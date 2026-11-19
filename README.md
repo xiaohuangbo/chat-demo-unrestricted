@@ -46,14 +46,14 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | ------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | 1. What this is                 | Scope, original features and everything this fork adds               | [01-what-is-this.md](docs/en/01-what-is-this.md)       |
 | 2. Restrictions in the original | What was hard-coded on the request and UI side                       | [02-original-limits.md](docs/en/02-original-limits.md) |
-| 3. What this fork changes       | 3.1–3.27: every settings group, NanoVM Slim and chat modes in detail | [03-changes.md](docs/en/03-changes.md)                 |
+| 3. What this fork changes       | 3.1–3.28: every settings group, NanoVM Slim and chat modes in detail | [03-changes.md](docs/en/03-changes.md)                 |
 | 4. Behaviour matrix             | Original / default / unrestricted mode, side by side                 | [04-behaviour.md](docs/en/04-behaviour.md)             |
 | 5. Settings reference           | Defaults and localStorage keys for every setting                     | [05-settings.md](docs/en/05-settings.md)               |
 | 6. What the request contains    | The JSON that actually goes out                                      | [06-request.md](docs/en/06-request.md)                 |
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 51 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 57 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -66,6 +66,26 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 ```
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
+
+Prebuilt artifact: `deepseek-unrestricted-2.7.1.apk` (7.5 MB, versionCode 271,
+SHA-256 `8ff166af736911633b97e29b8a2d1d18a0304473fa292a443fa5d5f8a5a8e309`) — see [android/README.md](android/README.md).
+
+## Compatibility
+
+Last regression run (2026-11, v2.7.1, both `compat` and `compat-prod` matrices):
+
+| Area             | Coverage                                                 | Result |
+| ---------------- | -------------------------------------------------------- | ------ |
+| Browsers         | Chromium, Firefox                                        | 13/13  |
+| Viewports        | 320 / 390 / 768 / 1024 / 1440 / 1920                     | 13/13  |
+| Theme and locale | Light / dark, zh-CN / en-US                              | 13/13  |
+| Production build | The same suite against the static `dist/` output         | 13/13  |
+| NanoVM           | Terminal, quotas, tool calls, 11 toolchains, virtual net | 21/21  |
+| Chat modes       | Tool groups and round limits for all four modes          | 10/10  |
+| Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
+| Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net  | pass   |
+
+Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
 

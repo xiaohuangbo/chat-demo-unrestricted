@@ -46,14 +46,14 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.27：设置页每一组功能、NanoVM Slim、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.28：设置页每一组功能、NanoVM Slim、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 51 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 57 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -66,6 +66,26 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 ```
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
+
+预构建产物：`deepseek-unrestricted-2.7.1.apk`（7.5 MB，versionCode 271，
+SHA-256 `8ff166af736911633b97e29b8a2d1d18a0304473fa292a443fa5d5f8a5a8e309`），详情见 [android/README.md](android/README.md)。
+
+## 兼容性
+
+最近一次兼容性回归（2026-11，v2.7.1，`compat` / `compat-prod` 两套矩阵）：
+
+| 范围            | 覆盖                                                       | 结果  |
+| --------------- | ---------------------------------------------------------- | ----- |
+| 浏览器          | Chromium、Firefox                                          | 13/13 |
+| 视口            | 320 / 390 / 768 / 1024 / 1440 / 1920                       | 13/13 |
+| 主题与语言      | 明 / 暗、zh-CN / en-US                                     | 13/13 |
+| 生产静态构建    | `dist/` 产物跑同一套用例                                   | 13/13 |
+| NanoVM / 工具链 | 终端、配额、工具调用、11 条工具链、虚拟网络                | 21/21 |
+| 聊天模式        | 仅聊天 / 网页 Agent / PTC / 创造 的工具分组与往返上限      | 10/10 |
+| 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
+| 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台  | 通过  |
+
+浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
 
