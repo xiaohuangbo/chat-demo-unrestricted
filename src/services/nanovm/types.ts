@@ -8,7 +8,18 @@ import type { NanovmFS } from './fs.js'
  */
 
 /** 虚拟机的可安装工具链（按需加载，不装也能用 busybox） */
-export type ToolchainId = 'python' | 'node' | 'lua' | 'sqlite' | 'esbuild' | 'make' | 'git'
+export type ToolchainId =
+  | 'python'
+  | 'node'
+  | 'lua'
+  | 'sqlite'
+  | 'esbuild'
+  | 'typescript'
+  | 'sass'
+  | 'terser'
+  | 'prettier'
+  | 'make'
+  | 'git'
 
 /** 控制台里的分组：运行时 / 构建 / 工具 */
 export type ToolchainCategory = 'runtime' | 'build' | 'tool'

@@ -13,7 +13,7 @@ import { nanoVMConfig, type NetMode } from './config.js'
  * 配置在 设置 → NanoVM Slim → 联网代理，见 config.ts 的 `netMode` / `proxyUrl`。
  */
 
-export type NetRoute = 'native' | 'direct' | 'custom'
+export type NetRoute = 'native' | 'direct' | 'custom' | 'virtual'
 
 export type NetErrorKind = 'cors' | 'network' | 'timeout' | 'proxy' | 'badurl'
 

@@ -175,7 +175,13 @@ const takeBytes = (text: string, count: number, fromEnd: boolean, fromStart: boo
 }
 
 const headTail = (kind: 'head' | 'tail', ctx: AppletContext): AppletResult => {
-  const parsed = parseArgs(ctx.argv, HEAD_TAIL_SPEC)
+  // busybox / coreutils 都支持 `head -5` 这种老式写法，先把它换成 -n 5 再解析
+  const argv = [...ctx.argv]
+  const shorthand = /^-(\d+)$/.exec(argv[1] ?? '')
+  if (shorthand) {
+    argv.splice(1, 1, '-n', shorthand[1])
+  }
+  const parsed = parseArgs(argv, HEAD_TAIL_SPEC)
   if (parsed.error) {
     return usageError(kind, parsed.error)
   }
@@ -248,7 +254,7 @@ const headApplet: Applet = {
   name: 'head',
   summary: '显示文件开头若干行或字节',
   summaryEn: 'Print the first lines or bytes of each file',
-  usage: 'head [-n N] [-c N] [-q] [-v] [file...]',
+  usage: 'head [-n N|-N] [-c N] [-q] [-v] [file...]',
   run: (ctx: AppletContext): AppletResult => headTail('head', ctx),
 }
 
@@ -256,13 +262,16 @@ const tailApplet: Applet = {
   name: 'tail',
   summary: '显示文件末尾若干行或字节，支持 -n +N',
   summaryEn: 'Print the last lines or bytes of each file',
-  usage: 'tail [-n N] [-n +N] [-c N] [-q] [-v] [file...]',
+  usage: 'tail [-n N|-N] [-n +N] [-c N] [-q] [-v] [file...]',
   run: (ctx: AppletContext): AppletResult => headTail('tail', ctx),
 }
 
 // ---------- grep ----------
 
 type GrepTarget = { label: string; text: string }
+
+/** 上下文行数：-B 命中行之前、-A 命中行之后 */
+type GrepContext = { before: number; after: number }
 
 type GrepOptions = {
   matcher: RegExp
@@ -274,10 +283,34 @@ type GrepOptions = {
   collect: boolean
   /** -l / -q 拿到第一个命中就够，不必继续扫 */
   earlyExit: boolean
+  /** -A / -B / -C 的上下文行数；-c / -l / -q 忽略，-o 只输出命中片段（不插 --） */
+  context: GrepContext
 }
 
 /** 一个文件里的扫描结果 */
 type GrepScan = { lines: string[]; count: number; matched: boolean; aborted: boolean }
+
+/**
+ * 一行的完整输出。文件名与行号后面跟的分隔符：命中行是 `:`，上下文行是 `-`
+ * （例如 `file.txt:3:hit`、`file.txt-4-context`）。
+ * GNU 只在这两段前缀真的输出时才带分隔符，所以 stdin 又没给 -n 时上下文行是裸的。
+ */
+const grepLineText = (
+  label: string,
+  index: number,
+  text: string,
+  separator: ':' | '-',
+  options: GrepOptions
+): string => {
+  let prefix = ''
+  if (options.withPath) {
+    prefix += `${label}${separator}`
+  }
+  if (options.showLineNumber) {
+    prefix += `${index + 1}${separator}`
+  }
+  return `${prefix}${text}`
+}
 
 /** 逐行扫描：返回格式化后的输出行与命中计数 */
 const scanGrepText = (
@@ -290,35 +323,101 @@ const scanGrepText = (
   let count = 0
   let matched = false
   let aborted = false
-  const pathPrefix = options.withPath ? `${label}:` : ''
   const input = splitLines(text)
+  // 先把命中集合整段标出来：上下文要按命中行前后扩展，-c 也要数完所有行
+  const selected = new Array<boolean>(input.length).fill(false)
   for (let index = 0; index < input.length; index += 1) {
     if ((index & 0xff) === 0 && interrupted(ctx)) {
       aborted = true
       break
     }
-    const line = input[index]
     options.matcher.lastIndex = 0
-    const hit = options.matcher.test(line)
-    const selected = options.invert ? !hit : hit
-    if (!selected) {
+    const hit = options.matcher.test(input[index])
+    const picked = options.invert ? !hit : hit
+    selected[index] = picked
+    if (!picked) {
       continue
     }
     matched = true
     // -c 数的一直是「选中的行数」，即使配了 -o 也跟 GNU 一致
     count += 1
-    if (options.collect) {
-      const prefix = options.showLineNumber ? `${pathPrefix}${index + 1}:` : pathPrefix
-      if (options.onlyMatching && options.globalMatcher) {
-        for (const item of collectRegexMatches(options.globalMatcher, line)) {
-          lines.push(`${prefix}${item}`)
-        }
-      } else {
-        lines.push(`${prefix}${line}`)
-      }
-    }
     if (options.earlyExit) {
       break
+    }
+  }
+  if (aborted || !options.collect) {
+    return { lines, count, matched, aborted }
+  }
+  // -o 只输出匹配片段，上下文与它互斥（GNU 同样不输出上下文行，但仍会插 --，这里省略）
+  const before = options.context.before
+  const after = options.context.after
+  // 取反 (-v) 时上下文按「取反后的命中集合」前后扩展，而不是按原始模式匹配的位置：
+  // 这是简化模型，和 GNU「先标记选中行、再按选中行取上下文」的做法等价。
+  const useContext = !options.onlyMatching && (before > 0 || after > 0)
+  if (useContext) {
+    let blockStart = -1
+    let blockEnd = -1
+    let emitted = false
+    /**
+     * 输出 [start, end] 这一段；同一文件内块与块之间插一行 `--`。
+     * 跨文件不插：调用方对每个文件单独扫描，GNU 实测跨文件也会插，这里有意只在文件内分隔。
+     */
+    const emitBlock = (start: number, end: number): boolean => {
+      if (emitted) {
+        lines.push('--')
+      }
+      for (let index = start; index <= end; index += 1) {
+        if ((index & 0xff) === 0 && interrupted(ctx)) {
+          aborted = true
+          return false
+        }
+        const separator = selected[index] ? ':' : '-'
+        lines.push(grepLineText(label, index, input[index], separator, options))
+      }
+      emitted = true
+      return true
+    }
+    for (let index = 0; index < input.length; index += 1) {
+      if (!selected[index]) {
+        continue
+      }
+      const start = Math.max(0, index - before)
+      const end = Math.min(input.length - 1, index + after)
+      if (blockStart < 0) {
+        blockStart = start
+        blockEnd = end
+        continue
+      }
+      // 重叠或首尾相接的块合并；中间隔了至少一行才输出 `--`
+      if (start <= blockEnd + 1) {
+        blockEnd = Math.max(blockEnd, end)
+        continue
+      }
+      if (!emitBlock(blockStart, blockEnd)) {
+        return { lines, count, matched, aborted }
+      }
+      blockStart = start
+      blockEnd = end
+    }
+    if (blockStart >= 0 && !emitBlock(blockStart, blockEnd)) {
+      return { lines, count, matched, aborted }
+    }
+    return { lines, count, matched, aborted }
+  }
+  for (let index = 0; index < input.length; index += 1) {
+    if (!selected[index]) {
+      continue
+    }
+    if ((index & 0xff) === 0 && interrupted(ctx)) {
+      aborted = true
+      break
+    }
+    if (options.onlyMatching && options.globalMatcher) {
+      for (const item of collectRegexMatches(options.globalMatcher, input[index])) {
+        lines.push(grepLineText(label, index, item, ':', options))
+      }
+    } else {
+      lines.push(grepLineText(label, index, input[index], ':', options))
     }
   }
   return { lines, count, matched, aborted }
@@ -346,6 +445,26 @@ const collectRegexMatches = (matcher: RegExp, line: string): string[] => {
   return found
 }
 
+/**
+ * 读 -A / -B / -C 的行数：没给返回 null（好让 -C 的默认值被单独给出的 -A/-B 覆盖），
+ * 非数字或负数按 GNU 的用法错误处理。
+ */
+const readContextCount = (
+  command: string,
+  flags: ParsedArgs['flags'],
+  name: string
+): { count: number | null } | { error: AppletResult } => {
+  const text = flagText(flags, name)
+  if (text === null) {
+    return { count: null }
+  }
+  const count = parseInteger(text)
+  if (count === null || count < 0) {
+    return { error: usageError(command, `${text}: invalid context length argument`) }
+  }
+  return { count }
+}
+
 const runGrep = (ctx: AppletContext): AppletResult => {
   const parsed = parseArgs(ctx.argv, {
     i: 'boolean',
@@ -364,11 +483,31 @@ const runGrep = (ctx: AppletContext): AppletResult => {
     H: 'boolean',
     s: 'boolean',
     e: 'value',
+    A: 'value',
+    B: 'value',
+    C: 'value',
   })
   if (parsed.error) {
     return usageError('grep', parsed.error)
   }
   const flags = parsed.flags
+  // -C 同时设置前后距离，单独给出的 -A / -B 优先（-A0 这种显式 0 也算）
+  const sharedContext = readContextCount('grep', flags, 'C')
+  if ('error' in sharedContext) {
+    return sharedContext.error
+  }
+  const afterContext = readContextCount('grep', flags, 'A')
+  if ('error' in afterContext) {
+    return afterContext.error
+  }
+  const beforeContext = readContextCount('grep', flags, 'B')
+  if ('error' in beforeContext) {
+    return beforeContext.error
+  }
+  const context: GrepContext = {
+    before: beforeContext.count ?? sharedContext.count ?? 0,
+    after: afterContext.count ?? sharedContext.count ?? 0,
+  }
   let pattern = flagText(flags, 'e')
   let operands = parsed.operands
   if (pattern === null) {
@@ -478,6 +617,7 @@ const runGrep = (ctx: AppletContext): AppletResult => {
     withPath,
     collect: !listOnly && !countOnly && !quiet,
     earlyExit: listOnly || quiet,
+    context,
   }
   const output: string[] = []
   const counters: string[] = []
@@ -513,10 +653,10 @@ const runGrep = (ctx: AppletContext): AppletResult => {
 
 const grepApplet: Applet = {
   name: 'grep',
-  summary: '按正则或字面量搜索文本，支持递归与多文件',
-  summaryEn: 'Search text with regular expressions or literal strings',
+  summary: '按正则或字面量搜索文本，支持递归、多文件与上下文行',
+  summaryEn: 'Search text with regular expressions, with -A/-B/-C context lines',
   usage:
-    'grep [-i] [-v] [-n] [-c] [-l] [-w] [-E|-F] [-r] [-q] [-o] [-h] [-e PATTERN] PATTERN [file...]',
+    'grep [-i] [-v] [-n] [-c] [-l] [-w] [-E|-F] [-r] [-q] [-o] [-h] [-H] [-s] [-A N] [-B N] [-C N] [-e PATTERN] PATTERN [file...]',
   run: (ctx: AppletContext): AppletResult => runGrep(ctx),
 }
 
@@ -2075,11 +2215,86 @@ const numericPrefix = (text: string): number => {
   return match ? Number(match[0]) : 0
 }
 
+/** 人类可读大小的单位，从 K 开始按 1024 进制 */
+const HUMAN_UNITS = ['K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
+
+/**
+ * sort -h 的数量解析：纯数字按字节，1K / 1.5M / 2G 按 1024 进制，后缀可带 B（1KB）。
+ * 认不出的按 0 算（GNU 的 -h 先比单位阶再比数字，认不出时退化成整行比较）。
+ */
+const humanPrefix = (text: string): number => {
+  const match = /^(\d+(?:\.\d+)?)([KMGTPEZY]?)B?$/i.exec(text.trim())
+  if (!match) {
+    return 0
+  }
+  const amount = Number(match[1])
+  const unit = match[2].toUpperCase()
+  if (unit === '') {
+    return amount
+  }
+  return amount * 1024 ** (HUMAN_UNITS.indexOf(unit) + 1)
+}
+
+/** -V 的切分：数字块与非数字块交替，1.9 → ['1', '.', '9'] */
+const splitVersionChunks = (text: string): string[] => text.match(/\d+|\D+/g) ?? []
+
+/** 数字块比较：先去掉前导零比长度，避免 parseInt 在大数字上丢精度 */
+const compareNumericChunk = (left: string, right: string): number => {
+  const a = left.replace(/^0+/, '')
+  const b = right.replace(/^0+/, '')
+  if (a.length !== b.length) {
+    return a.length < b.length ? -1 : 1
+  }
+  if (a !== b) {
+    return a < b ? -1 : 1
+  }
+  // 数值相同（1 与 01）时前导零少的在前，保证顺序稳定
+  if (left.length !== right.length) {
+    return left.length < right.length ? -1 : 1
+  }
+  return 0
+}
+
+/**
+ * sort -V 的比较：数字块按数值、非数字块按字节序，从前往后逐块比。
+ * 简化点：GNU 的 filevercmp 还特判了 `~`（排最前）、标点（排在字母之后）与文件名后缀，这里不处理。
+ */
+const compareVersion = (left: string, right: string, fold: boolean): number => {
+  const a = splitVersionChunks(left)
+  const b = splitVersionChunks(right)
+  const shared = Math.min(a.length, b.length)
+  for (let index = 0; index < shared; index += 1) {
+    const x = a[index]
+    const y = b[index]
+    if (/^\d/.test(x) && /^\d/.test(y)) {
+      const result = compareNumericChunk(x, y)
+      if (result !== 0) {
+        return result
+      }
+      continue
+    }
+    // 块类型不同时（1.0 与 v1.0）直接按字节序，数字排在字母前
+    const xn = fold ? x.toLowerCase() : x
+    const yn = fold ? y.toLowerCase() : y
+    if (xn !== yn) {
+      return xn < yn ? -1 : 1
+    }
+  }
+  if (a.length === b.length) {
+    return 0
+  }
+  // 前缀完全相同时块多的更长：1.0 < 1.0.1
+  return a.length < b.length ? -1 : 1
+}
+
+/** 排序模式：GNU 把 -n / -h / -V 当互斥选项（同时给出会报错），这里用固定优先级 */
+type SortMode = 'lexical' | 'numeric' | 'human' | 'version'
+
 const sortApplet: Applet = {
   name: 'sort',
-  summary: '按行排序，支持数值、逆序、去重与按字段',
-  summaryEn: 'Sort lines with numeric, reverse, unique and field keys',
-  usage: 'sort [-n] [-r] [-u] [-f] [-b] [-k N] [-t SEP] [file...]',
+  summary: '按行排序，支持数值、人类可读大小、版本号、逆序、去重与按字段',
+  summaryEn: 'Sort lines by text, number, human size or version, with reverse and unique',
+  usage: 'sort [-n] [-h] [-V] [-r] [-u] [-f] [-b] [-k N] [-t SEP] [file...]',
   run: (ctx: AppletContext): AppletResult => {
     const parsed = parseArgs(ctx.argv, {
       n: 'boolean',
@@ -2087,6 +2302,8 @@ const sortApplet: Applet = {
       u: 'boolean',
       f: 'boolean',
       b: 'boolean',
+      h: 'boolean',
+      V: 'boolean',
       k: 'value',
       t: 'value',
     })
@@ -2113,6 +2330,10 @@ const sortApplet: Applet = {
     const unique = flagOn(parsed.flags, 'u')
     const fold = flagOn(parsed.flags, 'f')
     const ignoreBlanks = flagOn(parsed.flags, 'b')
+    const human = flagOn(parsed.flags, 'h')
+    const version = flagOn(parsed.flags, 'V')
+    // parseArgs 不记录选项顺序，这里按固定优先级 -V > -h > -n 处理（GNU 对这类冲突组合直接报错）
+    const mode: SortMode = version ? 'version' : human ? 'human' : numeric ? 'numeric' : 'lexical'
     const gathered = gatherLines(ctx, parsed.operands, 'sort')
     if (gathered.errors !== '') {
       return { code: 2, stderr: gathered.errors }
@@ -2131,13 +2352,18 @@ const sortApplet: Applet = {
       return ignoreBlanks ? key.trimStart() : key
     }
     const compareKeys = (left: string, right: string): number => {
-      if (numeric) {
+      if (mode === 'numeric') {
         const a = numericPrefix(left)
         const b = numericPrefix(right)
-        if (a !== b) {
-          return a < b ? -1 : 1
-        }
-        return 0
+        return a === b ? 0 : a < b ? -1 : 1
+      }
+      if (mode === 'human') {
+        const a = humanPrefix(left)
+        const b = humanPrefix(right)
+        return a === b ? 0 : a < b ? -1 : 1
+      }
+      if (mode === 'version') {
+        return compareVersion(left, right, fold)
       }
       const a = fold ? left.toLowerCase() : left
       const b = fold ? right.toLowerCase() : right
@@ -2157,6 +2383,8 @@ const sortApplet: Applet = {
       return ordered !== 0 ? ordered : left.index - right.index
     })
     const output: string[] = []
+    // -u 按「最终比较键」去重，而不是整行原文（GNU 语义）：
+    // -k2 只保留第二列同键的行、-n 把 1 与 01 看作同键；同键时留下排序后的第一行。
     let previousKey: string | null = null
     for (const entry of entries) {
       if (unique && previousKey !== null && compareKeys(previousKey, entry.key) === 0) {

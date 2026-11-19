@@ -2,9 +2,12 @@
  * Node.js 兼容运行时的沙箱内核。
  *
  * 浏览器里没有真正的 Node，这里用 Function 构造函数搭一个「够用」的子集：
- * console / process / require('fs'|'path'|...) / Buffer / module.exports /
- * __dirname / __filename / 定时器。脚本改过的文件最后以差分的形式回传主线程，
- * 由主线程写回 NanoVM 的虚拟文件系统。
+ * console / process / require('fs'|'path'|'http'|'url'|'ws'|...) / Buffer /
+ * module.exports / __dirname / __filename / 定时器。脚本改过的文件最后以差分的形式回传
+ * 主线程，由主线程写回 NanoVM 的虚拟文件系统。
+ *
+ * `http` / `https` / `ws` 没有真实 socket，走「虚拟网络 + CGI 单请求」：宿主用环境变量
+ * 与 stdin 把请求塞进来，脚本把 CGI 响应写 stdout；细节见下面的虚拟网络模块一节。
  *
  * 这个文件被两条路径共用：
  * - 有 Worker 时它就是 Worker 入口（检测到 postMessage 才注册消息处理）；
@@ -35,6 +38,8 @@ export type NodeSandboxRequest = {
   env: Record<string, string>
   cwd: string
   files: SandboxFileMap
+  /** 标准输入：虚拟网络 CGI 请求体从 stdin 来，普通脚本读不到也不影响 */
+  stdin: string
   timeoutMs: number
 }
 
@@ -60,6 +65,8 @@ export type SandboxOptions = {
   env: Record<string, string>
   cwd: string
   files: SandboxFileMap
+  /** 标准输入，CGI 模式下就是请求体；默认空串 */
+  stdin?: string
   timeoutMs?: number
   onStdout: (text: string) => void
   onStderr: (text: string) => void
@@ -1006,6 +1013,1716 @@ const createFsModule = ({ fs, getCwd }: FsModuleOptions) => {
   }
 }
 
+// ---------- 虚拟网络：http / https / ws / url / querystring ----------
+
+/**
+ * NanoVM 没有真实 socket。`vm serve <端口> "node app.js"` 会把命令注册成虚拟服务，
+ * 之后每个 HTTP 请求都被当作一次 CGI 程序执行：请求信息走环境变量与 stdin 进来，
+ * 响应按 CGI 头 + 正文写 stdout。这一节实现 http / https 的服务端与客户端、url、
+ * querystring，以及 WebSocket 的单消息模式（ws）。
+ *
+ * CGI 模式（NANOVM_HTTP=1 / NANOVM_WS=1）下 stdout 是响应本体，所以 console 的
+ * 输出必须转走 stderr；这一点在 executeNode 里按环境变量统一处理。
+ */
+
+/** 虚拟网络模块共用的依赖：请求体、两个输出流、定时器与退出入口 */
+type VirtualNetOptions = {
+  env: Record<string, string>
+  stdin: string
+  stdout: Sink
+  stderr: Sink
+  timers: TimerRegistry
+  exit: (code: number) => never
+}
+
+/** 常用状态码文案：http.STATUS_CODES 与 CGI 的默认 Status 行都用它 */
+const HTTP_STATUS_CODES: Record<number, string> = {
+  100: 'Continue',
+  101: 'Switching Protocols',
+  200: 'OK',
+  201: 'Created',
+  202: 'Accepted',
+  204: 'No Content',
+  206: 'Partial Content',
+  301: 'Moved Permanently',
+  302: 'Found',
+  303: 'See Other',
+  304: 'Not Modified',
+  307: 'Temporary Redirect',
+  308: 'Permanent Redirect',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Method Not Allowed',
+  406: 'Not Acceptable',
+  408: 'Request Timeout',
+  409: 'Conflict',
+  410: 'Gone',
+  413: 'Payload Too Large',
+  415: 'Unsupported Media Type',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  501: 'Not Implemented',
+  502: 'Bad Gateway',
+  503: 'Service Unavailable',
+  504: 'Gateway Timeout',
+}
+
+const HTTP_METHODS = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'HEAD',
+  'OPTIONS',
+  'PATCH',
+  'TRACE',
+  'CONNECT',
+]
+
+/** 非 CGI 模式下 listen 的统一提示 */
+const VIRTUAL_NETWORK_HINT =
+  'NanoVM: 监听端口需要虚拟网络，请用 vm serve <端口> "node app.js" 注册服务'
+
+/** 只保留错误类型与消息：CGI 兜底响应与 stderr 提示都用它，不暴露沙箱内部栈 */
+const describeThrown = (error: unknown): string =>
+  error instanceof Error ? `${error.name}: ${error.message}` : inspectValue(error)
+
+/**
+ * 用户回调里调用 process.exit() 会抛 ExitSignal。原生 fetch / WebSocket 的
+ * 回调不在沙箱的定时器里，直接抛会变成未捕获异常；这里转交给定时器统一收尾。
+ */
+const quarantineThrow = (timers: TimerRegistry, run: () => void): void => {
+  try {
+    run()
+  } catch (error) {
+    timers.setTimeout(() => {
+      throw error
+    }, 0)
+  }
+}
+
+/** 请求体这类流事件：注册监听时把 stdin 里的内容推出去 */
+const STREAM_EVENTS = ['data', 'end', 'readable', 'close', 'error', 'aborted']
+
+/** 极简事件发射器：http / ws 的各种对象共用 */
+class SandboxEmitter {
+  private handlers = new Map<string, ((...args: unknown[]) => void)[]>()
+
+  on(event: string, handler: (...args: unknown[]) => void): this {
+    const list = this.handlers.get(event) ?? []
+    list.push(handler)
+    this.handlers.set(event, list)
+    return this
+  }
+
+  addListener(event: string, handler: (...args: unknown[]) => void): this {
+    return this.on(event, handler)
+  }
+
+  once(event: string, handler: (...args: unknown[]) => void): this {
+    const wrapper = (...args: unknown[]): void => {
+      this.off(event, wrapper)
+      handler(...args)
+    }
+    return this.on(event, wrapper)
+  }
+
+  off(event: string, handler: (...args: unknown[]) => void): this {
+    const list = this.handlers.get(event)
+    if (!list) {
+      return this
+    }
+    const next = list.filter((item) => item !== handler)
+    if (next.length > 0) {
+      this.handlers.set(event, next)
+    } else {
+      this.handlers.delete(event)
+    }
+    return this
+  }
+
+  removeListener(event: string, handler: (...args: unknown[]) => void): this {
+    return this.off(event, handler)
+  }
+
+  removeAllListeners(event?: string): this {
+    if (event === undefined) {
+      this.handlers.clear()
+    } else {
+      this.handlers.delete(event)
+    }
+    return this
+  }
+
+  listeners(event: string): ((...args: unknown[]) => void)[] {
+    return [...(this.handlers.get(event) ?? [])]
+  }
+
+  listenerCount(event: string): number {
+    return this.handlers.get(event)?.length ?? 0
+  }
+
+  emit(event: string, ...args: unknown[]): boolean {
+    const list = this.handlers.get(event)
+    if (!list || list.length === 0) {
+      return false
+    }
+    for (const handler of [...list]) {
+      handler(...args)
+    }
+    return true
+  }
+}
+
+// ---------- 虚拟网络：头部与 CGI 工具 ----------
+
+type HeaderEntry = { name: string; values: string[] }
+
+type HeaderMap = Map<string, HeaderEntry>
+
+const setHeaderValue = (headers: HeaderMap, name: string, value: unknown): void => {
+  const values = Array.isArray(value) ? value.map((item) => String(item)) : [String(value)]
+  headers.set(name.toLowerCase(), { name, values })
+}
+
+const appendHeaderValue = (headers: HeaderMap, name: string, value: unknown): void => {
+  const key = name.toLowerCase()
+  const values = Array.isArray(value) ? value.map((item) => String(item)) : [String(value)]
+  const existing = headers.get(key)
+  if (existing) {
+    existing.values.push(...values)
+    return
+  }
+  headers.set(key, { name, values })
+}
+
+const getHeaderValue = (headers: HeaderMap, name: string): string | string[] | undefined => {
+  const entry = headers.get(name.toLowerCase())
+  if (!entry) {
+    return undefined
+  }
+  return entry.values.length === 1 ? entry.values[0] : [...entry.values]
+}
+
+/** 解析宿主塞进 NANOVM_HTTP_HEADERS 的 JSON；坏 JSON 只提示一次，不中断请求 */
+const parseCgiHeaders = (raw: string | undefined, stderr: Sink): HeaderMap => {
+  const headers: HeaderMap = new Map()
+  const text = (raw ?? '').trim()
+  if (!text) {
+    return headers
+  }
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      for (const [name, value] of Object.entries(parsed as Record<string, unknown>)) {
+        setHeaderValue(headers, name, value)
+      }
+    }
+  } catch {
+    stderr.write('NanoVM: NANOVM_HTTP_HEADERS 不是合法 JSON，已按请求头为空处理\n')
+  }
+  return headers
+}
+
+/** 让沙箱在 fetch / WebSocket 这类「不靠定时器的异步」结束前保持存活 */
+type ActivityTracker = { begin: () => void; done: () => void }
+
+const createActivityTracker = (timers: TimerRegistry): ActivityTracker => {
+  let pending = 0
+  let polling = false
+  const poll = (): void => {
+    timers.setTimeout(() => {
+      if (pending > 0) {
+        poll()
+      } else {
+        polling = false
+      }
+    }, 8)
+  }
+  return {
+    begin: () => {
+      pending += 1
+      if (!polling) {
+        polling = true
+        poll()
+      }
+    },
+    done: () => {
+      pending = Math.max(0, pending - 1)
+    },
+  }
+}
+
+// ---------- 虚拟网络：IncomingMessage ----------
+
+type IncomingMessageInit = {
+  method?: string
+  url?: string
+  headers: HeaderMap
+  body: string
+  timers: TimerRegistry
+}
+
+/**
+ * 请求对象：数据一次性从 stdin 来，因此没有真正的流。
+ * 监听 data / end 时把整个请求体当一个 chunk 推出去，end 在下一个定时器里触发，
+ * 与真实 Node 的「事件在异步里到达」保持一致；body 为空也会触发 end。
+ */
+class IncomingMessage extends SandboxEmitter {
+  method: string
+  url: string
+  headers: Record<string, string>
+  rawHeaders: string[]
+  httpVersion = '1.1'
+  httpVersionMajor = 1
+  httpVersionMinor = 1
+  complete = true
+  aborted = false
+  readable = true
+  socket: Record<string, unknown>
+  connection: Record<string, unknown>
+  private body: string
+  private timers: TimerRegistry
+  private encoding: string | null = null
+  private scheduled = false
+  private delivered = false
+
+  constructor(init: IncomingMessageInit) {
+    super()
+    this.method = init.method ?? 'GET'
+    this.url = init.url ?? '/'
+    this.headers = {}
+    this.rawHeaders = []
+    for (const entry of init.headers.values()) {
+      this.headers[entry.name.toLowerCase()] = entry.values.join(', ')
+      for (const value of entry.values) {
+        this.rawHeaders.push(entry.name, value)
+      }
+    }
+    this.body = init.body
+    this.timers = init.timers
+    this.socket = {
+      remoteAddress: '127.0.0.1',
+      remoteFamily: 'IPv4',
+      remotePort: 0,
+      encrypted: false,
+    }
+    this.connection = this.socket
+  }
+
+  setEncoding(encoding: string = 'utf8'): this {
+    this.encoding = encoding
+    return this
+  }
+
+  override on(event: string, handler: (...args: unknown[]) => void): this {
+    super.on(event, handler)
+    if (STREAM_EVENTS.includes(event)) {
+      this.scheduleBody()
+    }
+    return this
+  }
+
+  pause(): this {
+    return this
+  }
+
+  resume(): this {
+    return this
+  }
+
+  isPaused(): boolean {
+    return false
+  }
+
+  destroy(): this {
+    this.aborted = true
+    return this
+  }
+
+  setTimeout(): this {
+    return this
+  }
+
+  private scheduleBody(): void {
+    if (this.scheduled || this.delivered) {
+      return
+    }
+    this.scheduled = true
+    this.timers.setTimeout(() => {
+      this.scheduled = false
+      this.pushBody()
+    }, 0)
+  }
+
+  private pushBody(): void {
+    if (this.delivered) {
+      return
+    }
+    this.delivered = true
+    const bytes = utf8Encode(this.body)
+    if (bytes.byteLength > 0) {
+      this.emit('data', this.encoding ? decodeWith(bytes, this.encoding) : asBuffer(bytes))
+    }
+    this.readable = false
+    this.emit('end')
+    this.emit('close')
+  }
+}
+
+// ---------- 虚拟网络：ServerResponse ----------
+
+type ServerResponseInit = {
+  stdout: Sink
+  timers: TimerRegistry
+  exit: (code: number) => never
+  request: IncomingMessage
+}
+
+/**
+ * 响应对象：写出的内容先攒在内存里，end() 时一次性拼成 CGI 响应写 stdout，
+ * 再让进程以 0 退出。没有 Content-Type 且正文非空时补 text/plain，
+ * Content-Length 按 UTF-8 字节数补全（脚本显式设置过就尊重脚本）。
+ */
+class ServerResponse extends SandboxEmitter {
+  statusCode = 200
+  statusMessage: string | undefined = undefined
+  headersSent = false
+  finished = false
+  writableEnded = false
+  req: IncomingMessage
+  socket: Record<string, unknown>
+  private headers: HeaderMap = new Map()
+  private bodyText = ''
+  private bodyBytes = 0
+  private exitCode = 0
+  private init: ServerResponseInit
+
+  constructor(init: ServerResponseInit) {
+    super()
+    this.init = init
+    this.req = init.request
+    this.socket = init.request.socket
+  }
+
+  setHeader(name: string, value: unknown): void {
+    if (this.headersSent) {
+      return
+    }
+    setHeaderValue(this.headers, String(name), value)
+  }
+
+  appendHeader(name: string, value: unknown): void {
+    if (this.headersSent) {
+      return
+    }
+    appendHeaderValue(this.headers, String(name), value)
+  }
+
+  getHeader(name: string): string | string[] | undefined {
+    return getHeaderValue(this.headers, String(name))
+  }
+
+  getHeaders(): Record<string, string | string[]> {
+    const result: Record<string, string | string[]> = {}
+    for (const [key, entry] of this.headers) {
+      result[key] = entry.values.length === 1 ? entry.values[0] : [...entry.values]
+    }
+    return result
+  }
+
+  getHeaderNames(): string[] {
+    return [...this.headers.keys()]
+  }
+
+  hasHeader(name: string): boolean {
+    return this.headers.has(String(name).toLowerCase())
+  }
+
+  removeHeader(name: string): void {
+    if (this.headersSent) {
+      return
+    }
+    this.headers.delete(String(name).toLowerCase())
+  }
+
+  writeHead(code: number, messageOrHeaders?: unknown, maybeHeaders?: unknown): this {
+    this.statusCode = Number.isFinite(Number(code)) ? Number(code) : 200
+    if (typeof messageOrHeaders === 'string') {
+      this.statusMessage = messageOrHeaders
+    }
+    const source =
+      typeof messageOrHeaders === 'object' && messageOrHeaders !== null
+        ? messageOrHeaders
+        : maybeHeaders
+    this.applyHeaders(source)
+    this.headersSent = true
+    return this
+  }
+
+  write(chunk?: unknown, encoding?: unknown, callback?: unknown): boolean {
+    if (this.finished) {
+      return false
+    }
+    const cb =
+      typeof encoding === 'function'
+        ? (encoding as () => void)
+        : typeof callback === 'function'
+          ? (callback as () => void)
+          : undefined
+    this.appendChunk(chunk, typeof encoding === 'string' ? encoding : undefined)
+    this.headersSent = true
+    if (cb) {
+      cb()
+    }
+    return true
+  }
+
+  end(chunk?: unknown, encoding?: unknown, callback?: unknown): this {
+    const cb =
+      typeof chunk === 'function'
+        ? (chunk as () => void)
+        : typeof encoding === 'function'
+          ? (encoding as () => void)
+          : typeof callback === 'function'
+            ? (callback as () => void)
+            : undefined
+    if (this.finished) {
+      if (cb) {
+        cb()
+      }
+      return this
+    }
+    if (typeof chunk !== 'function' && chunk !== undefined && chunk !== null) {
+      this.appendChunk(chunk, typeof encoding === 'string' ? encoding : undefined)
+    }
+    this.finished = true
+    this.writableEnded = true
+    this.headersSent = true
+    this.flushResponse()
+    this.emit('finish')
+    this.emit('close')
+    if (cb) {
+      cb()
+    }
+    // 交给下一个定时器退出：handler 在 async 函数里调用 end() 也能正常收尾
+    this.init.timers.setTimeout(() => this.init.exit(this.exitCode), 0)
+    return this
+  }
+
+  flushHeaders(): void {
+    this.headersSent = true
+  }
+
+  writeContinue(): void {
+    // 虚拟网络没有 100-continue 交换
+  }
+
+  writeEarlyHints(): void {
+    // 同上
+  }
+
+  setTimeout(): this {
+    return this
+  }
+
+  destroy(): void {
+    if (!this.finished) {
+      this.end()
+    }
+  }
+
+  /** 内部兜底：处理器抛异常时让进程以非零码退出，便于宿主判断失败 */
+  markFailed(): void {
+    this.exitCode = 1
+  }
+
+  private applyHeaders(source: unknown): void {
+    if (Array.isArray(source)) {
+      for (const item of source) {
+        if (Array.isArray(item) && item.length >= 2) {
+          setHeaderValue(this.headers, String(item[0]), item[1])
+        }
+      }
+      return
+    }
+    if (source && typeof source === 'object') {
+      for (const [name, value] of Object.entries(source as Record<string, unknown>)) {
+        setHeaderValue(this.headers, name, value)
+      }
+    }
+  }
+
+  private appendChunk(chunk: unknown, encoding?: string): void {
+    if (chunk === undefined || chunk === null) {
+      return
+    }
+    if (typeof chunk === 'string') {
+      const kind = (encoding ?? 'utf8').toLowerCase()
+      const bytes = encodeWith(chunk, kind)
+      this.bodyText += kind === 'utf8' || kind === 'utf-8' ? chunk : utf8Decode(bytes)
+      this.bodyBytes += bytes.byteLength
+      return
+    }
+    if (chunk instanceof Uint8Array) {
+      this.bodyText += utf8Decode(chunk)
+      this.bodyBytes += chunk.byteLength
+      return
+    }
+    const text = String(chunk)
+    this.bodyText += text
+    this.bodyBytes += utf8Encode(text).byteLength
+  }
+
+  private flushResponse(): void {
+    const status = this.statusCode
+    const message = this.statusMessage ?? HTTP_STATUS_CODES[status] ?? ''
+    const headers = new Map(this.headers)
+    if (!headers.has('content-length')) {
+      setHeaderValue(headers, 'Content-Length', String(this.bodyBytes))
+    }
+    if (this.bodyBytes > 0 && !headers.has('content-type')) {
+      setHeaderValue(headers, 'Content-Type', 'text/plain; charset=utf-8')
+    }
+    const lines = [message ? `Status: ${status} ${message}` : `Status: ${status}`]
+    for (const entry of headers.values()) {
+      for (const value of entry.values) {
+        lines.push(`${entry.name}: ${value}`)
+      }
+    }
+    this.init.stdout.write(`${lines.join('\r\n')}\r\n\r\n${this.bodyText}`)
+  }
+}
+
+// ---------- 虚拟网络：http.Server ----------
+
+type ListenOptions = {
+  port: number | undefined
+  host: string
+  callback?: (...args: unknown[]) => void
+}
+
+/** listen(port[, host][, backlog][, cb]) 与 listen({ port, host }, cb) 两种写法都认 */
+const parseListenArgs = (args: unknown[]): ListenOptions => {
+  let port: number | undefined
+  let host = ''
+  let callback: ((...args: unknown[]) => void) | undefined
+  const first = args[0]
+  if (typeof first === 'object' && first !== null) {
+    const options = first as { port?: unknown; host?: unknown; callback?: unknown }
+    if (typeof options.port === 'number') {
+      port = options.port
+    }
+    if (typeof options.host === 'string') {
+      host = options.host
+    }
+    if (typeof options.callback === 'function') {
+      callback = options.callback as (...args: unknown[]) => void
+    }
+  } else if (typeof first === 'number') {
+    port = first
+  }
+  for (const arg of args.slice(1)) {
+    if (typeof arg === 'string' && !host) {
+      host = arg
+    } else if (typeof arg === 'function') {
+      callback = arg as (...args: unknown[]) => void
+    }
+  }
+  return { port, host, callback }
+}
+
+/**
+ * 虚拟 HTTP 服务。
+ * - CGI 模式：listen 后立刻用环境变量里的请求调用一次 handler，res.end() 写响应并退出；
+ * - 非 CGI 模式：没有真实端口可监听，写 stderr 提示后以 1 退出，绝不 hang。
+ */
+class HttpServer extends SandboxEmitter {
+  listening = false
+  private net: VirtualNetOptions
+  private port: number | undefined = undefined
+  private host = ''
+
+  constructor(net: VirtualNetOptions, handler?: unknown) {
+    super()
+    this.net = net
+    if (typeof handler === 'function') {
+      this.on('request', handler as (...args: unknown[]) => void)
+    }
+  }
+
+  listen(...args: unknown[]): this {
+    const options = parseListenArgs(args)
+    this.port = options.port
+    this.host = options.host
+    if (options.callback) {
+      this.once('listening', options.callback)
+    }
+    this.listening = true
+    this.emit('listening')
+    this.startRequest()
+    return this
+  }
+
+  close(callback?: unknown): this {
+    this.listening = false
+    if (typeof callback === 'function') {
+      this.once('close', callback as (...args: unknown[]) => void)
+    }
+    this.emit('close')
+    return this
+  }
+
+  address(): { address: string; family: string; port: number } {
+    return { address: this.host || '127.0.0.1', family: 'IPv4', port: this.port ?? 0 }
+  }
+
+  getConnections(callback?: unknown): void {
+    if (typeof callback === 'function') {
+      ;(callback as (error: null, count: number) => void)(null, this.listening ? 1 : 0)
+    }
+  }
+
+  ref(): this {
+    return this
+  }
+
+  unref(): this {
+    return this
+  }
+
+  setTimeout(): this {
+    return this
+  }
+
+  private startRequest(): void {
+    const env = this.net.env
+    if (env.NANOVM_HTTP !== '1') {
+      this.net.stderr.write(`${VIRTUAL_NETWORK_HINT}\n`)
+      this.net.timers.setTimeout(() => this.net.exit(1), 0)
+      return
+    }
+    const requestPort = (env.NANOVM_HTTP_PORT ?? '').trim()
+    if (requestPort && this.port !== undefined && String(this.port) !== requestPort) {
+      this.net.stderr.write(
+        `NanoVM: 本次虚拟请求发往端口 ${requestPort}，与监听的 ${this.port} 不一致，` +
+          `请用 vm serve ${this.port} 注册服务\n`
+      )
+      this.net.timers.setTimeout(() => this.net.exit(1), 0)
+      return
+    }
+    // 等当前同步代码跑完（可能还有 on('request') 要注册）再投递请求
+    this.net.timers.setTimeout(() => this.serveRequest(), 0)
+  }
+
+  private serveRequest(): void {
+    const env = this.net.env
+    const headers = parseCgiHeaders(env.NANOVM_HTTP_HEADERS, this.net.stderr)
+    const host = env.NANOVM_HTTP_HOST || '127.0.0.1'
+    const port = env.NANOVM_HTTP_PORT || String(this.port ?? 80)
+    if (!headers.has('host')) {
+      setHeaderValue(headers, 'Host', `${host}:${port}`)
+    }
+    if (!headers.has('connection')) {
+      setHeaderValue(headers, 'Connection', 'close')
+    }
+    const body = this.net.stdin
+    if (body.length > 0 && !headers.has('content-length')) {
+      setHeaderValue(headers, 'Content-Length', String(utf8Encode(body).byteLength))
+    }
+    const request = new IncomingMessage({
+      method: (env.NANOVM_HTTP_METHOD || 'GET').toUpperCase(),
+      url: env.NANOVM_HTTP_URL || '/',
+      headers,
+      body,
+      timers: this.net.timers,
+    })
+    const response = new ServerResponse({
+      stdout: this.net.stdout,
+      timers: this.net.timers,
+      exit: this.net.exit,
+      request,
+    })
+    this.keepRequestAlive(response)
+    try {
+      if (this.listenerCount('request') === 0) {
+        throw new Error('虚拟 HTTP 请求已到达，但没有注册 request 处理器')
+      }
+      this.emit('request', request, response)
+    } catch (error) {
+      this.net.stderr.write(`${describeThrown(error)}\n`)
+      // 已经 end() 过的响应也要把退出码改成 1（退出定时器在触发时才读 exitCode）
+      response.markFailed()
+      if (!response.finished) {
+        response.statusCode = 500
+        response.setHeader('Content-Type', 'text/plain; charset=utf-8')
+        response.end(`NanoVM 虚拟 HTTP：处理器执行失败\n${describeThrown(error)}\n`)
+      }
+    }
+  }
+
+  /** handler 里可能有 await，用一串短定时器把沙箱撑到响应结束或全局超时 */
+  private keepRequestAlive(response: ServerResponse): void {
+    const poll = (): void => {
+      this.net.timers.setTimeout(() => {
+        if (!response.finished) {
+          poll()
+        }
+      }, 8)
+    }
+    poll()
+  }
+}
+
+// ---------- 虚拟网络：http.request / http.get ----------
+
+type HttpRequestTarget = {
+  protocol: string
+  hostname: string
+  port: string
+  path: string
+  method: string
+  headers: Record<string, string>
+  url: string
+}
+
+/** 这些主机名视为虚拟网络内部，不能走 fetch */
+const VIRTUAL_HOST_NAMES = ['127.0.0.1', 'localhost', '::1', '[::1]', '0.0.0.0']
+
+const normalizeHeaderRecord = (input: unknown): Record<string, string> => {
+  const headers: Record<string, string> = {}
+  if (Array.isArray(input)) {
+    for (const item of input) {
+      if (Array.isArray(item) && item.length >= 2) {
+        headers[String(item[0]).toLowerCase()] = String(item[1])
+      }
+    }
+    return headers
+  }
+  if (input && typeof input === 'object') {
+    for (const [name, value] of Object.entries(input as Record<string, unknown>)) {
+      headers[name.toLowerCase()] = String(value)
+    }
+  }
+  return headers
+}
+
+const normalizeRequestTarget = (
+  input: unknown,
+  fallbackMethod: string,
+  defaultProtocol: string
+): HttpRequestTarget => {
+  if (typeof input === 'string') {
+    let parsed: URL
+    try {
+      parsed = new URL(input)
+    } catch {
+      throw new Error(`NanoVM: http.request 只支持完整 URL（收到 '${input}'）`)
+    }
+    return {
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === 'https:' ? '443' : '80'),
+      path: `${parsed.pathname || '/'}${parsed.search}`,
+      method: fallbackMethod,
+      headers: {},
+      url: parsed.href,
+    }
+  }
+  const options = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+  const rawProtocol = typeof options.protocol === 'string' ? options.protocol : defaultProtocol
+  const protocol = rawProtocol.endsWith(':') ? rawProtocol : `${rawProtocol}:`
+  const rawHost =
+    typeof options.hostname === 'string'
+      ? options.hostname
+      : typeof options.host === 'string'
+        ? options.host
+        : 'localhost'
+  const portMatch = /:(\d+)$/.exec(rawHost)
+  let hostname = rawHost
+  let hostPort = ''
+  if (portMatch) {
+    hostPort = portMatch[1]
+    hostname = rawHost.slice(0, -portMatch[0].length)
+  }
+  const port =
+    options.port !== undefined && options.port !== null && options.port !== ''
+      ? String(options.port)
+      : hostPort || (protocol === 'https:' ? '443' : '80')
+  const pathname = typeof options.pathname === 'string' ? options.pathname : '/'
+  const search = typeof options.search === 'string' ? options.search : ''
+  const path =
+    typeof options.path === 'string'
+      ? options.path
+      : `${pathname.startsWith('/') ? pathname : `/${pathname}`}${search}`
+  return {
+    protocol,
+    hostname,
+    port,
+    path,
+    method: typeof options.method === 'string' ? options.method.toUpperCase() : fallbackMethod,
+    headers: normalizeHeaderRecord(options.headers),
+    url: `${protocol}//${hostname}${port ? `:${port}` : ''}${path}`,
+  }
+}
+
+/** fetch 拿到的响应转成 IncomingMessage 风格：statusCode / headers / on('data'|'end') */
+class HttpClientResponse extends IncomingMessage {
+  readonly statusCode: number
+  readonly statusMessage: string
+
+  constructor(init: IncomingMessageInit & { statusCode: number; statusMessage: string }) {
+    super(init)
+    this.statusCode = init.statusCode
+    this.statusMessage = init.statusMessage
+  }
+}
+
+const createClientResponse = async (
+  response: Response,
+  timers: TimerRegistry
+): Promise<HttpClientResponse> => {
+  const headers: HeaderMap = new Map()
+  response.headers.forEach((value, name) => {
+    appendHeaderValue(headers, name, value)
+  })
+  const body = await response.text()
+  return new HttpClientResponse({
+    headers,
+    body,
+    timers,
+    method: '',
+    url: '',
+    statusCode: response.status,
+    statusMessage: response.statusText,
+  })
+}
+
+/** 最小的 ClientRequest：缓存 body，end() 时才真的发请求 */
+class ClientRequest extends SandboxEmitter {
+  method: string
+  path: string
+  host: string
+  protocol: string
+  aborted = false
+  destroyed = false
+  writableEnded = false
+  private target: HttpRequestTarget
+  private net: VirtualNetOptions
+  private activity: ActivityTracker
+  private callback?: (message: unknown) => void
+  private chunks: Uint8Array[] = []
+  private headers: Map<string, string>
+  private sent = false
+
+  constructor(
+    target: HttpRequestTarget,
+    net: VirtualNetOptions,
+    activity: ActivityTracker,
+    callback?: (message: unknown) => void
+  ) {
+    super()
+    this.target = target
+    this.net = net
+    this.activity = activity
+    this.callback = callback
+    this.method = target.method
+    this.path = target.path
+    this.host = target.hostname
+    this.protocol = target.protocol
+    this.headers = new Map(Object.entries(target.headers))
+  }
+
+  setHeader(name: string, value: unknown): void {
+    this.headers.set(String(name).toLowerCase(), String(value))
+  }
+
+  getHeader(name: string): string | undefined {
+    return this.headers.get(String(name).toLowerCase())
+  }
+
+  removeHeader(name: string): void {
+    this.headers.delete(String(name).toLowerCase())
+  }
+
+  flushHeaders(): void {
+    // 请求头在 end() 时统一发送
+  }
+
+  write(chunk: unknown, encoding?: unknown, callback?: unknown): boolean {
+    const textEncoding = typeof encoding === 'string' ? encoding : undefined
+    if (typeof chunk === 'string') {
+      this.chunks.push(encodeWith(chunk, textEncoding ?? 'utf8'))
+    } else if (chunk instanceof Uint8Array) {
+      this.chunks.push(new Uint8Array(chunk))
+    } else if (chunk !== undefined && chunk !== null) {
+      this.chunks.push(utf8Encode(String(chunk)))
+    }
+    const cb =
+      typeof encoding === 'function'
+        ? (encoding as () => void)
+        : typeof callback === 'function'
+          ? (callback as () => void)
+          : undefined
+    if (cb) {
+      cb()
+    }
+    return true
+  }
+
+  end(chunk?: unknown, encoding?: unknown, callback?: unknown): this {
+    if (this.sent) {
+      return this
+    }
+    const cb =
+      typeof chunk === 'function'
+        ? (chunk as () => void)
+        : typeof encoding === 'function'
+          ? (encoding as () => void)
+          : typeof callback === 'function'
+            ? (callback as () => void)
+            : undefined
+    if (typeof chunk !== 'function' && chunk !== undefined && chunk !== null) {
+      this.write(chunk, typeof encoding === 'string' ? encoding : undefined)
+    }
+    this.sent = true
+    this.writableEnded = true
+    this.start()
+    if (cb) {
+      cb()
+    }
+    return this
+  }
+
+  abort(): void {
+    this.aborted = true
+    this.emit('abort')
+  }
+
+  destroy(): void {
+    this.aborted = true
+    this.emit('close')
+  }
+
+  setTimeout(): this {
+    return this
+  }
+
+  private start(): void {
+    const hostname = this.target.hostname.toLowerCase()
+    if (VIRTUAL_HOST_NAMES.includes(hostname)) {
+      this.net.timers.setTimeout(() => {
+        if (this.aborted) {
+          return
+        }
+        const error = new Error('虚拟网络里的服务请用 curl 或虚拟 WebSocket 访问')
+        // 没人监听 error 时按 Node 的习惯抛成未捕获异常，沙箱会打印并置退出码 1
+        if (!this.emit('error', error)) {
+          throw error
+        }
+      }, 0)
+      return
+    }
+    const body = this.chunks.length > 0 ? BufferApi.concat(this.chunks) : undefined
+    const init: RequestInit = {
+      method: this.method,
+      headers: Object.fromEntries(this.headers),
+    }
+    if (body) {
+      // 复制到普通 Uint8Array：fetch 的 BufferSource 只接受 ArrayBuffer 支撑的视图
+      init.body = new Uint8Array(body)
+    }
+    this.activity.begin()
+    void fetch(this.target.url, init)
+      .then(async (response) => {
+        const message = await createClientResponse(response, this.net.timers)
+        this.activity.done()
+        if (this.aborted) {
+          return
+        }
+        quarantineThrow(this.net.timers, () => {
+          this.emit('response', message)
+          if (this.callback) {
+            this.callback(message)
+          }
+        })
+      })
+      .catch((error: unknown) => {
+        this.activity.done()
+        if (this.aborted) {
+          return
+        }
+        const failure = error instanceof Error ? error : new Error(String(error))
+        quarantineThrow(this.net.timers, () => {
+          if (!this.emit('error', failure)) {
+            this.net.stderr.write(`http: 请求失败：${describeThrown(failure)}\n`)
+          }
+        })
+      })
+  }
+}
+
+const createHttpModule = (
+  net: VirtualNetOptions,
+  defaultProtocol: string
+): Record<string, unknown> => {
+  const activity = createActivityTracker(net.timers)
+
+  class Server extends HttpServer {
+    constructor(handler?: unknown) {
+      super(net, handler)
+    }
+  }
+
+  const createServer = (optionsOrHandler?: unknown, maybeHandler?: unknown): Server => {
+    const handler = typeof optionsOrHandler === 'function' ? optionsOrHandler : maybeHandler
+    return new Server(handler)
+  }
+
+  const request = (input?: unknown, callback?: unknown): ClientRequest => {
+    const target = normalizeRequestTarget(input, 'GET', defaultProtocol)
+    const listener =
+      typeof callback === 'function' ? (callback as (message: unknown) => void) : undefined
+    return new ClientRequest(target, net, activity, listener)
+  }
+
+  const get = (input?: unknown, callback?: unknown): ClientRequest => {
+    const clientRequest = request(input, callback)
+    clientRequest.end()
+    return clientRequest
+  }
+
+  return {
+    STATUS_CODES: HTTP_STATUS_CODES,
+    METHODS: HTTP_METHODS,
+    createServer,
+    request,
+    get,
+    Server,
+    IncomingMessage,
+    ServerResponse,
+    ClientRequest,
+    Agent: class Agent {
+      destroy(): void {
+        // 虚拟网络没有连接池，Agent 只是占位
+      }
+    },
+    globalAgent: { destroy: () => undefined },
+  }
+}
+
+// ---------- 虚拟网络：url / querystring ----------
+
+type ParsedQuery = Record<string, string | string[]>
+
+type LegacyUrl = {
+  href: string
+  protocol: string | null
+  slashes: boolean | null
+  auth: string | null
+  host: string | null
+  port: string | null
+  hostname: string | null
+  hash: string | null
+  search: string | null
+  pathname: string | null
+  path: string | null
+  query: string | ParsedQuery | null
+}
+
+const qsPrimitive = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value)
+  }
+  if (typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  return ''
+}
+
+const qsEscape = (text: string): string => encodeURIComponent(text)
+
+const qsUnescape = (text: string): string => {
+  try {
+    return decodeURIComponent(text)
+  } catch {
+    return text
+  }
+}
+
+const qsStringify = (input: unknown, separator = '&', equals = '='): string => {
+  if (!input || typeof input !== 'object') {
+    return ''
+  }
+  const pairs: string[] = []
+  for (const [key, raw] of Object.entries(input as Record<string, unknown>)) {
+    const values = Array.isArray(raw) ? raw : [raw]
+    for (const value of values) {
+      pairs.push(`${qsEscape(key)}${equals}${qsEscape(qsPrimitive(value))}`)
+    }
+  }
+  return pairs.join(separator)
+}
+
+const qsParse = (input: unknown, separator = '&', equals = '='): ParsedQuery => {
+  const result: ParsedQuery = {}
+  const text = String(input ?? '')
+  if (!text) {
+    return result
+  }
+  for (const pair of text.split(separator)) {
+    if (!pair) {
+      continue
+    }
+    const index = pair.indexOf(equals)
+    const rawKey = index >= 0 ? pair.slice(0, index) : pair
+    const rawValue = index >= 0 ? pair.slice(index + equals.length) : ''
+    const key = qsUnescape(rawKey.replace(/\+/g, ' '))
+    const value = qsUnescape(rawValue.replace(/\+/g, ' '))
+    const existing = result[key]
+    if (existing === undefined) {
+      result[key] = value
+    } else if (Array.isArray(existing)) {
+      existing.push(value)
+    } else {
+      result[key] = [existing, value]
+    }
+  }
+  return result
+}
+
+type AuthorityParts = {
+  auth: string | null
+  host: string | null
+  hostname: string | null
+  port: string | null
+}
+
+/** 拆 authority：user:pass@host:port；主机名小写，IPv6 的方括号保留在 host 里 */
+const splitAuthority = (authority: string): AuthorityParts => {
+  let rest = authority
+  let auth: string | null = null
+  const atIndex = rest.lastIndexOf('@')
+  if (atIndex >= 0) {
+    auth = qsUnescape(rest.slice(0, atIndex))
+    rest = rest.slice(atIndex + 1)
+  }
+  rest = rest.toLowerCase()
+  if (!rest) {
+    return { auth, host: null, hostname: null, port: null }
+  }
+  if (rest.startsWith('[')) {
+    const closeIndex = rest.indexOf(']')
+    if (closeIndex >= 0) {
+      const hostname = rest.slice(1, closeIndex)
+      const tail = rest.slice(closeIndex + 1)
+      const port = tail.startsWith(':') ? tail.slice(1) : null
+      return {
+        auth,
+        hostname,
+        port: port || null,
+        host: port ? `[${hostname}]:${port}` : `[${hostname}]`,
+      }
+    }
+  }
+  const colonIndex = rest.lastIndexOf(':')
+  if (colonIndex > 0 && /^\d*$/.test(rest.slice(colonIndex + 1))) {
+    return {
+      auth,
+      hostname: rest.slice(0, colonIndex),
+      port: rest.slice(colonIndex + 1) || null,
+      host: rest,
+    }
+  }
+  return { auth, host: rest, hostname: rest, port: null }
+}
+
+/**
+ * url.parse 的兼容实现：相对路径按 legacy 语义返回（protocol 等为 null），
+ * 绝对 URL 用原生 URL 校正大小写与转义。parseQuery 为 true（或对象里
+ * parseQueryString 为 true）时 query 解析成对象。
+ */
+const parseLegacyUrl = (input: string, parseQuery?: unknown): LegacyUrl => {
+  const wantQueryObject =
+    parseQuery === true ||
+    (typeof parseQuery === 'object' &&
+      parseQuery !== null &&
+      (parseQuery as { parseQueryString?: unknown }).parseQueryString === true)
+  const text = typeof input === 'string' ? input : String(input ?? '')
+  let rest = text
+  let hash: string | null = null
+  const hashIndex = rest.indexOf('#')
+  if (hashIndex >= 0) {
+    hash = rest.slice(hashIndex)
+    rest = rest.slice(0, hashIndex)
+  }
+  let search: string | null = null
+  const searchIndex = rest.indexOf('?')
+  if (searchIndex >= 0) {
+    search = rest.slice(searchIndex)
+    rest = rest.slice(0, searchIndex)
+  }
+  let protocol: string | null = null
+  let slashes: boolean | null = null
+  let authority: AuthorityParts = { auth: null, host: null, hostname: null, port: null }
+  const protocolMatch = /^([a-z][a-z0-9+.-]*):/i.exec(rest)
+  if (protocolMatch) {
+    protocol = `${protocolMatch[1].toLowerCase()}:`
+    rest = rest.slice(protocolMatch[0].length)
+  }
+  if (protocol !== null && rest.startsWith('//')) {
+    slashes = true
+    rest = rest.slice(2)
+    const slashIndex = rest.indexOf('/')
+    const hostPart = slashIndex >= 0 ? rest.slice(0, slashIndex) : rest
+    rest = slashIndex >= 0 ? rest.slice(slashIndex) : ''
+    authority = splitAuthority(hostPart)
+  }
+  const host = authority.host
+  let pathname: string | null
+  if (protocol !== null && host !== null) {
+    pathname = rest === '' ? '/' : rest
+  } else {
+    pathname = rest === '' ? null : rest
+  }
+  let href: string
+  if (protocol !== null && host !== null) {
+    try {
+      const parsed = new URL(text)
+      // 用原生实现做转义与小写化，但保留 legacy 显式写出的协议默认端口
+      const authPart = parsed.username
+        ? `${parsed.username}${parsed.password ? `:${parsed.password}` : ''}@`
+        : ''
+      const portPart = authority.port ?? parsed.port
+      const hostPart = `${parsed.hostname}${portPart ? `:${portPart}` : ''}`
+      href = `${parsed.protocol}//${authPart}${hostPart}${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      href = `${protocol}//${authority.auth ? `${authority.auth}@` : ''}${host}${pathname ?? ''}${search ?? ''}${hash ?? ''}`
+    }
+  } else {
+    href = `${protocol ?? ''}${authority.auth ? `${authority.auth}@` : ''}${host ?? ''}${pathname ?? ''}${search ?? ''}${hash ?? ''}`
+  }
+  const path = pathname === null && search === null ? null : `${pathname ?? ''}${search ?? ''}`
+  const query: string | ParsedQuery | null = wantQueryObject
+    ? qsParse(search === null ? '' : search.slice(1))
+    : search === null
+      ? null
+      : search.slice(1)
+  return {
+    href,
+    protocol,
+    slashes,
+    auth: authority.auth,
+    host,
+    port: authority.port,
+    hostname: authority.hostname,
+    hash,
+    search,
+    pathname,
+    path,
+    query,
+  }
+}
+
+const joinUrlPath = (basePath: string, targetPath: string): string => {
+  const index = basePath.lastIndexOf('/')
+  return index >= 0 ? `${basePath.slice(0, index + 1)}${targetPath}` : targetPath
+}
+
+/** 折叠 . 与 ..，保留是否以 / 开头 */
+const normalizeUrlPath = (path: string): string => {
+  const leading = path.startsWith('/')
+  const segments: string[] = []
+  for (const part of path.split('/')) {
+    if (!part || part === '.') {
+      continue
+    }
+    if (part === '..') {
+      segments.pop()
+      continue
+    }
+    segments.push(part)
+  }
+  const joined = segments.join('/')
+  return leading ? `/${joined}` : joined
+}
+
+/** url.format 的兼容实现：字段优先，没有任何字段时才用 href（与 legacy 行为一致） */
+const formatLegacyUrl = (input: unknown): string => {
+  if (typeof input === 'string') {
+    return input
+  }
+  if (!input || typeof input !== 'object') {
+    throw new TypeError('The "urlObject" argument must be one of type object or string')
+  }
+  const obj = input as Record<string, unknown>
+  const hasFields = [
+    'protocol',
+    'host',
+    'hostname',
+    'auth',
+    'pathname',
+    'search',
+    'query',
+    'hash',
+    'port',
+  ].some((key) => obj[key] !== undefined && obj[key] !== null && obj[key] !== '')
+  if (!hasFields) {
+    return typeof obj.href === 'string' ? obj.href : ''
+  }
+  const protocol =
+    typeof obj.protocol === 'string'
+      ? obj.protocol.endsWith(':')
+        ? obj.protocol
+        : `${obj.protocol}:`
+      : ''
+  const auth = typeof obj.auth === 'string' && obj.auth ? `${obj.auth}@` : ''
+  let host = typeof obj.host === 'string' ? obj.host : ''
+  if (!host && typeof obj.hostname === 'string') {
+    const port = obj.port === undefined || obj.port === null ? '' : String(obj.port)
+    host = port ? `${obj.hostname}:${port}` : obj.hostname
+  }
+  let pathname = typeof obj.pathname === 'string' ? obj.pathname : ''
+  if (host && pathname && !pathname.startsWith('/')) {
+    pathname = `/${pathname}`
+  }
+  let search = ''
+  if (typeof obj.search === 'string') {
+    search = obj.search
+  } else if (obj.query && typeof obj.query === 'object') {
+    search = `?${qsStringify(obj.query)}`
+  }
+  if (search && !search.startsWith('?')) {
+    search = `?${search}`
+  }
+  let hash = typeof obj.hash === 'string' ? obj.hash : ''
+  if (hash && !hash.startsWith('#')) {
+    hash = `#${hash}`
+  }
+  const protocolSlashes = /^(https?|wss?|ftp|file|gopher):$/.test(protocol)
+  const useSlashes = obj.slashes === true || (obj.slashes !== false && protocolSlashes)
+  return `${protocol}${useSlashes && host ? '//' : ''}${auth}${host}${pathname}${search}${hash}`
+}
+
+/** url.resolve 的兼容实现：绝对 URL 交给原生 URL，相对基准则在路径层面合并 */
+const resolveLegacyUrl = (from: string, to: string): string => {
+  const baseText = typeof from === 'string' ? from : String(from ?? '')
+  const targetText = typeof to === 'string' ? to : String(to ?? '')
+  if (/^[a-z][a-z0-9+.-]*:/i.test(targetText)) {
+    return targetText
+  }
+  const base = parseLegacyUrl(baseText)
+  if (base.protocol !== null && base.host !== null) {
+    try {
+      return new URL(targetText, base.href).href
+    } catch {
+      // 落到下面的手写合并
+    }
+  }
+  const target = parseLegacyUrl(targetText)
+  let pathname: string
+  if (target.pathname === null) {
+    pathname = base.pathname ?? ''
+  } else if (target.pathname.startsWith('/')) {
+    pathname = target.pathname
+  } else {
+    pathname = joinUrlPath(base.pathname ?? '', target.pathname)
+  }
+  const search = target.search ?? (target.pathname === null ? (base.search ?? '') : '')
+  const hash = target.hash ?? ''
+  return `${normalizeUrlPath(pathname)}${search}${hash}`
+}
+
+const createQuerystringModule = (): Record<string, unknown> => ({
+  stringify: qsStringify,
+  parse: qsParse,
+  escape: qsEscape,
+  unescape: qsUnescape,
+})
+
+const createUrlModule = (): Record<string, unknown> => ({
+  URL: globalThis.URL,
+  URLSearchParams: globalThis.URLSearchParams,
+  parse: parseLegacyUrl,
+  format: formatLegacyUrl,
+  resolve: resolveLegacyUrl,
+  resolveObject: (from: string, to: string) => parseLegacyUrl(resolveLegacyUrl(from, to)),
+})
+
+// ---------- 虚拟网络：ws（WebSocket 单消息模式） ----------
+
+/**
+ * 虚拟 WebSocket：
+ * - 服务端（NANOVM_WS=1）：宿主一条消息跑一次脚本，connection 回调收到一个
+ *   ws 对象，send() 写 CGI body，close() 结束进程；
+ * - 客户端：包一层浏览器原生 WebSocket，事件用 on('open'|'message'|'close') 转发。
+ */
+const createWsModule = (net: VirtualNetOptions): Record<string, unknown> => {
+  const activity = createActivityTracker(net.timers)
+
+  /** 单消息模式下服务端那一侧的 ws：send() 直接写 stdout 的 CGI body */
+  class VirtualWebSocket extends SandboxEmitter {
+    readyState = 1
+    readonly CONNECTING = 0
+    readonly OPEN = 1
+    readonly CLOSING = 2
+    readonly CLOSED = 3
+    private headWritten = false
+    private closed = false
+
+    send(data: unknown, callback?: unknown): void {
+      if (this.closed) {
+        return
+      }
+      this.writeHead()
+      net.stdout.write(typeof data === 'string' ? data : inspectValue(data))
+      if (typeof callback === 'function') {
+        ;(callback as (error?: Error) => void)()
+      }
+    }
+
+    close(code?: number, reason?: unknown): void {
+      if (this.closed) {
+        return
+      }
+      this.writeHead()
+      this.closed = true
+      this.readyState = 3
+      this.emit(
+        'close',
+        typeof code === 'number' ? code : 1000,
+        typeof reason === 'string' ? reason : ''
+      )
+      net.timers.setTimeout(() => net.exit(0), 0)
+    }
+
+    terminate(): void {
+      this.close(1006, 'terminated')
+    }
+
+    ping(): void {
+      // 单消息模式没有心跳
+    }
+
+    pong(): void {
+      // 同上
+    }
+
+    private writeHead(): void {
+      if (this.headWritten) {
+        return
+      }
+      this.headWritten = true
+      net.stdout.write('Status: 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n')
+    }
+  }
+
+  class WebSocketServer extends SandboxEmitter {
+    clients = new Set<VirtualWebSocket>()
+    private port: number | undefined = undefined
+
+    constructor(options?: unknown) {
+      super()
+      const settings = (options && typeof options === 'object' ? options : {}) as Record<
+        string,
+        unknown
+      >
+      this.port = typeof settings.port === 'number' ? settings.port : undefined
+      const noServer = settings.noServer === true
+      if (net.env.NANOVM_WS !== '1') {
+        net.stderr.write(`${VIRTUAL_NETWORK_HINT}\n`)
+        net.timers.setTimeout(() => net.exit(1), 0)
+        return
+      }
+      const requestPort = (net.env.NANOVM_HTTP_PORT ?? '').trim()
+      if (
+        !noServer &&
+        requestPort &&
+        this.port !== undefined &&
+        String(this.port) !== requestPort
+      ) {
+        net.stderr.write(
+          `NanoVM: 本次虚拟 WebSocket 请求发往端口 ${requestPort}，与监听的 ${this.port} 不一致，` +
+            `请用 vm serve ${this.port} 注册服务\n`
+        )
+        net.timers.setTimeout(() => net.exit(1), 0)
+        return
+      }
+      net.timers.setTimeout(() => this.openConnection(), 0)
+    }
+
+    address(): { address: string; family: string; port: number } {
+      return { address: '127.0.0.1', family: 'IPv4', port: this.port ?? 0 }
+    }
+
+    close(callback?: unknown): void {
+      for (const socket of [...this.clients]) {
+        if (socket.readyState === 1) {
+          socket.close()
+        }
+      }
+      this.clients.clear()
+      this.emit('close')
+      if (typeof callback === 'function') {
+        ;(callback as () => void)()
+      }
+    }
+
+    private openConnection(): void {
+      const socket = new VirtualWebSocket()
+      this.clients.add(socket)
+      const headers = parseCgiHeaders(net.env.NANOVM_HTTP_HEADERS, net.stderr)
+      const requestHeaders: Record<string, string> = {}
+      for (const entry of headers.values()) {
+        requestHeaders[entry.name.toLowerCase()] = entry.values.join(', ')
+      }
+      this.emit('listening')
+      if (this.listenerCount('connection') === 0) {
+        net.stderr.write('NanoVM: 虚拟 WebSocket 请求已到达，但没有注册 connection 处理器\n')
+        net.timers.setTimeout(() => net.exit(1), 0)
+        return
+      }
+      this.emit('connection', socket, {
+        url: net.env.NANOVM_HTTP_URL || '/',
+        headers: requestHeaders,
+      })
+      const message = net.env.NANOVM_WS_MESSAGE ?? ''
+      net.timers.setTimeout(() => {
+        if (socket.readyState === 1) {
+          socket.emit('message', message, false)
+        }
+      }, 0)
+    }
+  }
+
+  /** 客户端 WebSocket：没有原生实现时把错误交给 on('error') */
+  class SandboxWebSocket extends SandboxEmitter {
+    static CONNECTING = 0
+    static OPEN = 1
+    static CLOSING = 2
+    static CLOSED = 3
+    readyState = 0
+    onopen: ((event: unknown) => void) | null = null
+    onmessage: ((event: unknown) => void) | null = null
+    onclose: ((event: unknown) => void) | null = null
+    onerror: ((event: unknown) => void) | null = null
+    private socket: WebSocket | null = null
+    private tracked = false
+    private reported = false
+
+    constructor(url: string, protocols?: unknown) {
+      super()
+      const scope = globalThis as unknown as { WebSocket?: unknown }
+      const Native = scope.WebSocket
+      if (typeof Native !== 'function') {
+        this.readyState = 3
+        net.timers.setTimeout(() => {
+          const error = new Error('NanoVM: 当前环境没有原生 WebSocket，客户端 WebSocket 不可用')
+          if (!this.emit('error', error)) {
+            net.stderr.write(`${describeThrown(error)}\n`)
+          }
+        }, 0)
+        return
+      }
+      this.readyState = 0
+      let socket: WebSocket
+      try {
+        const Ctor = Native as new (target: string, protocols?: string | string[]) => WebSocket
+        socket =
+          protocols === undefined ? new Ctor(url) : new Ctor(url, protocols as string | string[])
+      } catch (error) {
+        this.readyState = 3
+        net.timers.setTimeout(() => {
+          const failure = error instanceof Error ? error : new Error(String(error))
+          if (!this.emit('error', failure)) {
+            net.stderr.write(`${describeThrown(failure)}\n`)
+          }
+        }, 0)
+        return
+      }
+      this.socket = socket
+      activity.begin()
+      this.tracked = true
+      socket.binaryType = 'arraybuffer'
+      socket.onopen = (event: Event) => {
+        this.readyState = 1
+        quarantineThrow(net.timers, () => {
+          this.emit('open')
+          if (this.onopen) {
+            this.onopen(event)
+          }
+        })
+      }
+      socket.onmessage = (event: MessageEvent) => {
+        quarantineThrow(net.timers, () => {
+          this.emit('message', event.data, typeof event.data !== 'string')
+          if (this.onmessage) {
+            this.onmessage(event)
+          }
+        })
+      }
+      socket.onclose = (event: CloseEvent) => {
+        this.readyState = 3
+        this.release()
+        quarantineThrow(net.timers, () => {
+          this.emit('close', event.code, event.reason)
+          if (this.onclose) {
+            this.onclose(event)
+          }
+        })
+      }
+      socket.onerror = (event: Event) => {
+        this.release()
+        quarantineThrow(net.timers, () => {
+          if (!this.emit('error', event) && !this.onerror) {
+            net.stderr.write('NanoVM: WebSocket 客户端连接出错\n')
+          }
+          if (this.onerror) {
+            this.onerror(event)
+          }
+        })
+      }
+    }
+
+    send(data: unknown): void {
+      if (!this.socket) {
+        return
+      }
+      if (data instanceof Uint8Array) {
+        // 复制成普通 Uint8Array：原生 WebSocket 的 BufferSource 只认 ArrayBuffer 支撑的视图
+        this.socket.send(new Uint8Array(data))
+      } else {
+        this.socket.send(String(data))
+      }
+    }
+
+    close(code?: number, reason?: string): void {
+      this.socket?.close(code, reason)
+    }
+
+    private release(): void {
+      if (!this.tracked || this.reported) {
+        return
+      }
+      this.reported = true
+      this.tracked = false
+      activity.done()
+    }
+  }
+
+  return Object.assign(SandboxWebSocket, {
+    WebSocket: SandboxWebSocket,
+    WebSocketServer,
+    Server: WebSocketServer,
+  }) as unknown as Record<string, unknown>
+}
+
 // ---------- 沙箱执行 ----------
 
 /** 用户脚本拿到的参数名（顺序与调用处一致） */
@@ -1053,6 +2770,7 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
   const state = {
     cwd: normalizePath(options.cwd || '/home/user'),
     env: { ...options.env },
+    stdin: options.stdin ?? '',
   }
   let asyncExit: number | null = null
   let asyncFailed = false
@@ -1091,7 +2809,7 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
     platform: NODE_PLATFORM,
     arch: 'wasm',
     version: `v${NODE_VERSION}`,
-    versions: { node: NODE_VERSION, nanovm: '2.7.0' },
+    versions: { node: NODE_VERSION, nanovm: '2.7.1' },
     pid: 1,
     exitCode: 0,
     title: 'node',
@@ -1148,13 +2866,16 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
 
   const consoleApi = (() => {
     const writes = (target: Sink, values: unknown[]) => target.write(`${formatArgs(values)}\n`)
+    // 虚拟网络的 CGI 响应就是 stdout，日志必须让路，否则会污染 Status 与响应头
+    const wireMode = state.env.NANOVM_HTTP === '1' || state.env.NANOVM_WS === '1'
+    const logTarget = wireMode ? stderr : stdout
     const timeLabels = new Map<string, number>()
     return {
-      log: (...values: unknown[]) => writes(stdout, values),
-      info: (...values: unknown[]) => writes(stdout, values),
-      debug: (...values: unknown[]) => writes(stdout, values),
-      dir: (value: unknown) => writes(stdout, [inspectValue(value)]),
-      table: (value: unknown) => writes(stdout, [inspectValue(value)]),
+      log: (...values: unknown[]) => writes(logTarget, values),
+      info: (...values: unknown[]) => writes(logTarget, values),
+      debug: (...values: unknown[]) => writes(logTarget, values),
+      dir: (value: unknown) => writes(logTarget, [inspectValue(value)]),
+      table: (value: unknown) => writes(logTarget, [inspectValue(value)]),
       trace: (...values: unknown[]) => writes(stderr, ['Trace:', ...values]),
       warn: (...values: unknown[]) => writes(stderr, values),
       error: (...values: unknown[]) => writes(stderr, values),
@@ -1170,7 +2891,7 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
         const started = timeLabels.get(label)
         timeLabels.delete(label)
         if (started !== undefined) {
-          writes(stdout, [`${label}: ${(performance.now() - started).toFixed(3)}ms`])
+          writes(logTarget, [`${label}: ${(performance.now() - started).toFixed(3)}ms`])
         }
       },
       group: () => undefined,
@@ -1187,11 +2908,33 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
   }
   const moduleCache = new Map<string, unknown>()
 
+  // 虚拟网络：http / https / ws 都靠 env + stdin + stdout 完成一次请求
+  const virtualNet: VirtualNetOptions = {
+    env: state.env,
+    stdin: state.stdin,
+    stdout,
+    stderr,
+    timers,
+    exit: (code: number): never => {
+      throw new ExitSignal(code)
+    },
+  }
+  const httpModule = createHttpModule(virtualNet, 'http:')
+  const httpsModule = createHttpModule(virtualNet, 'https:')
+  const urlModule = createUrlModule()
+  const querystringModule = createQuerystringModule()
+  const wsModule = createWsModule(virtualNet)
+
   const nodeModules: Record<string, unknown> = {
     fs: fsModule,
     'fs/promises': fsModule,
     path: pathModule,
     'path/posix': pathModule,
+    http: httpModule,
+    https: httpsModule,
+    url: urlModule,
+    querystring: querystringModule,
+    ws: wsModule,
     process: processApi,
     buffer: { Buffer: BufferApi },
     os: {
@@ -1203,7 +2946,7 @@ export const executeNode = async (options: SandboxOptions): Promise<SandboxOutco
       tmpdir: () => '/tmp',
       homedir: () => '/home/user',
       hostname: () => 'nanovm',
-      release: () => '2.7.0',
+      release: () => '2.7.1',
     },
     util: {
       format: (...values: unknown[]): string => formatArgs(values),
@@ -1369,6 +3112,7 @@ const handleRequest = async (scope: WorkerScope, request: NodeSandboxRequest): P
       env: request.env,
       cwd: request.cwd,
       files: request.files,
+      stdin: request.stdin,
       timeoutMs: request.timeoutMs,
       onStdout: (text) => scope.postMessage({ type: 'stdout', text }),
       onStderr: (text) => scope.postMessage({ type: 'stderr', text }),

@@ -14,7 +14,7 @@ import { dirName, normalizePath, resolvePath, type NanovmFS } from './fs.js'
  */
 
 /** `git --version` 报告的版本 */
-export const GIT_VERSION = '2.7.0-nanovm'
+export const GIT_VERSION = '2.7.1-nanovm'
 
 /** 索引文件名（真实 git 的 index 是二进制，这里用 JSON 便于调试） */
 const INDEX_FILE = 'index.json'

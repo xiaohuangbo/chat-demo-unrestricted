@@ -11,6 +11,7 @@ import type {
   ToolchainState,
 } from './types.js'
 import type { RuntimeModule } from './runtimes/types.js'
+import type { ServeInvocation } from './runtimes/pythonWeb.js'
 
 /**
  * 按需工具链注册表。
@@ -43,6 +44,10 @@ export const TOOLCHAIN_IDS: ToolchainId[] = [
   'lua',
   'sqlite',
   'esbuild',
+  'typescript',
+  'sass',
+  'terser',
+  'prettier',
   'make',
   'git',
 ]
@@ -109,6 +114,38 @@ const META: Record<ToolchainId, Meta> = {
     category: 'build',
     hint: 'esbuild main.ts --bundle --outfile=bundle.js',
   },
+  typescript: {
+    label: 'TypeScript',
+    summary: '官方 tsc 编译器（浏览器版），转译 .ts / .tsx 到 JS',
+    sizeMB: 9,
+    version: '5.9',
+    category: 'build',
+    hint: 'tsc app.ts --outfile app.js',
+  },
+  sass: {
+    label: 'Sass',
+    summary: 'dart-sass 官方编译器，SCSS / SASS 转 CSS',
+    sizeMB: 5.8,
+    version: '1.x',
+    category: 'build',
+    hint: 'sass style.scss style.css',
+  },
+  terser: {
+    label: 'Terser',
+    summary: '官方 JS 压缩器，可做语法压缩与变量重命名',
+    sizeMB: 1.1,
+    version: '5.x',
+    category: 'build',
+    hint: 'terser app.js -c -m -o app.min.js',
+  },
+  prettier: {
+    label: 'Prettier',
+    summary: '官方代码格式化器，支持 JS / TS / CSS / JSON / Markdown',
+    sizeMB: 2,
+    version: '3.x',
+    category: 'build',
+    hint: 'prettier --write src/app.ts',
+  },
   make: {
     label: 'GNU make',
     summary: '内置 Makefile 构建器，无需下载',
@@ -154,6 +191,10 @@ const RUNTIMES: Partial<Record<ToolchainId, () => Promise<RuntimeModule>>> = {
   lua: () => import('./runtimes/lua.js').then((module) => module.luaRuntime),
   sqlite: () => import('./runtimes/sqlite.js').then((module) => module.sqliteRuntime),
   esbuild: () => import('./runtimes/esbuild.js').then((module) => module.esbuildRuntime),
+  typescript: () => import('./runtimes/typescript.js').then((module) => module.typescriptRuntime),
+  sass: () => import('./runtimes/sass.js').then((module) => module.sassRuntime),
+  terser: () => import('./runtimes/terser.js').then((module) => module.terserRuntime),
+  prettier: () => import('./runtimes/prettier.js').then((module) => module.prettierRuntime),
 }
 
 const runtimeCache = new Map<ToolchainId, Promise<RuntimeModule>>()
@@ -331,9 +372,14 @@ type PyodideLike = {
   FS: PyodideFs
   globals: { get: (name: string) => unknown }
   runPython: (code: string) => unknown
+  /** micropip 的安装是 async 的，必须走 runPythonAsync（允许顶层 await） */
+  runPythonAsync: (code: string) => Promise<unknown>
+  /** 加载 Pyodide 发行版自带的包（pip 依赖这里的 micropip） */
+  loadPackage: (names: string | string[]) => Promise<unknown>
   setStdout: (options: { batched?: (text: string) => void }) => void
   setStderr: (options: { batched?: (text: string) => void }) => void
-  setStdin?: (options: { stdin: () => string | null }) => void
+  /** stdin 回调可以返回字符串、UTF-8 字节或 null（EOF） */
+  setStdin?: (options: { stdin: () => string | Uint8Array | null }) => void
 }
 
 type PyodideModule = {
@@ -347,6 +393,21 @@ type PythonRuntime = {
 
 let pythonRuntime: PythonRuntime | null = null
 let pythonLoading: Promise<PythonRuntime> | null = null
+
+/** 已经注入过 nanovm 模块的 Pyodide 实例（每个实例只注入一次） */
+let pythonWebInstance: PyodideLike | null = null
+
+/** 上一次同步进 os.environ 的变量名：下次同步时删掉已经消失的变量 */
+let syncedPythonEnv = new Set<string>()
+
+/** pythonWeb.ts 里带着三段 Python 源码，按需加载（和 runtimes 的动态 import 保持一致） */
+type PythonWebModule = typeof import('./runtimes/pythonWeb.js')
+let pythonWebLoading: Promise<PythonWebModule> | null = null
+
+const loadPythonWeb = (): Promise<PythonWebModule> => {
+  pythonWebLoading ??= import('./runtimes/pythonWeb.js')
+  return pythonWebLoading
+}
 
 let pyodideBase = PYODIDE_BASE_URL
 let pyodideModuleUrl = PYODIDE_URL
@@ -558,6 +619,119 @@ const loadPythonRuntime = async (
   }
 }
 
+/** 加载 Python 运行时；失败时给出中文提示并返回 null */
+const ensurePythonRuntime = async (io: ToolchainIO): Promise<PythonRuntime | null> => {
+  try {
+    return await loadPythonRuntime(() => undefined)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    io.stderr(
+      `python3: Python 运行时加载失败，需要联网（首次安装约 12MB）：${detail}\n` +
+        '提示：连上网后执行 vm install python，装好之后本页内可离线复用。\n'
+    )
+    return null
+  }
+}
+
+/**
+ * stdin 的一次性喂料：CGI 的请求体一次给完，之后返回 null（EOF）。
+ * 返回 Uint8Array 而不是字符串，Pyodide 就不会自作主张补换行。
+ */
+const stdinFeeder = (text: string): (() => string | Uint8Array | null) => {
+  let pending = text
+  return () => {
+    if (!pending) {
+      return null
+    }
+    const bytes = new TextEncoder().encode(pending)
+    pending = ''
+    return bytes
+  }
+}
+
+/**
+ * 把 io 的 stdout / stderr / stdin 接到 Pyodide 上（每次运行都要重接）。
+ *
+ * 传了 `collect` 就不直接往 io 写，而是把每一行收进数组：CGI 响应必须原样交给
+ * 虚拟网络，Pyodide 的 batched stdout 会把「没有换行结尾的最后一行」憋在缓冲区
+ * 里（直到下一条输出才吐出来），所以 run_cgi 写响应时会补一个哨兵换行，
+ * 由调用方用 join('\n') 重拼，正文不会多出字节。
+ */
+const attachPythonIO = (
+  io: ToolchainIO,
+  pyodide: PyodideLike,
+  stdin: string,
+  collect?: string[]
+): void => {
+  try {
+    pyodide.setStdout({
+      batched: (text) => {
+        if (collect) {
+          collect.push(text)
+          return
+        }
+        io.stdout(`${text}\n`)
+      },
+    })
+    pyodide.setStderr({ batched: (text) => io.stderr(`${text}\n`) })
+    pyodide.setStdin?.({ stdin: stdinFeeder(stdin) })
+  } catch {
+    // setStdout / setStderr 不可用时只能拿到 runPython 的返回值
+  }
+}
+
+/**
+ * 把 io.env 同步进 os.environ：虚拟网络的 NANOVM_HTTP_* 由宿主放在这里，
+ * nanovm_serve 读取它们来构造 WSGI environ。每次运行都同步，删掉已经消失的变量。
+ */
+const syncPythonEnv = (pyodide: PyodideLike, env: Record<string, string>): void => {
+  const values: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (key) {
+      values[key] = value
+    }
+  }
+  const removed = [...syncedPythonEnv].filter((key) => !(key in values))
+  try {
+    pyodide.runPython(
+      [
+        'import os',
+        `_nanovm_env = ${JSON.stringify(values)}`,
+        `for _nanovm_key in ${JSON.stringify(removed)}:`,
+        '    os.environ.pop(_nanovm_key, None)',
+        'os.environ.update(_nanovm_env)',
+      ].join('\n')
+    )
+    syncedPythonEnv = new Set(Object.keys(values))
+  } catch {
+    // 同步失败不影响命令本身
+  }
+}
+
+/**
+ * 每个 Pyodide 实例第一次用到时注入 nanovm 模块（写 FS + sys.path.insert）；
+ * 之后只同步环境变量。注入失败不影响普通脚本，只是 import nanovm 用不了。
+ */
+const ensurePythonWeb = (pyodide: PyodideLike, io: ToolchainIO, web: PythonWebModule): void => {
+  try {
+    if (pythonWebInstance !== pyodide) {
+      pyodide.runPython(web.NANOVM_BOOTSTRAP)
+      pythonWebInstance = pyodide
+      syncedPythonEnv = new Set()
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    io.stderr(`python3: nanovm 模块注入失败，import nanovm / -m nanovm_serve 不可用：${detail}\n`)
+  }
+  syncPythonEnv(pyodide, io.env)
+}
+
+/** 读 buildPythonRunner / buildServeRunner 写下的退出码 */
+const readPythonExitCode = (pyodide: PyodideLike): number => {
+  const value = pyodide.globals.get('__nanovm_exit_code')
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
 const pythonVersionLabel = (): string => {
   const version = stateOf('python').version
   return version || `3.x（Pyodide ${PYODIDE_VERSION}）`
@@ -719,6 +893,405 @@ const syncBackFromPyodide = (
   }
 }
 
+// ---------- pip（Pyodide 自带的 micropip） ----------
+
+/**
+ * NanoVM 的 pip 由 Pyodide 发行版自带的 micropip 实现：它只解析纯 Python wheel
+ * 和 Pyodide 预编译好的 wasm 包，需要现场编译 C 扩展的会在依赖解析阶段报错。
+ */
+const PIP_USAGE = [
+  '用法：pip <子命令> [参数...]',
+  '',
+  '  pip install <包> [包...]    安装纯 Python 包（-r 可读 requirements.txt）',
+  '  pip uninstall <包> [包...]  卸载 micropip 装过的包',
+  '  pip list                    已安装的包（Pyodide 内置 + micropip 装的）',
+  '  pip --version               版本信息',
+  '',
+  '只装纯 Python wheel 与 Pyodide 预编译的 wasm 包（numpy / pandas 等）；',
+  '需要现场编译 C 扩展的包（cryptography、uvloop、pydantic-core…）装不了。',
+  '',
+].join('\n')
+
+/** Pyodide 0.26.4 的 pyodide-lock.json 里锁定的 micropip 版本 */
+const MICROPIP_VERSION = '0.6.0'
+
+/** `pip install` 解析出来的东西 */
+type PipInstallOptions = {
+  requirements: string[]
+  indexUrls: string[]
+  deps: boolean
+  pre: boolean
+  verbose: boolean
+}
+
+/** 带独立取值的 pip 选项：值不是包名，不能放进 requirements */
+const PIP_VALUE_OPTIONS = new Set([
+  '-i',
+  '--index-url',
+  '--extra-index-url',
+  '--trusted-host',
+  '--target',
+  '--prefix',
+  '--root',
+  '--platform',
+  '--python-version',
+  '--implementation',
+  '--abi',
+  '--only-binary',
+  '--no-binary',
+  '--progress-bar',
+  '--log',
+  '--timeout',
+  '--retries',
+  '--proxy',
+  '--cert',
+  '--client-cert',
+  '--cache-dir',
+  '--src',
+  '--upgrade-strategy',
+  '-c',
+  '--constraint',
+])
+
+/** 解析 `pip install` 的参数（-r 会直接读虚拟文件系统里的依赖清单） */
+const parsePipInstall = (io: ToolchainIO, argv: string[]): PipInstallOptions => {
+  const options: PipInstallOptions = {
+    requirements: [],
+    indexUrls: [],
+    deps: true,
+    pre: false,
+    verbose: true,
+  }
+  const args = [...argv]
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg === '-r' || arg === '--requirement') {
+      const file = args[index + 1] ?? ''
+      index += 1
+      const path = file ? resolvePath(io.cwd, file) : ''
+      const source = path ? io.fs.readText(path) : null
+      if (source === null) {
+        io.stderr(`pip: 读不到依赖清单 '${file}'\n`)
+        continue
+      }
+      for (const line of source.split('\n')) {
+        const trimmed = line.split('#')[0].trim()
+        if (trimmed && !trimmed.startsWith('-')) {
+          options.requirements.push(trimmed)
+        }
+      }
+      continue
+    }
+    if (arg === '-i' || arg === '--index-url' || arg === '--extra-index-url') {
+      const url = args[index + 1]
+      index += 1
+      if (url) {
+        options.indexUrls.push(url)
+      }
+      continue
+    }
+    if (PIP_VALUE_OPTIONS.has(arg)) {
+      index += 1
+      continue
+    }
+    if (arg === '--no-deps') {
+      options.deps = false
+      continue
+    }
+    if (arg === '--pre') {
+      options.pre = true
+      continue
+    }
+    if (arg === '-q' || arg === '--quiet') {
+      options.verbose = false
+      continue
+    }
+    if (arg === '-v' || arg === '--verbose') {
+      options.verbose = true
+      continue
+    }
+    if (
+      arg === '-U' ||
+      arg === '--upgrade' ||
+      arg === '--user' ||
+      arg === '--force-reinstall' ||
+      arg === '--no-cache-dir' ||
+      arg === '--no-warn-script-location'
+    ) {
+      continue
+    }
+    if (arg.startsWith('-')) {
+      io.stderr(`pip: 忽略不支持的选项 '${arg}'\n`)
+      continue
+    }
+    options.requirements.push(arg)
+  }
+  return options
+}
+
+/** 网络 / 下载类的失败：可以自动重试一次 */
+const PIP_NETWORK_ERROR = /failed to fetch|networkerror|network error|load failed|timed out/i
+
+/** micropip 的报错翻译成中文：最典型的是「没有纯 Python wheel」 */
+const pipFailureMessage = (detail: string): string => {
+  const text = detail.replace(/\s+/g, ' ').trim()
+  if (
+    /pure python 3 wheel|pure-python|not a supported wheel|platform tag|abi3|manylinux/i.test(text)
+  ) {
+    return (
+      `pip: 该包需要编译好的 wasm 扩展，Pyodide 里装不了：${text}\n` +
+      '提示：包名写错时 micropip 也报同样的错，先用 PyPI 页面确认一下包名。'
+    )
+  }
+  if (/no matching distribution|could not find a version|not found|404/i.test(text)) {
+    return `pip: PyPI 上找不到这个包（检查包名或版本）：${text}`
+  }
+  if (PIP_NETWORK_ERROR.test(text)) {
+    return `pip: 下载失败，检查网络能不能访问 PyPI / jsDelivr：${text}`
+  }
+  return `pip: 该包需要编译好的 wasm 扩展，Pyodide 里装不了：${text}`
+}
+
+/** 已安装包的列表：优先 micropip.list()，老版本 micropip 退到 importlib.metadata */
+const PIP_LIST_SOURCE = [
+  'import importlib.metadata',
+  '',
+  'try:',
+  '    import micropip',
+  'except ImportError:',
+  '    micropip = None',
+  '',
+  '_nanovm_list = getattr(micropip, "list", None)',
+  'if _nanovm_list is not None:',
+  '    print(_nanovm_list())',
+  'else:',
+  '    print("Package                        Version")',
+  '    print("------------------------------ ---------")',
+  '    for _nanovm_dist in sorted(',
+  '        importlib.metadata.distributions(), key=lambda item: (item.name or "").lower()',
+  '    ):',
+  '        print("%-30s %s" % (_nanovm_dist.name, _nanovm_dist.version))',
+].join('\n')
+
+/** micropip 的版本号：实例里已经 import 过就读真值，否则用锁定的版本 */
+const micropipVersionLabel = (): string => {
+  const runtime = pythonRuntime
+  if (runtime) {
+    try {
+      const value = runtime.pyodide.runPython('import micropip\nmicropip.__version__')
+      if (typeof value === 'string' && value) {
+        return `micropip ${value}`
+      }
+    } catch {
+      // 还没 loadPackage('micropip')，用锁文件里的版本号
+    }
+  }
+  return `micropip ${MICROPIP_VERSION}`
+}
+
+/**
+ * 准备 pip 的执行环境：运行时 + ios + nanovm 模块。
+ * pip 的输出走 io.stdout（micropip 的日志 handler 绑在 sys.stdout 上）。
+ */
+const preparePip = async (io: ToolchainIO): Promise<{ pyodide: PyodideLike } | null> => {
+  const runtime = await ensurePythonRuntime(io)
+  if (!runtime) {
+    return null
+  }
+  attachPythonIO(io, runtime.pyodide, '')
+  const web = await loadPythonWeb()
+  ensurePythonWeb(runtime.pyodide, io, web)
+  // micropip 的 logging handler 只在第一次 import 时绑一次 sys.stdout；
+  // 每次运行 Pyodide 都会换掉 sys.stdout，这里把它重新指到当前输出上。
+  try {
+    runtime.pyodide.runPython(
+      [
+        'import logging, sys',
+        'for _nanovm_name in (None, "micropip"):',
+        '    for _nanovm_handler in logging.getLogger(_nanovm_name).handlers:',
+        '        if isinstance(_nanovm_handler, logging.StreamHandler):',
+        '            _nanovm_handler.setStream(sys.stdout)',
+      ].join('\n')
+    )
+  } catch {
+    // 重绑失败只影响日志去向
+  }
+  return { pyodide: runtime.pyodide }
+}
+
+const runPipInstall = async (io: ToolchainIO, argv: string[]): Promise<{ code: number }> => {
+  const options = parsePipInstall(io, argv)
+  if (options.requirements.length === 0) {
+    io.stderr('pip: 没有要安装的包，用法：pip install <包> [包...]\n')
+    return { code: 1 }
+  }
+  const runtime = await preparePip(io)
+  if (!runtime) {
+    return { code: 1 }
+  }
+  // 异常在 Python 里就转成字符串返回：micropip 的报错本来就带 FAQ 链接，
+  // 别再让 Pyodide 往 stderr 甩一整段 traceback
+  const source = [
+    'import micropip',
+    'import traceback',
+    '_nanovm_error = None',
+    'try:',
+    '    await micropip.install(',
+    `        ${JSON.stringify(options.requirements)},`,
+    `        deps=${options.deps ? 'True' : 'False'},`,
+    `        pre=${options.pre ? 'True' : 'False'},`,
+    '        keep_going=True,',
+    `        index_urls=${
+      options.indexUrls.length > 0 ? JSON.stringify(options.indexUrls) : 'None'
+    },`,
+    `        verbose=${options.verbose ? 'True' : 'False'},`,
+    '    )',
+    'except BaseException as _nanovm_exc:',
+    '    _nanovm_error = "".join(',
+    '        traceback.format_exception_only(type(_nanovm_exc), _nanovm_exc)',
+    '    ).strip()',
+    '_nanovm_error',
+  ].join('\n')
+  let failure = ''
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await runtime.pyodide.loadPackage('micropip')
+      const result = await runtime.pyodide.runPythonAsync(source)
+      failure = typeof result === 'string' ? result : ''
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error)
+    }
+    if (!failure || !PIP_NETWORK_ERROR.test(failure) || attempt === 1) {
+      break
+    }
+    // 虚拟网络 / CDN 偶尔断一下，重试一次比直接失败友好
+    io.stderr('pip: 下载中断，正在重试一次…\n')
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 500)
+    })
+  }
+  if (failure) {
+    io.stderr(`${pipFailureMessage(failure)}\n`)
+    return { code: 1 }
+  }
+  io.stdout(`pip: 已装好 ${options.requirements.join(' ')}，可以直接 import\n`)
+  return { code: 0 }
+}
+
+const runPipUninstall = async (io: ToolchainIO, argv: string[]): Promise<{ code: number }> => {
+  const packages = argv.filter((arg) => !arg.startsWith('-'))
+  if (packages.length === 0) {
+    io.stderr('pip: 没有要卸载的包，用法：pip uninstall <包> [包...]\n')
+    return { code: 1 }
+  }
+  const runtime = await preparePip(io)
+  if (!runtime) {
+    return { code: 1 }
+  }
+  try {
+    await runtime.pyodide.loadPackage('micropip')
+    const available = runtime.pyodide.runPython('import micropip\nhasattr(micropip, "uninstall")')
+    if (available !== true) {
+      io.stderr(
+        'pip: 当前 Pyodide 的 micropip 不支持 uninstall（需要 micropip ≥ 0.4），' +
+          '可以 vm uninstall python 之后重装运行时\n'
+      )
+      return { code: 1 }
+    }
+    // micropip.uninstall 对不存在的包只 warning 不报错，这里先自己判断一遍
+    const failure = runtime.pyodide.runPython(
+      [
+        'import importlib.metadata',
+        'import micropip',
+        'import traceback',
+        `_nanovm_names = ${JSON.stringify(packages)}`,
+        '_nanovm_missing = []',
+        'for _nanovm_name in _nanovm_names:',
+        '    try:',
+        '        importlib.metadata.distribution(_nanovm_name)',
+        '    except importlib.metadata.PackageNotFoundError:',
+        '        _nanovm_missing.append(_nanovm_name)',
+        '_nanovm_error = None',
+        'if _nanovm_missing:',
+        "    _nanovm_error = '没有安装：' + ', '.join(_nanovm_missing)",
+        'else:',
+        '    try:',
+        '        micropip.uninstall(_nanovm_names)',
+        '    except BaseException as _nanovm_exc:',
+        '        _nanovm_error = "".join(',
+        '            traceback.format_exception_only(type(_nanovm_exc), _nanovm_exc)',
+        '        ).strip()',
+        '_nanovm_error',
+      ].join('\n')
+    )
+    if (typeof failure === 'string' && failure) {
+      io.stderr(`pip: ${failure}\n`)
+      return { code: 1 }
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    io.stderr(`pip: 卸载失败：${detail}\n`)
+    return { code: 1 }
+  }
+  io.stdout(`pip: 已卸载 ${packages.join(' ')}\n`)
+  return { code: 0 }
+}
+
+const runPipList = async (io: ToolchainIO): Promise<{ code: number }> => {
+  const runtime = await preparePip(io)
+  if (!runtime) {
+    return { code: 1 }
+  }
+  try {
+    await runtime.pyodide.loadPackage('micropip')
+  } catch {
+    // 装不上 micropip 也还能用 importlib.metadata 列表
+  }
+  try {
+    runtime.pyodide.runPython(PIP_LIST_SOURCE)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    io.stderr(`pip: 列出已安装的包失败：${detail}\n`)
+    return { code: 1 }
+  }
+  return { code: 0 }
+}
+
+/** pip 的命令分发：argv 是 `pip` 之后的部分 */
+const runPip = async (io: ToolchainIO, argv: string[]): Promise<{ code: number }> => {
+  const command = argv[0] ?? ''
+  if (!command) {
+    io.stderr(PIP_USAGE)
+    return { code: 1 }
+  }
+  if (command === '-h' || command === '--help' || command === 'help') {
+    io.stdout(PIP_USAGE)
+    return { code: 0 }
+  }
+  if (command === '--version' || command === '-V') {
+    io.stdout(`pip（${micropipVersionLabel()}，Pyodide ${PYODIDE_VERSION}）\n`)
+    return { code: 0 }
+  }
+  if (command === 'install') {
+    return runPipInstall(io, argv.slice(1))
+  }
+  if (command === 'uninstall') {
+    return runPipUninstall(io, argv.slice(1))
+  }
+  if (command === 'list') {
+    return runPipList(io)
+  }
+  if (command === 'freeze') {
+    io.stderr(
+      'pip: 不支持 freeze（micropip.freeze() 输出的是 Pyodide 锁文件，不是 requirements 格式），' +
+        '请用 pip list 看已安装的包\n'
+    )
+    return { code: 1 }
+  }
+  io.stderr(`pip: 不支持的子命令 '${command}'\n${PIP_USAGE}`)
+  return { code: 1 }
+}
+
 type PythonMode = 'script' | 'code' | 'stdin' | 'version' | 'help' | 'module'
 
 type PythonInvocation = {
@@ -768,8 +1341,11 @@ const parsePythonArgs = (argv: string[]): PythonInvocation => {
 
 const PYTHON_USAGE = [
   '用法：python3 [-c "代码"] [脚本.py] [参数...]',
+  '      python3 -m pip install <包>      用 micropip 装纯 Python 包',
+  '      python3 -m nanovm_serve app:app  虚拟网络里的 WSGI 入口（vm serve 用）',
   '',
-  'Pyodide 版 CPython（WASM），标准库齐全，第三方包（pip）不支持。',
+  'Pyodide 版 CPython（WASM），标准库齐全；pip 只装纯 Python wheel 与 Pyodide',
+  '预编译好的 wasm 包（numpy / pandas 等），需要编译 C 扩展的包装不了。',
   '脚本所在的目录、/home/user 与 /tmp 会同步进 Python 的文件系统，',
   '脚本写出的文件会自动回到虚拟文件系统里。',
   '',
@@ -825,6 +1401,10 @@ const buildPythonRunner = (
 }
 
 const runPython = async (io: ToolchainIO, argv: string[]): Promise<{ code: number }> => {
+  // pip 这个 applet 会把命令原样交给 python 工具链：pip install … → python -m pip install …
+  if (argv[0] === 'pip') {
+    return runPip(io, argv.slice(1))
+  }
   const invocation = parsePythonArgs(argv)
   if (invocation.mode === 'version') {
     io.stdout(`Python ${pythonVersionLabel()}\n`)
@@ -838,9 +1418,22 @@ const runPython = async (io: ToolchainIO, argv: string[]): Promise<{ code: numbe
     io.stdout(PYTHON_USAGE)
     return { code: 0 }
   }
+  // -m 只认两个：pip（micropip）与 nanovm_serve（虚拟网络里的 WSGI 入口）
+  let serve: ServeInvocation | null = null
   if (invocation.mode === 'module') {
-    io.stderr(`python3: 不支持 -m（没有安装第三方包）。NanoVM Slim 只内置 Python 标准库。\n`)
-    return { code: 1 }
+    const moduleName = invocation.args[0] ?? ''
+    if (moduleName === 'pip') {
+      return runPip(io, invocation.args.slice(1))
+    }
+    const web = await loadPythonWeb()
+    serve = web.parseServeInvocation(['-m', moduleName, ...invocation.args.slice(1)])
+    if (!serve) {
+      io.stderr(
+        `python3: 不支持 -m ${moduleName || '（空模块名）'}，` +
+          '只支持 -m pip 与 -m nanovm_serve\n'
+      )
+      return { code: 1 }
+    }
   }
 
   let script: string | null = null
@@ -870,15 +1463,8 @@ const runPython = async (io: ToolchainIO, argv: string[]): Promise<{ code: numbe
     code = invocation.code ?? ''
   }
 
-  let runtime: PythonRuntime
-  try {
-    runtime = await loadPythonRuntime(() => undefined)
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error)
-    io.stderr(
-      `python3: Python 运行时加载失败，需要联网（首次安装约 12MB）：${detail}\n` +
-        '提示：连上网后执行 vm install python，装好之后本页内可离线复用。\n'
-    )
+  const runtime = await ensurePythonRuntime(io)
+  if (!runtime) {
     return { code: 1 }
   }
 
@@ -888,32 +1474,41 @@ const runPython = async (io: ToolchainIO, argv: string[]): Promise<{ code: numbe
     io.stderr(`python3: 有 ${skipped} 个文件超过同步上限（16MB），Python 里读不到它们\n`)
   }
   const pyodide = runtime.pyodide
-  try {
-    pyodide.setStdout({ batched: (text) => io.stdout(`${text}\n`) })
-    pyodide.setStderr({ batched: (text) => io.stderr(`${text}\n`) })
-    if (io.stdin) {
-      try {
-        pyodide.setStdin?.({ stdin: () => io.stdin })
-      } catch {
-        // 老版本 Pyodide 没有 setStdin，input() 会 EOFError
-      }
-    }
-  } catch {
-    // setStdout / setStderr 不可用时只能拿到 runPython 的返回值
-  }
+  // CGI 响应要原样回给虚拟网络，所以 serve 模式下先把 stdout 收集起来
+  const cgiOutput: string[] | undefined = serve ? [] : undefined
+  attachPythonIO(io, pyodide, io.stdin, cgiOutput)
   syncIntoPyodide(pyodide.FS, files)
+
+  // nanovm 模块每个实例只注入一次；环境变量（NANOVM_HTTP_*）每次都同步
+  let web: PythonWebModule | null = null
+  try {
+    web = await loadPythonWeb()
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    io.stderr(`python3: nanovm 模块加载失败，-m nanovm_serve 不可用：${detail}\n`)
+  }
+  if (web) {
+    ensurePythonWeb(pyodide, io, web)
+  }
 
   const runnerArgv = [
     mode === 'script' ? (invocation.script ?? script ?? '') : mode === 'code' ? '-c' : '-',
     ...scriptArgs,
   ]
-  const runner = buildPythonRunner(mode, { script, code, argv: runnerArgv })
   let exitCode = 0
   try {
-    pyodide.runPython(runner)
-    const value = pyodide.globals.get('__nanovm_exit_code')
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      exitCode = value
+    if (serve) {
+      if (!web) {
+        io.stderr('python3: nanovm 模块没有注入成功，无法运行 WSGI 应用\n')
+        return { code: 1 }
+      }
+      exitCode = web.runWsgiApp(pyodide, serve, { cwd: io.cwd })
+      if (cgiOutput && cgiOutput.length > 0) {
+        io.stdout(cgiOutput.join('\n'))
+      }
+    } else {
+      pyodide.runPython(buildPythonRunner(mode, { script, code, argv: runnerArgv }))
+      exitCode = readPythonExitCode(pyodide)
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
@@ -1037,6 +1632,8 @@ const runNodeCli = async (io: ToolchainIO, argv: string[]): Promise<{ code: numb
     argv: scriptArgs,
     env: io.env,
     cwd: io.cwd,
+    // 虚拟网络（vm serve）的 CGI 请求体从 stdin 进 Node 沙箱
+    stdin: io.stdin,
     files: Object.fromEntries(files),
     timeoutMs: nanoVMConfig().timeoutMs,
     signal: io.signal,

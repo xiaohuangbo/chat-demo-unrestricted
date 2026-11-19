@@ -35,6 +35,8 @@ export type NodeRunOptions = {
   cwd?: string
   /** 路径 → 内容 的文件快照 */
   files?: SandboxFileMap
+  /** 标准输入；虚拟网络的 CGI 请求体会从这里传给脚本（默认空串） */
+  stdin?: string
   timeoutMs?: number
   signal?: AbortSignal
   onStdout?: (text: string) => void
@@ -58,6 +60,7 @@ type ResolvedNodeOptions = {
   env: Record<string, string>
   cwd: string
   files: SandboxFileMap
+  stdin: string
   timeoutMs: number
   signal?: AbortSignal
   onStdout: (text: string) => void
@@ -183,6 +186,7 @@ const runInWorker = (worker: Worker, options: ResolvedNodeOptions): Promise<Node
       env: options.env,
       cwd: options.cwd,
       files: options.files,
+      stdin: options.stdin,
       timeoutMs: options.timeoutMs,
     }
     worker.postMessage(request)
@@ -200,6 +204,7 @@ const runInMainThread = async (options: ResolvedNodeOptions): Promise<NodeRunRes
     env: options.env,
     cwd: options.cwd,
     files: options.files,
+    stdin: options.stdin,
     timeoutMs: options.timeoutMs,
     onStdout: options.onStdout,
     onStderr: options.onStderr,
@@ -219,6 +224,7 @@ export const runNode = async (options: NodeRunOptions): Promise<NodeRunResult> =
     env: options.env ?? {},
     cwd: options.cwd ?? '/home/user',
     files: options.files ?? {},
+    stdin: options.stdin ?? '',
     timeoutMs: Math.max(1000, options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     signal: options.signal,
     onStdout: options.onStdout ?? (() => undefined),

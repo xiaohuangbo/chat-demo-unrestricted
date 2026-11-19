@@ -34,11 +34,11 @@ The API origin is set in [`rspack.config.ts`](../../rspack.config.ts) via `creat
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.0.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.1.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.7.0 / 270), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.7.1 / 271), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```

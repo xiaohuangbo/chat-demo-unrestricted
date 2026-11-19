@@ -55,6 +55,8 @@
 53. **Networking cannot bypass the browser security model**: the APK's built-in proxy only serves this app (token-checked, bound to 127.0.0.1), while plain browsers stay limited by CORS. A custom proxy sends the target URL to a third party — decide for yourself whether you trust it.
 54. **The new toolchains need the network too**: Lua (wasmoon, ~0.4 MB), SQLite (sql.js, ~1.3 MB) and esbuild (esbuild-wasm, ~12 MB) are downloaded from jsDelivr on first install and cached afterwards; `make` is built in, so it installs offline.
 55. **Every runtime here is a subset**: esbuild can only bundle files inside the VM (no npm resolution, no plugin ecosystem), SQLite is sql.js (no FTS / extension modules), Lua has no `os.execute` / `io.popen` host access, `make` has no parallel builds, `$(call)` / `$(eval)` or target-specific variables, and `jq` covers the common filters only; `timeout` returns 124 but cannot actually kill the child command.
+56. **The virtual network is CGI, not real sockets**: every request to a `vm serve` service re-runs the command (cold start); there are no daemons, keep-alive, concurrency or long-lived connections, request and response bodies are buffered, nothing outside `curl` can reach those ports, and a service that requests itself more than three levels deep is rejected.
+57. **Go / Rust / C / C++ have no in-browser compiler**: none of the official toolchains ship a `go` / `rustc` / `gcc` that runs inside browser WebAssembly, so NanoVM does not fake one. Backends can be written in Node (`http` / `ws`) or Python (Flask or the `nanovm` micro framework) on the virtual network; if you really need a Go / Rust / C binary, build it on the host and wire the artifact or the API in.
 
 ---
 

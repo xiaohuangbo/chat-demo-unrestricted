@@ -1,6 +1,7 @@
 import type { Applet, AppletContext, AppletResult } from '../types.js'
 import { dirName, resolvePath } from '../fs.js'
 import { fetchNet, netStatus, NetError, normalizeUrl } from '../netProxy.js'
+import { dispatchVirtual, isVirtualUrl } from '../net/virtual.js'
 import { fail, interrupted, ok, parseArgs, type FlagSpec, type ParsedArgs } from './helpers.js'
 
 /**
@@ -13,6 +14,7 @@ import { fail, interrupted, ok, parseArgs, type FlagSpec, type ParsedArgs } from
  */
 
 const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 const BINARY_HINT = '二进制数据无法写入文本终端'
 
@@ -254,13 +256,45 @@ const formatWriteOut = (format: string, response: NetResponse, url: string): str
   return text
 }
 
+// ---------- 虚拟网络 ----------
+
+/**
+ * 把发往 127.0.0.1 / localhost 的请求交给虚拟机里的服务（`vm serve` 注册）。
+ * 浏览器不允许直连本机端口，所以这一层既是「本地服务」，也是这类地址唯一的出路。
+ */
+const virtualNetResponse = async (
+  ctx: AppletContext,
+  url: URL,
+  method: string,
+  headers: Record<string, string>,
+  body: string
+): Promise<NetResponse> => {
+  const response = await dispatchVirtual(ctx, url, { method, headers, body })
+  const text = decoder.decode(response.bytes)
+  const headerRecord: Record<string, string> = {}
+  for (const [name, value] of response.headers) {
+    headerRecord[name] = value
+  }
+  return {
+    status: response.status,
+    ok: response.status >= 200 && response.status < 400,
+    contentType: headerRecord['content-type'] ?? 'text/plain',
+    headers: headerRecord,
+    text,
+    bytes: response.bytes,
+    route: 'virtual',
+  }
+}
+
 // ---------- curl ----------
 
 const curlUsage =
-  "curl [-sIL] [-o FILE|-O] [-X METHOD] [-H 'K: V'] [-d DATA] [--max-time N] [-w FORMAT] URL"
+  "curl [-siIL] [-o FILE|-O] [-X METHOD] [-H 'K: V'] [-d DATA] [--max-time N] [-w FORMAT] URL"
 
 const curlSpec: FlagSpec = {
   s: 'boolean',
+  i: 'boolean',
+  include: 'boolean',
   I: 'boolean',
   L: 'boolean',
   O: 'boolean',
@@ -315,6 +349,7 @@ const curlApplet: Applet = {
     }
     const silent = flagOn(parsed.flags, 's', 'silent')
     const headOnly = flagOn(parsed.flags, 'I', 'head')
+    const includeHeaders = flagOn(parsed.flags, 'i', 'include')
     const remoteName = flagOn(parsed.flags, 'O')
     const output = flagText(parsed.flags, 'o', 'output')
     const data = flagText(parsed.flags, 'd', 'data')
@@ -331,13 +366,21 @@ const curlApplet: Applet = {
     }
     let response: NetResponse
     try {
-      response = await fetchNet(target.href, {
-        method,
-        headers: buildHeaders(collectHeaders(ctx.argv), data),
-        body: data ?? undefined,
-        signal: ctx.signal,
-        timeoutMs: maxTime === null ? undefined : maxTime * 1000,
-      })
+      response = isVirtualUrl(target)
+        ? await virtualNetResponse(
+            ctx,
+            target,
+            method,
+            buildHeaders(collectHeaders(ctx.argv), data),
+            data ?? ''
+          )
+        : await fetchNet(target.href, {
+            method,
+            headers: buildHeaders(collectHeaders(ctx.argv), data),
+            body: data ?? undefined,
+            signal: ctx.signal,
+            timeoutMs: maxTime === null ? undefined : maxTime * 1000,
+          })
     } catch (error) {
       if (interrupted(ctx) || ctx.signal?.aborted === true) {
         return { code: 130, stderr: 'curl: 已中断\n' }
@@ -345,8 +388,15 @@ const curlApplet: Applet = {
       return netFailure('curl', error, maxTime)
     }
     const writeOutText = writeOut === null ? '' : formatWriteOut(writeOut, response, target.href)
+    const headerBlock = headOnly || includeHeaders ? headersText(response) : ''
     if (!response.ok) {
-      return { code: 22, stdout: writeOutText, stderr: `curl: HTTP ${response.status}\n` }
+      // -i 时连错误响应体一起打印，方便看服务端到底回了什么
+      const bodyText = includeHeaders ? responseText(response) : null
+      return {
+        code: 22,
+        stdout: `${headerBlock}${bodyText ? withNewline(bodyText) : ''}${writeOutText}`,
+        stderr: `curl: HTTP ${response.status}\n`,
+      }
     }
     const outputPath = output !== null ? output : remoteName ? remoteFileName(target) : null
     let stdout = ''
@@ -384,6 +434,7 @@ const curlApplet: Applet = {
         `curl: 响应是${BINARY_HINT}（${response.bytes.byteLength} 字节），请用 -o FILE 落文件\n`
       )
     }
+    stdout += headerBlock
     stdout += withNewline(text)
     stdout += writeOutText
     return { code: 0, stdout }
@@ -441,7 +492,9 @@ const wgetApplet: Applet = {
     }
     let response: NetResponse
     try {
-      response = await fetchNet(target.href, { method: 'GET', signal: ctx.signal })
+      response = isVirtualUrl(target)
+        ? await virtualNetResponse(ctx, target, 'GET', {}, '')
+        : await fetchNet(target.href, { method: 'GET', signal: ctx.signal })
     } catch (error) {
       if (interrupted(ctx) || ctx.signal?.aborted === true) {
         return { code: 130, stderr: 'wget: 已中断\n' }

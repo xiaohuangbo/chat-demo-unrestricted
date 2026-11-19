@@ -10,6 +10,7 @@ import {
 } from '../packages.js'
 import type { Applet, AppletContext, AppletResult, ToolchainIO, ToolchainId } from '../types.js'
 import { humanSize, needToolchain } from './helpers.js'
+import { addService, readServices, removeService, type ServiceKind } from '../net/virtual.js'
 
 /**
  * 按需工具链命令：python3 / python / node / lua / sqlite3 / esbuild / make / git /
@@ -105,15 +106,24 @@ const npmApplet: Applet = {
   }),
 }
 
+/**
+ * pip：走 Pyodide 自带的 micropip，只能装纯 Python 包（带 C 扩展的包没有 wasm 轮子）。
+ * 真正的安装在 Python 工具链里实现，这里只做「有没有装 Python」的门禁。
+ */
 const pipApplet: Applet = {
   name: 'pip',
-  summary: '不支持：NanoVM Slim 没有 pip',
-  summaryEn: 'Not supported: NanoVM Slim has no pip',
-  usage: 'pip',
-  run: (): AppletResult => ({
-    code: 127,
-    stderr: 'pip: NanoVM Slim 不支持 pip 安装，只内置 Python 标准库\n',
-  }),
+  summary: '安装纯 Python 包（Pyodide micropip），带 C 扩展的包不支持',
+  summaryEn: 'Install pure-Python packages through Pyodide micropip',
+  usage: 'pip install <包...> | pip list | pip --version',
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    if (!ctx.toolchains.installed('python')) {
+      return needToolchain(
+        'python',
+        'pip: 需要 Python 运行时（约 12MB），先执行 vm install python\n'
+      )
+    }
+    return runToolchain(ctx, 'python', ['pip', ...ctx.argv.slice(1)])
+  },
 }
 
 const VM_HELP = [
@@ -125,6 +135,10 @@ const VM_HELP = [
   '  vm list            工具链安装状态',
   '  vm install <id>    安装工具链（见 vm list，python / node / lua / sqlite / esbuild / make / git）',
   '  vm uninstall <id>  卸载工具链',
+  '  vm serve <端口> <命令>        注册虚拟 HTTP 服务（CGI，curl 127.0.0.1 访问）',
+  '  vm serve --static <端口> <目录>  注册静态文件服务',
+  '  vm serve --ws <端口> <命令>    注册 WebSocket 单消息服务（wscat 访问）',
+  '  vm serve list / rm <端口>      查看或删除服务',
   '  vm export          导出虚拟机镜像',
   '  vm help            这份说明',
   '',
@@ -185,7 +199,7 @@ const vmInfo = async (ctx: AppletContext): Promise<AppletResult> => {
   }).join(' · ')
   const totalMB = memory.totalMB > 0 ? memory.totalMB : config.memoryMB
   const lines = [
-    `NanoVM Slim ${info?.version ?? '2.7.0'}`,
+    `NanoVM Slim ${info?.version ?? '2.7.1'}`,
     `引擎：${info?.wasm === false ? 'JS 兼容内核' : 'WASM Shell Engine'}（异步 chunk 懒加载）`,
   ]
   if (applets > 0) {
@@ -317,6 +331,92 @@ const vmUninstall = async (ctx: AppletContext): Promise<AppletResult> => {
   }
 }
 
+/**
+ * `vm serve`：把命令登记到虚拟网络。
+ *
+ * 浏览器里没有常驻进程，所以服务是 CGI 形式的：每次请求按注册的命令跑一次，
+ * 环境变量给请求信息、stdin 给请求体、stdout 按 CGI 格式回响应。
+ */
+const vmServe = (ctx: AppletContext): AppletResult => {
+  const args = ctx.argv.slice(2)
+  const sub = args[0]
+  if (!sub || sub === 'list' || sub === 'ls' || sub === 'status') {
+    const services = readServices(ctx.fs)
+    if (services.length === 0) {
+      return {
+        code: 0,
+        stdout:
+          '还没有注册服务。\n' +
+          '  vm serve 3000 "node app.js"        注册 CGI 服务\n' +
+          '  vm serve --static 8080 www          注册静态目录\n' +
+          '  vm serve --ws 3000 "node ws.js"     注册 WebSocket 服务\n',
+      }
+    }
+    const lines = [
+      '端口   类型     命令 / 目录',
+      '----- ------  ----------------------------------------',
+    ]
+    for (const service of services) {
+      lines.push(`${String(service.port).padEnd(5)} ${service.kind.padEnd(8)} ${service.command}`)
+    }
+    lines.push(
+      '',
+      '访问：curl http://127.0.0.1:<端口>/   · WebSocket：wscat ws://127.0.0.1:<端口>/'
+    )
+    return { code: 0, stdout: `${lines.join('\n')}\n` }
+  }
+  if (sub === 'rm' || sub === 'remove' || sub === 'stop' || sub === 'delete') {
+    const port = Number.parseInt(args[1] ?? '', 10)
+    if (!Number.isInteger(port)) {
+      return { code: 1, stderr: 'vm: 用法 vm serve rm <端口>\n' }
+    }
+    return removeService(ctx.fs, port)
+      ? { code: 0, stdout: `已删除端口 ${port} 的服务\n` }
+      : { code: 1, stderr: `vm: 端口 ${port} 上没有注册服务\n` }
+  }
+  let kind: ServiceKind = 'cgi'
+  let rest = args
+  if (rest[0] === '--static' || rest[0] === '--ws') {
+    kind = rest[0] === '--static' ? 'static' : 'ws'
+    rest = rest.slice(1)
+  }
+  const portText = rest[0] ?? ''
+  const port = Number.parseInt(portText, 10)
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    return {
+      code: 1,
+      stderr: `vm: 端口必须是 1-65535（收到 '${portText}'）\n用法：vm serve [--static|--ws] <端口> <命令>\n`,
+    }
+  }
+  const command = rest.slice(1).join(' ').trim()
+  if (kind !== 'static' && command === '') {
+    return {
+      code: 1,
+      stderr: 'vm: 缺少要执行的命令，例如 vm serve 3000 "node app.js"\n',
+    }
+  }
+  addService(ctx.fs, {
+    port,
+    kind,
+    command: kind === 'static' ? command || '.' : command,
+    cwd: ctx.cwd,
+  })
+  const target =
+    kind === 'static'
+      ? `http://127.0.0.1:${port}/`
+      : kind === 'ws'
+        ? `ws://127.0.0.1:${port}/`
+        : `http://127.0.0.1:${port}/`
+  const tool = kind === 'ws' ? 'wscat' : 'curl'
+  return {
+    code: 0,
+    stdout:
+      `已注册${kind === 'static' ? '静态' : kind === 'ws' ? 'WebSocket' : ' CGI'}服务：${target}\n` +
+      `命令：${command || '.'}\n工作目录：${ctx.cwd}\n` +
+      `访问：${tool} ${target}\n`,
+  }
+}
+
 const vmApplet: Applet = {
   name: 'vm',
   summary: '虚拟机管理：引擎信息、内存、磁盘与工具链按需安装',
@@ -337,6 +437,8 @@ const vmApplet: Applet = {
         return vmInstall(ctx)
       case 'uninstall':
         return vmUninstall(ctx)
+      case 'serve':
+        return vmServe(ctx)
       case 'export':
         return {
           code: 0,
@@ -400,6 +502,42 @@ const esbuildApplet = runtimeApplet(
   '未安装 esbuild 打包器（约 12MB）'
 )
 
+const tscApplet = runtimeApplet(
+  'tsc',
+  'typescript',
+  'TypeScript 官方编译器（浏览器版），把 .ts / .tsx 转译成 JS',
+  'Official TypeScript compiler (browser build) turning .ts / .tsx into JS',
+  'tsc [--outfile=out.js|--outdir=dir] [--target=es2020] [--module=esm|cjs] [--sourceMap] 文件...',
+  '未安装 TypeScript 编译器（约 9MB）'
+)
+
+const sassApplet = runtimeApplet(
+  'sass',
+  'sass',
+  'dart-sass 官方编译器，SCSS / SASS 转 CSS',
+  'Official dart-sass compiler turning SCSS / SASS into CSS',
+  'sass [--style=expanded|compressed] 输入.scss [输出.css]',
+  '未安装 Sass 编译器（约 5.8MB）'
+)
+
+const terserApplet = runtimeApplet(
+  'terser',
+  'terser',
+  'Terser 官方 JS 压缩器（压缩 + 变量重命名）',
+  'Official Terser JS minifier (compress + mangle)',
+  'terser 输入.js [-c] [-m] [-o 输出.js]',
+  '未安装 Terser 压缩器（约 1.1MB）'
+)
+
+const prettierApplet = runtimeApplet(
+  'prettier',
+  'prettier',
+  'Prettier 官方格式化器（JS / TS / CSS / JSON / Markdown）',
+  'Official Prettier formatter (JS / TS / CSS / JSON / Markdown)',
+  'prettier [--check|--write] [--parser=类型] 文件...',
+  '未安装 Prettier 格式化器（约 2MB）'
+)
+
 /**
  * make：内置 Makefile 构建器。
  *
@@ -452,6 +590,10 @@ export const TOOLCHAIN_APPLETS: Applet[] = [
   luaApplet,
   sqliteApplet,
   esbuildApplet,
+  tscApplet,
+  sassApplet,
+  terserApplet,
+  prettierApplet,
   makeApplet,
   gitApplet,
   npmApplet,

@@ -1404,7 +1404,8 @@ export const en = {
   nanovmToolchainsTool: 'Command-line tools',
   nanovmToolchainsRuntimeHint:
     'Python / Node / Lua / SQLite — for scripts, databases and everything in between.',
-  nanovmToolchainsBuildHint: 'esbuild and make — bundle and compile right inside the VM.',
+  nanovmToolchainsBuildHint:
+    'esbuild / tsc / sass / terser / prettier plus the built-in make — bundle, compile, minify and format inside the VM.',
   nanovmToolchainsToolHint: 'Git for version control, built in — nothing to download.',
   nanovmToolchainSummary: '{installed} of {total} installed · about {size} MB',
   nanovmToolchainTryHint: 'Try {command}',
@@ -1472,6 +1473,18 @@ export const en = {
   nanovmNetInvalid: 'The proxy URL must start with http:// or https://',
   nanovmNetChecking: 'Testing…',
   settingDialogAsideNanoVMOptionLabel: 'NanoVM Slim',
+  changelogV271Title: 'v2.7.1 · 2026-11',
+  changelogV271Vnet:
+    'New virtual network inside the VM: `vm serve <port> <command>` registers a service, `serve <port> [dir]` starts a static site and `vm serve --ws` registers a WebSocket; `curl` / `wget` to 127.0.0.1 route to it automatically (CGI model, no real sockets, so a “local backend” works in the browser)',
+  changelogV271NodeWeb:
+    'The Node runtime gains `http` / `https` / `ws` / `url` / `querystring`: `http.createServer(...).listen(port)` runs on the virtual network with request bodies, status codes, headers and 404 branches; `require("ws")` serves single-message WebSockets',
+  changelogV271PythonWeb:
+    'Python gains `pip install` (Pyodide micropip, pure-Python packages) and a built-in `nanovm` module: `python3 -m nanovm_serve app:app` runs WSGI apps, so Flask or a hand-written REST API can live on the virtual network',
+  changelogV271BuildTools:
+    'Four new build toolchains: TypeScript (official tsc for TS/TSX), Sass (dart-sass with @use/@import), Terser (JS minifier) and Prettier (format JS/TS/CSS/JSON/Markdown/YAML), all installable from the console',
+  changelogV271Commands:
+    'Twelve new commands: patch / bc / expr / tree / fmt / time / uuid / getopt / tsort / envsubst / dotenv / sponge; grep supports -A/-B/-C context, sort supports -h and -V, head/tail accept the old `-5` form and curl -i prints response headers',
+  changelogV271Apk: 'Builds the 2.7.1 APK (versionCode 271), signed with xiaohuangbo.jks',
   changelogV270Title: 'v2.7.0 · 2026-11',
   changelogV270Mobile:
     'Mobile input bar rework: chain-of-thought, web search and deep thinking moved to a second row with visible text labels right above the send button, so no more sideways scrolling and guessing at icon-only buttons. On wider phones the three toggles share the send row. Desktop layout is unchanged',

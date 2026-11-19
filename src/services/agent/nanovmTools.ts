@@ -165,7 +165,19 @@ const lsTool: AgentTool = {
  * 看的 enum，工具真正执行时才动态 import 注册表（避免把 Pyodide / wasmoon 的加载器
  * 拖进首屏包）。新增工具链时两处都要改。
  */
-const INSTALLABLE = ['python', 'node', 'lua', 'sqlite', 'esbuild', 'make', 'git'] as const
+const INSTALLABLE = [
+  'python',
+  'node',
+  'lua',
+  'sqlite',
+  'esbuild',
+  'typescript',
+  'sass',
+  'terser',
+  'prettier',
+  'make',
+  'git',
+] as const
 
 const installTool: AgentTool = {
   id: 'nanovm_install',
@@ -175,9 +187,10 @@ const installTool: AgentTool = {
   summaryEn: 'Install runtimes and builders into NanoVM Slim on demand; asks for confirmation.',
   description:
     '在 NanoVM Slim 虚拟机里安装（启用）一个工具链：python（Pyodide 版 CPython，' +
-    '首次需联网下载约 12MB）、lua（wasmoon 版 Lua 5.4，约 0.4MB）、sqlite（sql.js 版 SQLite，' +
-    '约 1.3MB）、esbuild（esbuild-wasm 打包器，约 12MB）、node 与 git 与 make（浏览器内置，' +
-    '无需下载）。安装完成后就能在 nanovm_shell 里直接使用对应命令。已安装时直接返回成功。',
+    '约 12MB）、lua（wasmoon 版 Lua 5.4，约 0.4MB）、sqlite（sql.js 版 SQLite，约 1.3MB）、' +
+    'esbuild（打包器，约 12MB）、typescript（官方 tsc，约 9MB）、sass（约 5.8MB）、' +
+    'terser（约 1.1MB）、prettier（约 2MB）、node 与 git 与 make（浏览器内置，无需下载）。' +
+    '安装完成后就能在 nanovm_shell 里直接使用对应命令。已安装时直接返回成功。',
   inputSchema: {
     type: 'object',
     properties: {

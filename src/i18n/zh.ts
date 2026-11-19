@@ -1294,7 +1294,8 @@ export const zh = {
   nanovmToolchainsBuild: '构建工具',
   nanovmToolchainsTool: '命令行工具',
   nanovmToolchainsRuntimeHint: 'Python / Node / Lua / SQLite：写脚本、查数据库都靠它们。',
-  nanovmToolchainsBuildHint: 'esbuild 与 make：在虚拟机里直接打包、编译。',
+  nanovmToolchainsBuildHint:
+    'esbuild / tsc / sass / terser / prettier 与内置 make：打包、编译、压缩、格式化一条龙。',
   nanovmToolchainsToolHint: 'Git 版本管理，内置实现，不用下载。',
   nanovmToolchainSummary: '已安装 {installed} / {total}，占用约 {size} MB',
   nanovmToolchainTryHint: '试试 {command}',
@@ -1359,6 +1360,18 @@ export const zh = {
   nanovmNetInvalid: '代理地址要以 http:// 或 https:// 开头',
   nanovmNetChecking: '测试中…',
   settingDialogAsideNanoVMOptionLabel: 'NanoVM Slim',
+  changelogV271Title: 'v2.7.1 · 2026-11',
+  changelogV271Vnet:
+    '新增虚拟机虚拟网络：`vm serve <端口> <命令>` 注册服务、`serve <端口> [目录]` 起静态站、`vm serve --ws` 注册 WebSocket；`curl` / `wget` 访问 127.0.0.1 会自动路由到虚拟服务（CGI 模型，无真实 socket，浏览器里也能跑「本地后端」）',
+  changelogV271NodeWeb:
+    'Node 运行时补齐 `http` / `https` / `ws` / `url` / `querystring`：`http.createServer(...).listen(port)` 在虚拟网络里跑，Express 风格的请求体、状态码、响应头、404 分支都能用；`require("ws")` 支持单消息 WebSocket 服务',
+  changelogV271PythonWeb:
+    'Python 支持 `pip install`（Pyodide micropip，纯 Python 包）与内置 `nanovm` 模块：`python3 -m nanovm_serve app:app` 跑 WSGI 应用，Flask / 手写 REST API 都能挂在虚拟网络上',
+  changelogV271BuildTools:
+    '新增 4 个构建工具链：TypeScript（官方 tsc，转译 TS/TSX）、Sass（dart-sass，SCSS 转 CSS 并支持 @use/@import）、Terser（JS 压缩）、Prettier（格式化 JS/TS/CSS/JSON/Markdown/YAML），控制台里可直接安装',
+  changelogV271Commands:
+    '新增 12 条命令：patch / bc / expr / tree / fmt / time / uuid / getopt / tsort / envsubst / dotenv / sponge；grep 支持 -A/-B/-C 上下文，sort 支持 -h 与 -V，head/tail 支持 `-5` 老式写法，curl 支持 -i 打印响应头',
+  changelogV271Apk: '同步构建 2.7.1 APK（versionCode 271），使用 xiaohuangbo.jks 签名',
   changelogV270Title: 'v2.7.0 · 2026-11',
   changelogV270Mobile:
     '手机端输入栏改版：思维链 / 智能搜索 / 深度思考挪到第二排并显示文字标签，和发送按钮上下相邻，不用再横向滑动去猜无文字图标；屏幕更宽时三个开关直接和发送按钮同排。桌面端布局完全不变',
