@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
+  IconGlobeLanguageOutline14,
   IconPanelLeftOutline16,
   IconSettingsOutline16,
   IconTerminalOutline16,
@@ -18,8 +19,9 @@ import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { closeLab, openLab, useLab } from '../../services/lab/labStore.js'
-import { toggleNanoVM, useNanoVM } from '../../services/nanovm/session.js'
+import { toggleNanoVM, toggleWebVM, useNanoVM } from '../../services/nanovm/session.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
+import { useWebVMConfig } from '../../services/webvm/config.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
@@ -30,7 +32,9 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const sessions = useChatStore((state) => state.sessions)
   const labOpen = useLab((state) => state.open)
   const nanoVMEnabled = useNanoVMConfig((state) => state.enabled)
+  const webVMEnabled = useWebVMConfig((state) => state.enabled)
   const nanoVMOpen = useNanoVM((state) => state.open)
+  const activeVm = useNanoVM((state) => state.activeVm)
   const activeId = useChatStore((state) => state.activeId)
   const [now, setNow] = useState(Date.now)
   const groups = useMemo(() => groupSessions(sessions, now, t), [sessions, now, t])
@@ -108,7 +112,10 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         {nanoVMEnabled ? (
           <button
             type="button"
-            className={clsx(styles.settings, nanoVMOpen && styles.settingsActive)}
+            className={clsx(
+              styles.settings,
+              nanoVMOpen && activeVm === 'nanovm' && styles.settingsActive
+            )}
             onClick={() => {
               toggleNanoVM()
               if (mobile) {
@@ -120,6 +127,26 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
               <IconTerminalOutline16 />
             </span>
             <span className={styles.settingsLabel}>{t('nanovm')}</span>
+          </button>
+        ) : null}
+        {webVMEnabled ? (
+          <button
+            type="button"
+            className={clsx(
+              styles.settings,
+              nanoVMOpen && activeVm === 'webvm' && styles.settingsActive
+            )}
+            onClick={() => {
+              toggleWebVM()
+              if (mobile) {
+                closeMobileSider()
+              }
+            }}
+          >
+            <span className={styles.settingsIcon}>
+              <IconGlobeLanguageOutline14 />
+            </span>
+            <span className={styles.settingsLabel}>{t('webvm')}</span>
           </button>
         ) : null}
         <button

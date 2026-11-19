@@ -86,7 +86,11 @@ export const createConfig = ({
     }),
     new rspack.DefinePlugin({ __API_ORIGIN__: JSON.stringify(apiOrigin) }),
     new rspack.CopyRspackPlugin({
-      patterns: [{ from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' }],
+      patterns: [
+        { from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' },
+        // WebVM 的跨源隔离 shim：必须放在站点根目录，注册后作用于整个应用
+        { from: path.resolve(root, 'public/coi-sw.js'), to: 'coi-sw.js', toType: 'file' },
+      ],
     }),
   ],
   performance: { hints: false },

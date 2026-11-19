@@ -34,9 +34,10 @@
 - **浏览器 Agent 工具**（默认关闭，逐项开关）：时间、定位、天气、通知、剪贴板、抓网页、生成文件、打开链接、可视化组件；
 - **虚拟工作区**：浏览器本地文件库，任意格式导入导出、OPFS 真文件系统、安卓端为应用存储；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 命令，桌面端右侧停靠、手机端底部面板，Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git 按需安装，虚拟机内自带虚拟网络（Node 与 Python 的 HTTP / WebSocket 服务）；
+- **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，自带 bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
-- **安卓端**：APK 构建、应用内更新检测、虚拟机联网内置代理。
+- **安卓端**：APK 构建、应用内更新检测、NanoVM 联网内置代理；WebVM 因 Android WebView 不支持跨源隔离而只能在浏览器里运行。
 
 ## 文档导航
 
@@ -46,14 +47,14 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.28：设置页每一组功能、NanoVM Slim、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.29：设置页每一组功能、NanoVM Slim、WebVM、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 57 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 65 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -67,12 +68,12 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：`deepseek-unrestricted-2.7.1.apk`（7.5 MB，versionCode 271，
-SHA-256 `8ff166af736911633b97e29b8a2d1d18a0304473fa292a443fa5d5f8a5a8e309`），详情见 [android/README.md](android/README.md)。
+预构建产物：`deepseek-unrestricted-2.7.2.apk`（7.5 MB，versionCode 272，
+SHA-256 `b4a281535a9e4357b7b22aa233a073c779ec5c8e1ebc4725eaf20b632be4332e`），详情见 [android/README.md](android/README.md)。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.1，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.2，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -81,14 +82,16 @@ SHA-256 `8ff166af736911633b97e29b8a2d1d18a0304473fa292a443fa5d5f8a5a8e309`），
 | 主题与语言      | 明 / 暗、zh-CN / en-US                                     | 13/13 |
 | 生产静态构建    | `dist/` 产物跑同一套用例                                   | 13/13 |
 | NanoVM / 工具链 | 终端、配额、工具调用、11 条工具链、虚拟网络                | 21/21 |
+| WebVM / CheerpX | 跨源隔离、启动、xterm 输入、导入导出、切换、Agent 工具     | 通过  |
 | 聊天模式        | 仅聊天 / 网页 Agent / PTC / 创造 的工具分组与往返上限      | 10/10 |
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
-| 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台  | 通过  |
+| 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
 
+- **2.7.2**：新增 WebVM / CheerpX 终端：浏览器里的 x86 Debian 10，自带 gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出、编程环境检测与 `webvm_shell` / `webvm_ls` / `webvm_status` 三个模型工具。
 - **2.7.1**：虚拟机虚拟网络（`vm serve` + `serve` + `wscat`，curl 访问 127.0.0.1 自动路由）；Node 补齐 `http`/`ws`，Python 支持 `pip install` 与 Flask/WSGI；新增 tsc / Sass / Terser / Prettier 工具链与 12 条开发命令。
 - **2.7.0**：手机端输入栏把思维链 / 智能搜索 / 深度思考挪到第二排并显示文字标签（桌面不变）；NanoVM Slim 新增 26 条命令与 jq 子集；设置里新增 Lua / SQLite / esbuild / make 按需工具链。
 - **2.6.9**：设置 → 关于新增「检查更新」（安卓端直接给 APK 链接）；修复终端光标残影；安卓端工作区改为应用存储语义并放宽配额；README 拆分为分册。

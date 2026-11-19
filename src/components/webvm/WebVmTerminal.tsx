@@ -1,0 +1,620 @@
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import '@xterm/xterm/css/xterm.css'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslate } from '../../i18n/index.js'
+import { showToast } from '../base/toastState.js'
+import { openSettings } from '../settings/settingsDialogState.js'
+import {
+  bootWebVm,
+  checkWebVmEnvironment,
+  clearWebVmScreen,
+  exportWebVmHome,
+  importWebVmFiles,
+  resetWebVm,
+  resizeWebVm,
+  restartWebVm,
+  sendWebVmText,
+  subscribeWebVmOutput,
+  useWebVM,
+} from '../../services/webvm/session.js'
+import { enableCrossOriginIsolation } from '../../services/webvm/coi.js'
+import { useWebVMConfig } from '../../services/webvm/config.js'
+import { WebVmResetDialog } from './WebVmResetDialog.js'
+import styles from './WebVM.module.css'
+
+/** CheerpX 的 Linux 只有一个控制台；终端字号跟 NanoVM 保持一致 */
+const FONT_FAMILY =
+  "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Noto Sans Mono CJK SC', monospace"
+
+type Palette = {
+  background: string
+  foreground: string
+  cursor: string
+  selection: string
+}
+
+const readPalette = (): Palette => {
+  const computed = getComputedStyle(document.body)
+  const read = (name: string, fallback: string) =>
+    computed.getPropertyValue(name).trim() || fallback
+  return {
+    background: read('--dsw-alias-bg-base', '#ffffff'),
+    foreground: read('--dsw-alias-label-primary', '#1f2329'),
+    cursor: read('--dsw-alias-label-primary', '#1f2329'),
+    selection: read('--dsw-alias-brand-primary', '#4d6bfe'),
+  }
+}
+
+const xtermTheme = (palette: Palette) => ({
+  background: palette.background,
+  foreground: palette.foreground,
+  cursor: palette.cursor,
+  cursorAccent: palette.background,
+  selectionBackground: palette.selection,
+  black: '#1f2329',
+  red: '#d93025',
+  green: '#188038',
+  yellow: '#b06000',
+  blue: '#1a73e8',
+  magenta: '#a142f4',
+  cyan: '#007b83',
+  white: '#e8eaed',
+  brightBlack: '#5f6368',
+  brightRed: '#f28b82',
+  brightGreen: '#81c995',
+  brightYellow: '#fdd663',
+  brightBlue: '#8ab4f8',
+  brightMagenta: '#d7aefb',
+  brightCyan: '#78d9ec',
+  brightWhite: '#ffffff',
+})
+
+const ONLINE_URL = 'https://chat-unrestricted.fur0.com/'
+
+const openOnline = () => {
+  // WebView 里 window.open 不会触发 shouldOverrideUrlLoading；直接赋值 location
+  // 会让主框架导航被 shouldOverrideUrlLoading 接住，交给系统浏览器打开。
+  window.location.assign(ONLINE_URL)
+}
+
+const statusTone = (status: string): 'ready' | 'loading' | 'error' | 'idle' => {
+  if (status === 'ready') {
+    return 'ready'
+  }
+  if (status === 'loading' || status === 'connecting' || status === 'booting') {
+    return 'loading'
+  }
+  if (status === 'error') {
+    return 'error'
+  }
+  return 'idle'
+}
+
+/**
+ * WebVM 终端：xterm.js + CheerpX 的 VT100 控制台。
+ *
+ * 这个组件是懒加载的（xterm 与样式单独一个 chunk），只有真正切到 WebVM 时
+ * 才会下载。切回 NanoVM 时组件保持挂载、仅用 CSS 隐藏，所以滚动历史与输入
+ * 状态都还在；CheerpX 进程本身在 session 模块里，和面板开合无关。
+ */
+export const WebVmTerminal = ({
+  visible,
+  compact = false,
+}: {
+  visible: boolean
+  compact?: boolean
+}) => {
+  const t = useTranslate()
+  const status = useWebVM((state) => state.status)
+  const detail = useWebVM((state) => state.detail)
+  const error = useWebVM((state) => state.error)
+  const bootMs = useWebVM((state) => state.bootMs)
+  const startedAt = useWebVM((state) => state.startedAt)
+  const coi = useWebVM((state) => state.coi)
+  const coiReason = useWebVM((state) => state.coiReason)
+  const busy = useWebVM((state) => state.busy)
+  const clearToken = useWebVM((state) => state.clearToken)
+  const autoBoot = useWebVMConfig((state) => state.autoBoot)
+  const imageId = useWebVMConfig((state) => state.imageId)
+  const customImageUrl = useWebVMConfig((state) => state.customImageUrl)
+
+  const hostRef = useRef<HTMLDivElement>(null)
+  const termRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [coiBusy, setCoiBusy] = useState(false)
+  const [coiError, setCoiError] = useState<string | null>(null)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [envOpen, setEnvOpen] = useState(false)
+  const [envText, setEnvText] = useState('')
+  const [envBusy, setEnvBusy] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
+
+  const booting = status === 'loading' || status === 'connecting' || status === 'booting'
+  const webview = coi === 'unsupported' && coiReason === 'webview'
+
+  // 启动计时：只用于给用户一个「已经等了多久」的反馈
+  useEffect(() => {
+    if (!booting || !startedAt) {
+      setElapsed(0)
+      return
+    }
+    setElapsed(Math.max(0, Math.round((Date.now() - startedAt) / 1000)))
+    const timer = window.setInterval(() => {
+      setElapsed(Math.max(0, Math.round((Date.now() - startedAt) / 1000)))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [booting, startedAt])
+
+  // xterm 只创建一次；主题跟随应用明暗切换
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) {
+      return
+    }
+    const palette = readPalette()
+    const terminal = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'block',
+      fontFamily: FONT_FAMILY,
+      fontSize: compact ? 12 : 13,
+      lineHeight: 1.2,
+      scrollback: 5000,
+      convertEol: false,
+      allowProposedApi: false,
+      theme: xtermTheme(palette),
+    })
+    const fit = new FitAddon()
+    terminal.loadAddon(fit)
+    terminal.open(host)
+    termRef.current = terminal
+    fitRef.current = fit
+
+    const write = subscribeWebVmOutput((chunk) => terminal.write(chunk))
+    const data = terminal.onData((value) => sendWebVmText(value))
+    const resize = terminal.onResize(({ cols, rows }) => {
+      window.clearTimeout(resizeTimer)
+      resizeTimer = window.setTimeout(() => resizeWebVm(cols, rows), 150)
+    })
+    let resizeTimer = 0
+
+    const applyTheme = () => {
+      terminal.options.theme = xtermTheme(readPalette())
+    }
+    const observer = new MutationObserver(applyTheme)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
+
+    const fitNow = () => {
+      const rect = host.getBoundingClientRect()
+      if (rect.width < 30 || rect.height < 30) {
+        return
+      }
+      try {
+        fit.fit()
+      } catch {
+        // 容器尺寸为 0 时 xterm 会抛错，等下一次 resize
+      }
+    }
+    const sizeObserver = new ResizeObserver(fitNow)
+    sizeObserver.observe(host)
+    fitNow()
+
+    return () => {
+      data.dispose()
+      resize.dispose()
+      write()
+      observer.disconnect()
+      sizeObserver.disconnect()
+      window.clearTimeout(resizeTimer)
+      terminal.dispose()
+      termRef.current = null
+      fitRef.current = null
+    }
+    // 只在挂载时创建；compact 变化通过重新挂载外层来生效
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 切回 WebVM 时重新适配尺寸（隐藏期间容器是 0×0）
+  useEffect(() => {
+    if (!visible) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      const host = hostRef.current
+      if (!host) {
+        return
+      }
+      try {
+        fitRef.current?.fit()
+      } catch {
+        // 忽略尺寸瞬时错误
+      }
+      host.focus()
+    }, 30)
+    return () => window.clearTimeout(timer)
+  }, [visible])
+
+  useEffect(() => {
+    if (clearToken > 0) {
+      termRef.current?.clear()
+    }
+  }, [clearToken])
+
+  // 打开 WebVM 时按配置自动启动
+  useEffect(() => {
+    if (!visible || !autoBoot) {
+      return
+    }
+    if (status === 'idle' && coi === 'isolated') {
+      void bootWebVm()
+    }
+  }, [autoBoot, coi, status, visible])
+
+  const focusTerminal = () => {
+    termRef.current?.focus()
+  }
+
+  const start = () => {
+    if (status === 'error') {
+      void restartWebVm()
+      return
+    }
+    void bootWebVm()
+  }
+
+  const enableCoi = async () => {
+    setCoiBusy(true)
+    setCoiError(null)
+    try {
+      await enableCrossOriginIsolation()
+      // 正常路径会刷新页面；如果已经隔离，直接启动
+      void bootWebVm()
+    } catch (reason) {
+      setCoiError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setCoiBusy(false)
+    }
+  }
+
+  const onImport = async (files: File[]) => {
+    if (files.length === 0) {
+      return
+    }
+    try {
+      const result = await importWebVmFiles(files)
+      showToast({ key: 'webvmImportDone', params: { count: result.count } })
+    } catch (reason) {
+      showToast({
+        key: 'webvmImportFailed',
+        params: { reason: reason instanceof Error ? reason.message : String(reason) },
+        type: 'error',
+      })
+    }
+  }
+
+  const onExport = async () => {
+    try {
+      const blob = await exportWebVmHome()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'webvm-home.tar.gz'
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      showToast({ key: 'webvmExportDone' })
+    } catch (reason) {
+      showToast({
+        key: 'webvmExportFailed',
+        params: { reason: reason instanceof Error ? reason.message : String(reason) },
+        type: 'error',
+      })
+    }
+  }
+
+  const checkEnv = async () => {
+    setEnvOpen(true)
+    setEnvBusy(true)
+    try {
+      setEnvText(await checkWebVmEnvironment())
+    } catch (reason) {
+      setEnvText(
+        t('webvmEnvFailed', {
+          reason: reason instanceof Error ? reason.message : String(reason),
+        })
+      )
+    } finally {
+      setEnvBusy(false)
+    }
+  }
+
+  const reset = async () => {
+    setResetOpen(false)
+    try {
+      await resetWebVm(true)
+      showToast({ key: 'webvmResetDone' })
+    } catch (reason) {
+      showToast({
+        key: 'webvmResetFailed',
+        params: { reason: reason instanceof Error ? reason.message : String(reason) },
+        type: 'error',
+      })
+    }
+  }
+
+  const imageLabel =
+    imageId === 'custom'
+      ? customImageUrl || t('webvmImageCustom')
+      : imageId === 'debian-2023'
+        ? t('webvmImageDebian2023')
+        : t('webvmImageDebian')
+
+  const statusText =
+    status === 'loading'
+      ? t('webvmStatusLoading')
+      : status === 'connecting'
+        ? t('webvmStatusConnecting')
+        : status === 'booting'
+          ? t('webvmStatusBooting')
+          : status === 'ready'
+            ? t('webvmStatusReady', { ms: bootMs ?? 0 })
+            : status === 'error'
+              ? t('webvmStatusError', { reason: error ?? '—' })
+              : status === 'coi'
+                ? coi === 'unsupported'
+                  ? t('webvmStatusUnsupported')
+                  : t('webvmStatusCoi')
+                : t('webvmStatusIdle')
+
+  const key = (value: string) => {
+    sendWebVmText(value)
+    focusTerminal()
+  }
+
+  const paste = async () => {
+    try {
+      const text = await navigator.clipboard?.readText()
+      if (!text) {
+        return
+      }
+      sendWebVmText(text)
+      focusTerminal()
+    } catch {
+      showToast({ key: 'webvmPasteFailed', type: 'error' })
+    }
+  }
+
+  return (
+    <div className={styles.wrap} data-status={status}>
+      <div className={styles.statusRow}>
+        <span className={styles.dot} data-status={statusTone(status)} aria-hidden />
+        <span className={styles.statusText} title={statusText}>
+          {statusText}
+        </span>
+        <span className={styles.imageLabel} title={imageLabel}>
+          {imageLabel}
+        </span>
+        {busy ? (
+          <span className={styles.busy}>
+            {busy === 'import'
+              ? t('webvmImport')
+              : busy === 'export'
+                ? t('webvmExport')
+                : t('webvmEnvBusy')}
+          </span>
+        ) : null}
+      </div>
+
+      <div className={styles.stage}>
+        <div
+          ref={hostRef}
+          className={styles.terminal}
+          data-compact={compact ? 'true' : undefined}
+          onClick={focusTerminal}
+          role="application"
+          aria-label={t('webvmTabLabel')}
+        />
+
+        {status === 'coi' ? (
+          <div className={styles.overlay}>
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>
+                {webview ? t('webvmUnsupportedTitle') : t('webvmCoiTitle')}
+              </div>
+              {webview ? null : <div className={styles.cardText}>{t('webvmCoiHint')}</div>}
+              {webview ? (
+                <>
+                  <div className={styles.error}>{t('webvmCoiWebView')}</div>
+                  <div className={styles.note}>{t('webvmBrowserHint')}</div>
+                </>
+              ) : coi === 'unsupported' ? (
+                <div className={styles.error}>{t('webvmCoiUnsupported')}</div>
+              ) : null}
+              {coiError ? <div className={styles.error}>{coiError}</div> : null}
+              <div className={styles.cardActions}>
+                {coi === 'registerable' ? (
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    disabled={coiBusy}
+                    onClick={() => void enableCoi()}
+                  >
+                    {coiBusy ? t('webvmCoiReloading') : t('webvmCoiButton')}
+                  </button>
+                ) : null}
+                {webview ? (
+                  <button type="button" className={styles.primary} onClick={openOnline}>
+                    {t('webvmOpenBrowser')}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => openSettings('nanovm')}
+                >
+                  {t('settings')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {status === 'idle' ? (
+          <div className={styles.overlay}>
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>{t('webvmTitle')}</div>
+              <div className={styles.cardText}>{t('webvmStartHint')}</div>
+              <div className={styles.cardActions}>
+                <button type="button" className={styles.primary} onClick={start}>
+                  {t('webvmStart')}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => openSettings('nanovm')}
+                >
+                  {t('settings')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {booting ? (
+          <div className={styles.overlay}>
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>
+                <span className={styles.spinner} aria-hidden />
+                {t('webvmTitle')}
+              </div>
+              <div className={styles.cardText}>{detail ?? statusText}</div>
+              <div className={styles.progressLine}>
+                {t('webvmBootElapsed', { seconds: elapsed })}
+              </div>
+              <div className={styles.bar} aria-hidden>
+                <span />
+              </div>
+              <div className={styles.note}>{t('webvmStartHint')}</div>
+            </div>
+          </div>
+        ) : null}
+
+        {status === 'error' ? (
+          <div className={styles.overlay}>
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>{t('webvmErrorTitle')}</div>
+              <div className={styles.error}>{error ?? '—'}</div>
+              <div className={styles.cardActions}>
+                <button type="button" className={styles.primary} onClick={start}>
+                  {t('webvmRetry')}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => setResetOpen(true)}
+                >
+                  {t('webvmReset')}
+                </button>
+              </div>
+              <div className={styles.note}>{t('webvmNoNetwork')}</div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {envOpen ? (
+        <div className={styles.envPanel}>
+          <div className={styles.envHead}>
+            <span>{t('webvmEnv')}</span>
+            <button type="button" className={styles.linkButton} onClick={() => setEnvOpen(false)}>
+              {t('close')}
+            </button>
+          </div>
+          <pre className={styles.envPre}>{envBusy ? t('webvmEnvBusy') : envText}</pre>
+        </div>
+      ) : null}
+
+      <div className={styles.toolbar} data-compact={compact ? 'true' : undefined}>
+        <button type="button" className={styles.tool} onClick={() => key('\x1b')}>
+          Esc
+        </button>
+        <button type="button" className={styles.tool} onClick={() => key('\t')}>
+          Tab
+        </button>
+        <button type="button" className={styles.tool} onClick={() => key('\x03')}>
+          Ctrl+C
+        </button>
+        <button type="button" className={styles.tool} onClick={() => key('\x04')}>
+          Ctrl+D
+        </button>
+        <button type="button" className={styles.tool} onClick={() => void paste()}>
+          {t('webvmPaste')}
+        </button>
+        <button type="button" className={styles.tool} onClick={() => key('\x1b[A')}>
+          ↑
+        </button>
+        <button type="button" className={styles.tool} onClick={() => key('\x1b[B')}>
+          ↓
+        </button>
+        <button type="button" className={styles.tool} onClick={focusTerminal}>
+          {t('webvmKeyboard')}
+        </button>
+        <span className={styles.toolSpacer} />
+        <button
+          type="button"
+          className={styles.tool}
+          disabled={busy !== null || status === 'coi'}
+          onClick={() => importRef.current?.click()}
+        >
+          {t('webvmImport')}
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          disabled={busy !== null || status !== 'ready'}
+          onClick={() => void onExport()}
+        >
+          {t('webvmExport')}
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          disabled={status === 'coi'}
+          onClick={() => void checkEnv()}
+        >
+          {t('webvmEnv')}
+        </button>
+        <button type="button" className={styles.tool} onClick={clearWebVmScreen}>
+          {t('webvmClear')}
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          disabled={status === 'coi' || status === 'idle'}
+          onClick={() => setResetOpen(true)}
+        >
+          {t('webvmReset')}
+        </button>
+        <button type="button" className={styles.tool} onClick={() => openSettings('nanovm')}>
+          {t('webvmSettingsTitle')}
+        </button>
+      </div>
+      <div className={styles.tip}>{t('webvmTerminalHint')}</div>
+
+      <input
+        ref={importRef}
+        type="file"
+        multiple
+        hidden
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? [])
+          event.target.value = ''
+          void onImport(files)
+        }}
+      />
+      {resetOpen ? (
+        <WebVmResetDialog onClose={() => setResetOpen(false)} onConfirm={() => void reset()} />
+      ) : null}
+    </div>
+  )
+}

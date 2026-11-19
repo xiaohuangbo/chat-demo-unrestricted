@@ -58,6 +58,13 @@
 | NanoVM            | Command timeout                      | 15 s                         | `chat-demo:nanovm-config`                  | Unaffected                      |
 | NanoVM            | VM files                             | Factory tree                 | OPFS `chat-demo-nanovm`                    | Unaffected                      |
 | NanoVM            | Installed toolchains                 | Node / Git / make (built in) | `chat-demo:nanovm-packages`                | Unaffected                      |
+| WebVM             | Enable WebVM                         | On                           | `chat-demo:webvm-config`                   | Unaffected                      |
+| WebVM             | Let the model call WebVM             | Off                          | `chat-demo:webvm-config`                   | Unaffected                      |
+| WebVM             | Boot automatically when opened       | On                           | `chat-demo:webvm-config`                   | Unaffected                      |
+| WebVM             | System image                         | Debian 10 full               | `chat-demo:webvm-config`                   | Unaffected                      |
+| WebVM             | Per-command timeout                  | 30 s                         | `chat-demo:webvm-config`                   | Unaffected                      |
+| WebVM             | Disk overlay (auto)                  | Empty                        | IndexedDB `nanovm-webvm:debian`            | Unaffected                      |
+| WebVM             | Cross-origin isolation (auto)        | Not enabled                  | Service worker `coi-sw.js`                 | Unaffected                      |
 | Composer          | Chat mode                            | Web agent                    | `chat-demo:chat-mode`                      | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.

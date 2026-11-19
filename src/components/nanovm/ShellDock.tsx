@@ -1,16 +1,30 @@
 import clsx from 'clsx'
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { IconButton } from '../base/IconButton.js'
 import { IconCloseOutline16, IconTerminalOutline16, IconTrashOutline16 } from '../base/icons.js'
 import { loadEngine, useEngine } from '../../services/nanovm/boot.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
 import { clearNanoVMScreen, closeNanoVM, useNanoVM } from '../../services/nanovm/session.js'
+import { clearWebVmScreen } from '../../services/webvm/session.js'
+import { useWebVMConfig } from '../../services/webvm/config.js'
 import { ResetVmDialog } from './ResetVmDialog.js'
 import { mbText, useVmUsage } from './usage.js'
 import { ShellTabs } from './ShellTabs.js'
 import { TerminalView } from './TerminalView.js'
+import { VmSwitcher } from './VmSwitcher.js'
 import styles from './NanoVM.module.css'
+
+const WebVmTerminal = lazy(() =>
+  import('../webvm/WebVmTerminal.js').then((module) => ({ default: module.WebVmTerminal }))
+)
 
 /** 停靠宽度：默认 420px，可拖到 320px ~ 视口的 70% */
 const WIDTH_KEY = 'chat-demo:nanovm-dock-width'
@@ -50,6 +64,8 @@ export const ShellDock = () => {
   const t = useTranslate()
   const tabs = useNanoVM((state) => state.tabs)
   const activeId = useNanoVM((state) => state.activeId)
+  const activeVm = useNanoVM((state) => state.activeVm)
+  const webvmEnabled = useWebVMConfig((state) => state.enabled)
   const docked = useNanoVMConfig((state) => state.desktopDock)
   const memoryMB = useNanoVMConfig((state) => state.memoryMB)
   const status = useEngine((state) => state.status)
@@ -63,6 +79,14 @@ export const ShellDock = () => {
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const [resizing, setResizing] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [webvmMounted, setWebvmMounted] = useState(activeVm === 'webvm')
+
+  // WebVM 第一次打开后保持挂载：切到 NanoVM 只是 CSS 隐藏，滚动历史与输入都还在
+  useEffect(() => {
+    if (activeVm === 'webvm') {
+      setWebvmMounted(true)
+    }
+  }, [activeVm])
 
   // 窗口变窄时把宽度收回视口 70% 以内
   useEffect(() => {
@@ -166,18 +190,20 @@ export const ShellDock = () => {
       <header className={styles.dockHead}>
         <div className={styles.dockTitle}>
           <IconTerminalOutline16 />
-          <span>{t('nanovm')}</span>
+          <span>{activeVm === 'webvm' ? t('webvmTitle') : t('nanovm')}</span>
         </div>
         <div className={styles.dockActions}>
-          <button type="button" className={styles.headReset} onClick={() => setResetOpen(true)}>
-            {t('nanovmResetShort')}
-          </button>
+          {activeVm === 'nanovm' ? (
+            <button type="button" className={styles.headReset} onClick={() => setResetOpen(true)}>
+              {t('nanovmResetShort')}
+            </button>
+          ) : null}
           <IconButton
             size="xs"
             tooltip={t('nanovmClear')}
             icon={<IconTrashOutline16 />}
-            disabled={tab.lines.length === 0}
-            onClick={() => clearNanoVMScreen()}
+            disabled={activeVm === 'nanovm' && tab.lines.length === 0}
+            onClick={() => (activeVm === 'webvm' ? clearWebVmScreen() : clearNanoVMScreen())}
           />
           <IconButton
             size="xs"
@@ -187,18 +213,34 @@ export const ShellDock = () => {
           />
         </div>
       </header>
-      <ShellTabs variant="dock" />
-      <div className={styles.dockStatus}>
-        <span className={styles.statusDot} data-status={status} aria-hidden />
-        <span className={styles.statusText}>{statusText}</span>
-        {status === 'error' ? (
-          <button type="button" className={styles.statusRetry} onClick={() => void loadEngine()}>
-            {t('nanovmRetry')}
-          </button>
-        ) : null}
-        <span className={styles.statusUsage}>{usageText}</span>
-      </div>
-      <TerminalView tab={tab} />
+      <VmSwitcher variant="dock" />
+      {activeVm === 'nanovm' ? (
+        <>
+          <ShellTabs variant="dock" />
+          <div className={styles.dockStatus}>
+            <span className={styles.statusDot} data-status={status} aria-hidden />
+            <span className={styles.statusText}>{statusText}</span>
+            {status === 'error' ? (
+              <button
+                type="button"
+                className={styles.statusRetry}
+                onClick={() => void loadEngine()}
+              >
+                {t('nanovmRetry')}
+              </button>
+            ) : null}
+            <span className={styles.statusUsage}>{usageText}</span>
+          </div>
+          <TerminalView tab={tab} />
+        </>
+      ) : null}
+      {webvmMounted && webvmEnabled ? (
+        <div className={clsx(styles.vmPane, activeVm !== 'webvm' && styles.vmPaneHidden)}>
+          <Suspense fallback={<div className={styles.paneLoading}>{t('webvmStatusLoading')}</div>}>
+            <WebVmTerminal visible={activeVm === 'webvm'} />
+          </Suspense>
+        </div>
+      ) : null}
       {resetOpen ? <ResetVmDialog onClose={() => setResetOpen(false)} /> : null}
     </section>
   )

@@ -2,19 +2,24 @@ import { create } from 'zustand'
 import {
   allAgentTools,
   registerNanovmTools,
+  registerWebvmTools,
   registerWorkspaceTools,
   type AgentTool,
 } from './tools.js'
 import { WORKSPACE_TOOLS } from './workspaceTools.js'
 import { NANOVM_TOOLS } from './nanovmTools.js'
+import { WEBVM_TOOLS } from './webvmTools.js'
 import { isWorkspaceEnabled } from '../workspace/store.js'
 import { nanoVMAgentAvailable } from '../nanovm/config.js'
+import { webVMAgentAvailable } from '../webvm/config.js'
 import { modeAllowsGroup, type ToolGroup } from '../chat/mode.js'
 
 const WORKSPACE_IDS = new Set(WORKSPACE_TOOLS.map((tool) => tool.id))
 const NANOVM_IDS = new Set(NANOVM_TOOLS.map((tool) => tool.id))
+const WEBVM_IDS = new Set(WEBVM_TOOLS.map((tool) => tool.id))
 registerWorkspaceTools(() => WORKSPACE_TOOLS)
 registerNanovmTools(() => NANOVM_TOOLS)
+registerWebvmTools(() => WEBVM_TOOLS)
 
 /**
  * 浏览器工具的开关状态。
@@ -97,12 +102,20 @@ export const isAgentToolEnabled = (id: string): boolean => {
   if (NANOVM_IDS.has(id) && !nanoVMAgentAvailable()) {
     return false
   }
+  // WebVM 有独立的启用 / 允许模型调用开关
+  if (WEBVM_IDS.has(id) && !webVMAgentAvailable()) {
+    return false
+  }
   return state.flags[id] !== false
 }
 
 /** 工具属于设置页的哪一组：浏览器 / 工作区 / NanoVM */
 export const agentToolGroup = (id: string): ToolGroup =>
-  NANOVM_IDS.has(id) ? 'nanovm' : WORKSPACE_IDS.has(id) ? 'workspace' : 'browser'
+  NANOVM_IDS.has(id) || WEBVM_IDS.has(id)
+    ? 'nanovm'
+    : WORKSPACE_IDS.has(id)
+      ? 'workspace'
+      : 'browser'
 
 /** 当前聊天模式是否允许该工具（模式只是多加一道限制，不越过开关） */
 export const modeAllowsTool = (id: string): boolean => modeAllowsGroup(agentToolGroup(id))

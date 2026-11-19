@@ -9,6 +9,8 @@
 - Thanks to [L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S), the upstream source for GODMODE, the Hall of Fame combos and jailbreak prompts.
 - Thanks to [Operit](https://github.com/AAswordman/Operit) for the memory graph, vector dimensions, retrieval weights and search-debug reference.
 - Thanks to [DeepChat](https://github.com/YanJiuWeiYuanHui/DeepChat) for the long-term memory and daily token / cost alert reference.
+- **WebVM / CheerpX**: the x86 virtualisation runtime and the default Debian image come from [Leaning Technologies](https://cheerpx.io). CheerpX is proprietary software, free for personal and open-source projects, and requires a commercial licence otherwise; this repository only calls the public runtime on their CDN and does not redistribute the engine files.
+- **xterm.js**: the terminal component, MIT licensed, see [@xterm/xterm](https://github.com/xtermjs/xterm.js).
 - The engines under `src/services/unrestricted/` (input perturbation, AutoTune, STM, race scoring, GODMODE prompt) are ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3) and licensed [AGPL-3.0](../../src/services/unrestricted/COPYING-AGPL-3.0); that directory keeps its own license, separate from the MIT-licensed rest of the repo.
 
 ---

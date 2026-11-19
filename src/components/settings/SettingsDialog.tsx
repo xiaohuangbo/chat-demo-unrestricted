@@ -106,6 +106,7 @@ import { AgentToolsSetting } from './AgentToolsSetting.js'
 import { WorkspaceSetting } from './WorkspaceSetting.js'
 import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
+import { WebVMConsole } from '../webvm/WebVMConsole.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -256,7 +257,10 @@ const SettingsContent = () => {
           ) : section === 'workspace' ? (
             <WorkspaceSetting />
           ) : section === 'nanovm' ? (
-            <NanoVMConsole />
+            <>
+              <NanoVMConsole />
+              <WebVMConsole />
+            </>
           ) : section === 'stats' ? (
             <StatsSettings />
           ) : section === 'about' ? (
@@ -721,6 +725,18 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV272Title',
+      items: [
+        'changelogV272WebVM',
+        'changelogV272Switch',
+        'changelogV272Coi',
+        'changelogV272Agent',
+        'changelogV272Import',
+        'changelogV272Docs',
+        'changelogV272Apk',
+      ],
+    },
     {
       title: 'changelogV271Title',
       items: [

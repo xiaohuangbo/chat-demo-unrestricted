@@ -17,7 +17,7 @@ The settings dialog grows from two groups to sixteen:
 | **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment                                                              |
 | **Browser tools**     | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
 | **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
-| **NanoVM Slim**       | A WASM shell in the browser: terminal switches, model access, memory / disk quotas, command timeout, image import/export, reset, on-demand toolchains                                          |
+| **Virtual machines**  | Two terminals: NanoVM Slim (WASM shell, quotas, toolchains, virtual network) and WebVM (CheerpX x86 Debian, cross-origin isolation, images, import/export, environment check); both run at once and switch freely |
 | **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
 | Data                  | API key, import, export, restore default settings, delete all                                                                                                                                  |
 | About                 | Repository, demo and upstream links                                                                                                                                                            |
@@ -375,7 +375,7 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 
 **API key masking:** the jailbreak lab no longer renders the full key. It shows `sk-****` plus the last four characters, and a “Change in Settings” link that opens Settings → Data, matching how the data section itself masks the saved key.
 
-> What is actually sent is also gated by the composer’s chat mode: Chat only sends none, Web agent sends browser + workspace, PTC / Creator add NanoVM. See 3.27.
+> What is actually sent is also gated by the composer’s chat mode: Chat only sends none, Web agent sends browser + workspace, PTC / Creator add NanoVM and WebVM. See 3.27.
 
 ### 3.24 Browser agent tools
 
@@ -455,7 +455,7 @@ The mode only decides **which client tools are sent to the model this turn** —
 | ------------- | --------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Chat only** | Server tools only (read URL / web search); no browser, workspace or VM tool | 4                       | Long-term memory, search poisoning and custom CoT keep working                                                                                              |
 | **Web agent** | Browser tools + virtual workspace tools                                     | 8                       | Fetch pages, notifications, clipboard, workspace read/write                                                                                                 |
-| **PTC**       | Web agent + NanoVM Slim (shell / files / installs)                          | 16                      | Multiple tool calls in one round run **in parallel** and can build on each other                                                                            |
+| **PTC**       | Web agent + NanoVM Slim / WebVM (shell / files / installs)                          | 16                      | Multiple tool calls in one round run **in parallel** and can build on each other                                                                            |
 | **Creator**   | Same as PTC                                                                 | 24                      | The model may `vm install python`, write scripts into `/usr/bin` and `chmod +x` them into new commands; VM writes and installs **no longer ask every time** |
 
 - The active mode is described to the model in the system prompt, so it does not keep trying tools it cannot use.
@@ -478,6 +478,32 @@ The mode only decides **which client tools are sent to the model this turn** —
 
 - The check is a single anonymous GET against the GitHub public API — no API key, no other requests; failures are shown verbatim.
 - Migration is one-way: after moving to OPFS the localStorage copy is cleared, and only switching back to “browser local storage” writes it again.
+
+---
+
+
+### 3.29 WebVM (CheerpX)
+
+**Where:** the “WebVM” entry in the sidebar, or the “NanoVM Slim / WebVM” switcher at the top of the terminal panel; the WebVM card under Settings → **Virtual machines**.
+
+**What it is:** the second terminal is not a simulated shell — it runs a real x86 Debian 10 on top of CheerpX, which JIT-compiles x86 into WebAssembly and executes actual Linux binaries in the browser. The root filesystem is an ext2 image streamed from `disks.webvm.io`; changes go into an IndexedDB overlay. The image ships bash, coreutils, gcc / g++, Python 3, Node.js, Ruby, Perl, Lua 5.3 / LuaJIT, make, git, vim, nano, curl, wget and more, so C/C++, Python and Node code runs out of the box.
+
+| Capability        | Behaviour                                                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime           | First open loads CheerpX 1.4.0 from the Leaning CDN (~1 MB) and streams about 2 GB of Debian image blocks; later launches use the IndexedDB overlay and keep disk changes across reloads |
+| Alongside NanoVM  | Both instances stay alive. Switching changes only the view — the WASM engine, the CheerpX processes, scrollback and files are untouched. Works in the desktop dock and the mobile sheet |
+| Terminal          | xterm.js plus a real PTY: arrows, Tab, Ctrl+C / Ctrl+D, full-screen programs such as vim and top, and IME input all work; the toolbar has Esc / Tab / arrows / keyboard / import / export / environment check |
+| Cross-origin      | CheerpX needs SharedArrayBuffer, which needs COOP/COEP. On static hosting the first enable registers `coi-sw.js` and reloads once; Android WebView does not support cross-origin isolation, so the APK points users to Chrome or a desktop browser |
+| Images            | Debian 10 (2026-06 image) by default, the 2023 image as a fallback, or a custom `wss://` / `https://` / same-origin ext2 URL; each image gets its own overlay |
+| Import            | Files are written to the read-only DataDevice under `/data` and copied into `/home/user/imports`; up to 50 files / 20 MB per batch |
+| Export            | Runs `tar czf - -C /home/user . \| base64 -w0` inside the VM; the browser captures it and downloads `webvm-home.tar.gz` (32 MB cap) |
+| Model access      | New `webvm_shell` / `webvm_ls` / `webvm_status` tools, in the same group as the NanoVM tools (only PTC / Creator send them); each run asks first, and Creator auto-approves |
+| Environment check | “Check environment” in the settings card runs `uname`, `/etc/debian_version` and `command -v` for 24 tools, then prints what exists |
+
+- **Why model commands do not use `cx.run()`:** a CheerpX Linux has a single console. Starting another process does produce output, but after it exits the interactive bash no longer receives stdin — typing appears dead. WebVM therefore writes model commands and import/export scripts to `/data/agent_xxx.sh` and runs them from the **existing shell** with `timeout N bash /data/...`, framing the output with begin/end markers.
+- **Serialisation and timeouts:** model commands run one at a time; the tool timeout is 5 minutes (the first launch waits for image blocks), while a normal command gets 30–60 seconds. The timeout only guarantees the tool returns; a command that already started may still finish.
+- **Network:** no network is configured by default (CheerpX networking needs a Tailscale login), so there is no `apt install` inside WebVM; the image already includes common toolchains. Use NanoVM's virtual network when you need HTTP services, or provide a custom image.
+- **Licence:** CheerpX is proprietary software from Leaning Technologies; it is free for personal and open-source projects and needs a commercial licence otherwise. The settings card and docs keep the attribution and link.
 
 ---
 

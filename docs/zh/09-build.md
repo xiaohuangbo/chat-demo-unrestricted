@@ -32,13 +32,15 @@ pnpm build      # 产物在 dist/
 
 API 地址在 [`rspack.config.ts`](../../rspack.config.ts) 的 `createConfig({ apiOrigin })` 里配置，默认 `https://api.deepseek.com`。
 
+WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 这类不能自定义响应头的静态托管上，第一次启用 WebVM 时会注册 `coi-sw.js` 并刷新一次，之后由 Service Worker 为同源响应补头。**Android WebView 不支持跨源隔离（Chromium issue 40914606），所以 APK 内无法运行 WebVM；请在手机 Chrome 或桌面浏览器里打开在线版。** 也可以自己在 Nginx / Vercel 上直接配置 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: credentialless`，省掉这次刷新。
+
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.1.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.2.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.1 / 271），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.2 / 272），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -49,7 +51,7 @@ API 地址在 [`rspack.config.ts`](../../rspack.config.ts) 的 `createConfig({ a
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 267；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 272；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---

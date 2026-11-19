@@ -58,6 +58,13 @@
 | NanoVM     | 命令超时           | 15 秒                     | `chat-demo:nanovm-config`                  | 不受影响             |
 | NanoVM     | 虚拟机文件         | 出厂目录树                | OPFS `chat-demo-nanovm`                    | 不受影响             |
 | NanoVM     | 已装工具链         | Node / Git / make（内置） | `chat-demo:nanovm-packages`                | 不受影响             |
+| WebVM      | 启用 WebVM         | 开                        | `chat-demo:webvm-config`                   | 不受影响             |
+| WebVM      | 允许模型调用 WebVM | 关                        | `chat-demo:webvm-config`                   | 不受影响             |
+| WebVM      | 打开时自动启动     | 开                        | `chat-demo:webvm-config`                   | 不受影响             |
+| WebVM      | 系统镜像           | Debian 10 完整            | `chat-demo:webvm-config`                   | 不受影响             |
+| WebVM      | 单条命令超时       | 30 秒                     | `chat-demo:webvm-config`                   | 不受影响             |
+| WebVM      | 磁盘覆盖层（自动） | 空                        | IndexedDB `nanovm-webvm:debian`            | 不受影响             |
+| WebVM      | 跨源隔离（自动）   | 未启用                    | Service Worker `coi-sw.js`                 | 不受影响             |
 | 输入栏     | 聊天模式           | 网页 Agent                | `chat-demo:chat-mode`                      | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。

@@ -54,6 +54,8 @@ export type AgentTool = {
   risk: ToolRisk
   /** 执行前是否需要用户确认 */
   requiresApproval?: boolean
+  /** 单个工具的执行上限；默认 60 秒。WebVM 首次启动可能更久，单独放宽。 */
+  timeoutMs?: number
   run: (input: Record<string, unknown>, context: ToolContext) => Promise<ToolResult>
 }
 
@@ -839,6 +841,7 @@ export const allAgentTools = (): AgentTool[] => [
   ...AGENT_TOOLS,
   ...workspaceTools(),
   ...nanovmTools(),
+  ...webvmTools(),
 ]
 
 export const agentToolById = (id: string): AgentTool | undefined =>
@@ -847,6 +850,7 @@ export const agentToolById = (id: string): AgentTool | undefined =>
 /** 由 agentToolSettings 在初始化时注入，避免 tools.ts 依赖设置模块 */
 let workspaceTools: () => AgentTool[] = () => []
 let nanovmTools: () => AgentTool[] = () => []
+let webvmTools: () => AgentTool[] = () => []
 
 export const registerWorkspaceTools = (loader: () => AgentTool[]) => {
   workspaceTools = loader
@@ -855,6 +859,11 @@ export const registerWorkspaceTools = (loader: () => AgentTool[]) => {
 /** 由 agentToolSettings 注入 NanoVM Slim 工具 */
 export const registerNanovmTools = (loader: () => AgentTool[]) => {
   nanovmTools = loader
+}
+
+/** 由 agentToolSettings 注入 WebVM（CheerpX）工具 */
+export const registerWebvmTools = (loader: () => AgentTool[]) => {
+  webvmTools = loader
 }
 
 /** 该工具在本机是否可用（通知 / 剪贴板 / 定位依赖浏览器能力） */

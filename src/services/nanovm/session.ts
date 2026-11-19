@@ -41,12 +41,16 @@ export type ShellTab = {
   pendingInstall: ToolchainId | null
 }
 
+export type VmKind = 'nanovm' | 'webvm'
+
 type NanoVMState = {
   open: boolean
   /** 手机端全屏终端 */
   expanded: boolean
   activeId: string
   tabs: ShellTab[]
+  /** 当前显示的虚拟机：NanoVM 或 WebVM（CheerpX）。切换只换视图，不销毁实例。 */
+  activeVm: VmKind
 }
 
 /** 每个标签最多保留的输出行数，超出后从最早的开始丢 */
@@ -86,6 +90,7 @@ export const useNanoVM = create<NanoVMState>(() => ({
   expanded: false,
   activeId: firstTab.id,
   tabs: [firstTab],
+  activeVm: 'nanovm',
 }))
 
 // ---------- 基础操作 ----------
@@ -146,7 +151,22 @@ const endStream = (id: string) => {
 // ---------- 面板开关 ----------
 
 export const openNanoVM = () => {
-  useNanoVM.setState({ open: true })
+  useNanoVM.setState({ open: true, activeVm: 'nanovm' })
+}
+
+/** 打开面板并切到 WebVM；WebVM 的启动由组件按配置懒执行 */
+export const openWebVM = () => {
+  useNanoVM.setState({ open: true, activeVm: 'webvm' })
+}
+
+/** 切换虚拟机并打开面板（侧栏入口 / 切换器用） */
+export const setActiveVm = (activeVm: VmKind) => {
+  useNanoVM.setState({ activeVm, open: true })
+}
+
+/** 只改当前虚拟机，不改变面板开合（某个虚拟机被关掉时的回退） */
+export const setActiveVmOnly = (activeVm: VmKind) => {
+  useNanoVM.setState({ activeVm })
 }
 
 export const closeNanoVM = () => {
@@ -154,7 +174,15 @@ export const closeNanoVM = () => {
 }
 
 export const toggleNanoVM = () => {
-  useNanoVM.setState((state) => ({ open: !state.open }))
+  useNanoVM.setState((state) =>
+    state.open && state.activeVm === 'nanovm' ? { open: false } : { open: true, activeVm: 'nanovm' }
+  )
+}
+
+export const toggleWebVM = () => {
+  useNanoVM.setState((state) =>
+    state.open && state.activeVm === 'webvm' ? { open: false } : { open: true, activeVm: 'webvm' }
+  )
 }
 
 export const setNanoVMExpanded = (expanded: boolean) => {

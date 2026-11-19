@@ -1,5 +1,12 @@
 import clsx from 'clsx'
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { IconButton } from '../base/IconButton.js'
 import { showToast } from '../base/toastState.js'
@@ -22,7 +29,13 @@ import { openSettings } from '../settings/settingsDialogState.js'
 import { ResetVmDialog } from './ResetVmDialog.js'
 import { ShellTabs } from './ShellTabs.js'
 import { TerminalView } from './TerminalView.js'
+import { VmSwitcher } from './VmSwitcher.js'
+import { useWebVMConfig } from '../../services/webvm/config.js'
 import styles from './NanoVM.module.css'
+
+const WebVmTerminal = lazy(() =>
+  import('../webvm/WebVmTerminal.js').then((module) => ({ default: module.WebVmTerminal }))
+)
 
 /** 面板高度：默认 52%，可拖到 30%–92%，expanded 时固定 92% */
 const DEFAULT_RATIO = 0.52
@@ -46,6 +59,8 @@ export const ShellSheet = () => {
   const t = useTranslate()
   const tabs = useNanoVM((state) => state.tabs)
   const activeId = useNanoVM((state) => state.activeId)
+  const activeVm = useNanoVM((state) => state.activeVm)
+  const webvmEnabled = useWebVMConfig((state) => state.enabled)
   const expanded = useNanoVM((state) => state.expanded)
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0]
   const [ratio, setRatio] = useState(DEFAULT_RATIO)
@@ -55,6 +70,13 @@ export const ShellSheet = () => {
   const [keyboardOffset, setKeyboardOffset] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [webvmMounted, setWebvmMounted] = useState(activeVm === 'webvm')
+
+  useEffect(() => {
+    if (activeVm === 'webvm') {
+      setWebvmMounted(true)
+    }
+  }, [activeVm])
   const dragRef = useRef<{ startY: number; startRatio: number } | null>(null)
 
   // 键盘弹出 / 页面被顶上去时，面板跟着视觉视口走
@@ -138,7 +160,7 @@ export const ShellSheet = () => {
         onDoubleClick={() => setNanoVMExpanded(!expanded)}
       />
       <div className={styles.sheetTop}>
-        <ShellTabs variant="sheet" />
+        <VmSwitcher variant="sheet" />
         <span className={styles.sheetClose}>
           <IconButton
             size="xs"
@@ -148,66 +170,88 @@ export const ShellSheet = () => {
           />
         </span>
       </div>
-      <div className={styles.sheetTools}>
-        <button
-          type="button"
-          className={styles.interrupt}
-          disabled={!tab.running}
-          onClick={interruptNanoVM}
-        >
-          <span className={styles.interruptKey}>Ctrl+C</span>
-          {t('nanovmInterrupt')}
-        </button>
-        <div className={styles.sheetToolRight}>
-          <button type="button" className={styles.toolReset} onClick={() => setResetOpen(true)}>
-            {t('nanovmResetShort')}
+      {activeVm === 'nanovm' ? <ShellTabs variant="sheet" /> : null}
+      {activeVm === 'nanovm' ? (
+        <div className={styles.sheetTools}>
+          <button
+            type="button"
+            className={styles.interrupt}
+            disabled={!tab.running}
+            onClick={interruptNanoVM}
+          >
+            <span className={styles.interruptKey}>Ctrl+C</span>
+            {t('nanovmInterrupt')}
           </button>
-          <button type="button" className={styles.toolLink} onClick={() => openSettings('nanovm')}>
-            {t('nanovmConfig')}
-          </button>
-          <IconButton
-            size="xs"
-            icon={<IconSettingsOutline16 />}
-            tooltip={t('nanovmConfig')}
-            onClick={() => openSettings('nanovm')}
-          />
-        </div>
-      </div>
-      <TerminalView
-        tab={tab}
-        compact
-        renderInputActions={({ focus, toggleKeyboard }) => (
-          <>
-            {/* 先聚焦输入框再叫原生选择器，键盘已经弹着时也能立刻换 */}
+          <div className={styles.sheetToolRight}>
+            <button type="button" className={styles.toolReset} onClick={() => setResetOpen(true)}>
+              {t('nanovmResetShort')}
+            </button>
             <button
               type="button"
-              className={styles.inputButton}
-              aria-label={t('nanovmKeyboardSwitch')}
-              title={t('nanovmKeyboardHint')}
-              onClick={() => {
-                focus()
-                if (!showKeyboardPicker()) {
-                  showToast({ key: 'nanovmKeyboardUnavailable' })
-                }
-              }}
+              className={styles.toolLink}
+              onClick={() => openSettings('nanovm')}
             >
-              <IconKeyboardSwitch16 />
+              {t('nanovmConfig')}
             </button>
             <IconButton
               size="xs"
-              icon={<IconTerminalOutline16 />}
-              tooltip={t('nanovmKeyboard')}
-              onClick={toggleKeyboard}
+              icon={<IconSettingsOutline16 />}
+              tooltip={t('nanovmConfig')}
+              onClick={() => openSettings('nanovm')}
             />
-            <IconButton
-              size="xs"
-              icon={expanded ? <IconChevronDownOutline14 /> : <IconRightUpOutline14 />}
-              tooltip={expanded ? t('nanovmRestore') : t('nanovmExpand')}
-              onClick={() => setNanoVMExpanded(!expanded)}
-            />
-          </>
-        )}
-      />
+          </div>
+        </div>
+      ) : null}
+      {activeVm === 'nanovm' ? (
+        <TerminalView
+          tab={tab}
+          compact
+          renderInputActions={({ focus, toggleKeyboard }) => (
+            <>
+              {/* 先聚焦输入框再叫原生选择器，键盘已经弹着时也能立刻换 */}
+              <button
+                type="button"
+                className={styles.inputButton}
+                aria-label={t('nanovmKeyboardSwitch')}
+                title={t('nanovmKeyboardHint')}
+                onClick={() => {
+                  focus()
+                  if (!showKeyboardPicker()) {
+                    showToast({ key: 'nanovmKeyboardUnavailable' })
+                  }
+                }}
+              >
+                <IconKeyboardSwitch16 />
+              </button>
+              <IconButton
+                size="xs"
+                icon={<IconTerminalOutline16 />}
+                tooltip={t('nanovmKeyboard')}
+                onClick={toggleKeyboard}
+              />
+              <IconButton
+                size="xs"
+                icon={expanded ? <IconChevronDownOutline14 /> : <IconRightUpOutline14 />}
+                tooltip={expanded ? t('nanovmRestore') : t('nanovmExpand')}
+                onClick={() => setNanoVMExpanded(!expanded)}
+              />
+            </>
+          )}
+        />
+      ) : null}
+      {webvmMounted && webvmEnabled ? (
+        <div
+          className={clsx(
+            styles.vmPane,
+            styles.vmPaneSheet,
+            activeVm !== 'webvm' && styles.vmPaneHidden
+          )}
+        >
+          <Suspense fallback={<div className={styles.paneLoading}>{t('webvmStatusLoading')}</div>}>
+            <WebVmTerminal visible={activeVm === 'webvm'} compact />
+          </Suspense>
+        </div>
+      ) : null}
       {resetOpen ? <ResetVmDialog onClose={() => setResetOpen(false)} /> : null}
     </section>
   )

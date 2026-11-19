@@ -15,6 +15,7 @@ import {
 import { useAgentTools } from '../../services/agent/agentToolSettings.js'
 import { useWorkspace } from '../../services/workspace/store.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
+import { useWebVMConfig } from '../../services/webvm/config.js'
 import { useSettings } from '../../services/settings.js'
 import styles from './ModePicker.module.css'
 
@@ -54,6 +55,7 @@ export const ModePicker = ({
   const browserOn = useAgentTools((state) => state.enabled)
   const workspaceOn = useWorkspace((state) => state.enabled)
   const nanoVMOn = useNanoVMConfig((state) => state.enabled && state.allowAgent)
+  const webVMOn = useWebVMConfig((state) => state.enabled && state.allowAgent)
   const [open, setOpen] = useState(false)
 
   const { anchorRef, floatingRef, position } = useAnchoredPosition<
@@ -65,7 +67,7 @@ export const ModePicker = ({
     offset: 8,
     maxHeight: 520,
     minSpace: 240,
-    measureKey: `${browserOn}-${workspaceOn}-${nanoVMOn}`,
+    measureKey: `${browserOn}-${workspaceOn}-${nanoVMOn}-${webVMOn}`,
   })
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
 
@@ -79,7 +81,7 @@ export const ModePicker = ({
     if (groups.includes('workspace') && !workspaceOn) {
       off.push(t('chatModeOffWorkspace'))
     }
-    if (groups.includes('nanovm') && !nanoVMOn) {
+    if (groups.includes('nanovm') && !nanoVMOn && !webVMOn) {
       off.push(t('chatModeOffNanoVM'))
     }
     return off

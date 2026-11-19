@@ -1,0 +1,425 @@
+/*
+ * WebVM（CheerpX）终端。xterm 的画布尺寸必须是显式的像素高度，
+ * 所以这里从 dock / sheet 的 flex 布局一路把 min-height: 0 传下来。
+ */
+
+.wrap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.statusRow {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 12px 6px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 17px;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--dsw-alias-label-dimmed);
+
+  &[data-status='ready'] {
+    background-color: var(--dsw-static-green-500);
+  }
+
+  &[data-status='loading'] {
+    background-color: var(--dsw-alias-brand-primary);
+    animation: webvmPulse 1.2s ease-in-out infinite;
+  }
+
+  &[data-status='error'] {
+    background-color: var(--dsw-alias-state-error-primary);
+  }
+}
+
+@keyframes webvmPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.statusText {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imageLabel {
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busy {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 999px;
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.terminal {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 8px 4px 10px;
+  overflow: hidden;
+  background-color: var(--dsw-alias-bg-base);
+}
+
+/* xterm 自己会算像素宽高，这里只负责让它填满容器 */
+.terminal :global(.xterm) {
+  height: 100%;
+}
+
+.terminal :global(.xterm-viewport) {
+  background-color: transparent !important;
+}
+
+.terminal :global(.xterm-screen) {
+  height: auto;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  background-color: var(--dsw-alias-bg-base);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 420px);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.cardText {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.primary {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background-color: var(--dsw-alias-brand-primary);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+}
+
+.secondary {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.error {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: var(--dsw-alias-interactive-bg-hover-danger);
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.note {
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.progressLine {
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--dsw-alias-border-l2);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background-color: var(--dsw-alias-brand-primary);
+  animation: webvmProgress 1.4s ease-in-out infinite;
+}
+
+@keyframes webvmProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--dsw-alias-border-l3);
+  border-top-color: var(--dsw-alias-brand-primary);
+  border-radius: 50%;
+  animation: webvmSpin 0.8s linear infinite;
+}
+
+@keyframes webvmSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.tool {
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+    color: var(--dsw-alias-label-secondary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--dsw-alias-brand-primary);
+    outline-offset: -2px;
+  }
+}
+
+.toolSpacer {
+  flex: 1;
+  min-width: 4px;
+}
+
+.tip {
+  flex-shrink: 0;
+  padding: 0 10px 5px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.envPanel {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  max-height: 180px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  overflow: auto;
+}
+
+.envHead {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.envPre {
+  margin: 0;
+  padding: 6px 10px 8px;
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--nanovm-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dsw-alias-brand-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.confirm {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.confirmHint {
+  margin-top: 8px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 手机端：工具栏更紧凑，提示文字可以省掉 */
+@media (max-width: 640px) {
+  .statusRow {
+    padding: 0 10px 4px;
+  }
+
+  .terminal {
+    padding: 4px 6px 2px 8px;
+  }
+
+  .toolbar {
+    padding: 3px 6px;
+  }
+
+  .tip {
+    display: none;
+  }
+}
+
+/* ---------- 设置卡片 ---------- */
+
+.settingsInput {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background-color: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+
+  &:focus {
+    border-color: var(--dsw-alias-brand-primary);
+    outline: none;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--dsw-alias-state-error-primary);
+  }
+}
+
+.settingsValue {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.settingsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}

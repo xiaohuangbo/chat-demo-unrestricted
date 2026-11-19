@@ -57,6 +57,14 @@
 55. **运行时能力都是子集**：esbuild 只能打包虚拟机里的文件（不解析 npm 依赖、没有插件生态），SQLite 是 sql.js（没有 FTS / 扩展模块），Lua 没有 `os.execute` / `io.popen` 这类宿主能力，`make` 不支持并行构建、`$(call)` / `$(eval)` 与目标专属变量，`jq` 只覆盖常用过滤器；`timeout` 到点返回 124 但**不能真正杀掉**子命令。
 56. **虚拟网络是 CGI，不是真 socket**：`vm serve` 注册的服务每次请求都重新跑一遍命令（冷启动），没有常驻进程、keep-alive、并发与长连接；请求体和响应都整体缓冲，`curl` 之外的程序访问不到这些端口；服务里再请求自己嵌套超过 3 层会被拒绝。
 57. **Go / Rust / C / C++ 没有浏览器内编译器**：官方工具链都不提供能在浏览器 WASM 里跑的 `go` / `rustc` / `gcc`，所以 NanoVM 不伪造它们。写后端可以用 Node（`http` / `ws`）或 Python（Flask / `nanovm` 微框架）挂在虚拟网络上；真正需要 Go / Rust / C 的二进制，请在宿主机上编译后再把产物或接口接进来。
+58. **WebVM 需要跨源隔离**：CheerpX 依赖 `SharedArrayBuffer`，页面必须带 COOP/COEP。静态站点第一次启用时注册 `coi-sw.js` 并刷新一次；`file://`、局域网 HTTP（非 localhost）以及禁用 Service Worker 的浏览器都无法启用。开启后同源的第三方 iframe / 跨域图片可能受 COEP 影响（用 `credentialless` 降低影响），遇到嵌入内容空白可先关闭 WebVM。**Android WebView 至今不支持跨源隔离，所以 APK 内无法运行 WebVM**，请用手机 Chrome 或桌面浏览器打开在线版。
+59. **WebVM 首次启动要联网拉约 2GB 镜像块**：CheerpX 运行时来自 `cxrtnc.leaningtech.com`，根文件系统来自 `disks.webvm.io`；首启通常 30–90 秒，慢网更久。之后从 IndexedDB 覆盖层缓存启动，但清站点数据、换镜像或重置都会让缓存重新下载。
+60. **WebVM 是 32 位 x86 的 Debian 10**：软件包停留在 buster 时代，没有 `npm`（只有 `node`），没有 `apt` 网络，也没有 Tailscale；需要新版本工具链、原生扩展或包管理时，请用 NanoVM、宿主环境或自己的自定义镜像。
+61. **一个 WebVM 只有一个控制台**：这与 NanoVM 的多标签不同。NanoVM 与 WebVM 可以同时运行，但 WebVM 内部只有一个 bash；模型命令复用同一个 shell 串行执行，所以用户正在跑前台命令时，模型命令会排在后面甚至超时，Ctrl+C 也可能同时中断两边。
+62. **WebVM 导入导出有上限**：单批最多 50 个文件 / 20MB；导出是 `/home/user` 的 tar.gz（base64 捕获，上限 32MB），不是整块磁盘镜像。重置会清空 IndexedDB 覆盖层，VM 里新建与修改的文件全部丢失。
+63. **WebVM Agent 工具首调最长 5 分钟**：首次启动要等镜像块，工具超时按 5 分钟计；启动后的命令通常几秒。超时只保证工具返回，已经启动的命令仍可能在 VM 里跑完，输出会回到终端。
+64. **CheerpX 是专有软件**：Leaning Technologies 允许个人与开源项目免费使用，商业使用需要商业许可；运行时与默认镜像由他们的 CDN 提供，是否可接受这种依赖由部署者判断。
+65. **两个虚拟机不共享文件系统**：NanoVM 的 zip 镜像与 WebVM 的 tar.gz 不互通，需要手动解包后再导入；`/home/user` 也是两套独立目录，模型要明确自己在操作哪一个 VM。
 
 ---
 

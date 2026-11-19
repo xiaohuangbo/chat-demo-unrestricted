@@ -15,7 +15,7 @@ import type { EngineInfo, ExecRequest, ExecResponse, ShellEngine } from './types
  * 配额改了要重建内核，那是 boot.ts 的 resetEngine() + 再次 createEngine()。
  */
 
-const VERSION = '2.7.1'
+const VERSION = '2.7.2'
 
 let instance: ShellEngine | null = null
 let pending: Promise<ShellEngine> | null = null

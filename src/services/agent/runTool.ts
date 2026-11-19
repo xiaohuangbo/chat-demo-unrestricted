@@ -81,7 +81,7 @@ export const runAgentToolCall = async (
   }
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TOOL_TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(), tool.timeoutMs ?? TOOL_TIMEOUT_MS)
   const abort = () => controller.abort()
   signal.addEventListener('abort', abort, { once: true })
 
