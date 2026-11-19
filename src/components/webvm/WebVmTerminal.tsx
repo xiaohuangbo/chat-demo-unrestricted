@@ -161,7 +161,8 @@ export const WebVmTerminal = ({
       fontSize: compact ? 12 : 13,
       lineHeight: 1.2,
       scrollback: 5000,
-      convertEol: false,
+      // CheerpX 的 PTY 换行只发 LF；xterm 必须自己回到行首，否则每行都会向右错位
+      convertEol: true,
       allowProposedApi: false,
       theme: xtermTheme(palette),
     })
@@ -194,7 +195,13 @@ export const WebVmTerminal = ({
         fit.fit()
       } catch {
         // 容器尺寸为 0 时 xterm 会抛错，等下一次 resize
+        return
       }
+      // 不要只依赖 onResize 的 150ms 防抖：CheerpX 启动前必须拿到终端的真实列数，
+      // 否则 bash 会按默认 100 列格式化 help / 多列输出，在窄面板里错位折行。
+      resizeWebVm(terminal.cols, terminal.rows)
+      host.dataset.cols = String(terminal.cols)
+      host.dataset.rows = String(terminal.rows)
     }
     const sizeObserver = new ResizeObserver(fitNow)
     sizeObserver.observe(host)
@@ -247,15 +254,52 @@ export const WebVmTerminal = ({
       return
     }
     if (status === 'idle' && coi === 'isolated') {
-      void bootWebVm()
+      // 等一帧确保停靠/底部面板已完成布局，再把真实 cols 交给 CheerpX
+      const timer = window.setTimeout(() => {
+        prepareTerminalSize()
+        void bootWebVm()
+      }, 60)
+      return () => window.clearTimeout(timer)
     }
+    return undefined
   }, [autoBoot, coi, status, visible])
+
+  // shell 就绪后再校准一次；启动期间容器尺寸可能刚稳定下来
+  useEffect(() => {
+    if (!visible || status !== 'ready') {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      prepareTerminalSize()
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [status, visible])
 
   const focusTerminal = () => {
     termRef.current?.focus()
   }
 
+  /** 启动前把 xterm 的真实行列数同步给 CheerpX，避免 shell 按默认 100 列排版 */
+  const prepareTerminalSize = () => {
+    const term = termRef.current
+    if (!term) {
+      return
+    }
+    try {
+      fitRef.current?.fit()
+    } catch {
+      // 容器还没布局完，用当前尺寸
+    }
+    resizeWebVm(term.cols, term.rows)
+    const host = hostRef.current
+    if (host) {
+      host.dataset.cols = String(term.cols)
+      host.dataset.rows = String(term.rows)
+    }
+  }
+
   const start = () => {
+    prepareTerminalSize()
     if (status === 'error') {
       void restartWebVm()
       return

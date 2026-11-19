@@ -1,7 +1,6 @@
 <p align="center">
-  <img src="./brand.jpg" alt="chat-demo-unrestricted — Yes, Sun Xiaochuan Chat" width="760">
+  <img src="./brand.png" alt="A blue-haired maid holds a whale icon and a padlock icon; the caption reads that countless geniuses want to prove themselves under the whale, while under the padlock genius is only the entry threshold." width="49%"><img src="./brand_2.jpg" alt="Give up every client app in the world and try the strongest adversarial play; this is your only chance to duel with a top open-source model." width="49%">
 </p>
-<h1 align="center"><img src="brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会" width="250"></h1>
 
 <h1 align="center">Deepseek Unrestricted Chat Harness</h1>
 
@@ -69,7 +68,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.2.apk` (7.5 MB, versionCode 272,
-SHA-256 `b4a281535a9e4357b7b22aa233a073c779ec5c8e1ebc4725eaf20b632be4332e`) — see [android/README.md](android/README.md).
+SHA-256 `3384bc49c95fcea98c69b04a55cc9544d44dfba61c9666e3a1a259b8708aa81f`) — see [android/README.md](android/README.md).
 
 ## Compatibility
 

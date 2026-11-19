@@ -1,7 +1,6 @@
 <p align="center">
-  <img src="./brand.jpg" alt="chat-demo-unrestricted — 是，孙笑川聊天" width="760">
+  <img src="./brand.png" alt="在这个客户端中，有无数的天才想要在肥鱼图标里，证明自己是天才。可是在带锁图标里，天才只是门槛。" width="49%"><img src="./brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会" width="49%">
 </p>
-<h1 align="center"><img src="brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会" width="250"></h1>
 
 <h1 align="center">deepseek unrestricted chat harness</h1>
 
@@ -69,7 +68,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：`deepseek-unrestricted-2.7.2.apk`（7.5 MB，versionCode 272，
-SHA-256 `b4a281535a9e4357b7b22aa233a073c779ec5c8e1ebc4725eaf20b632be4332e`），详情见 [android/README.md](android/README.md)。
+SHA-256 `3384bc49c95fcea98c69b04a55cc9544d44dfba61c9666e3a1a259b8708aa81f`），详情见 [android/README.md](android/README.md)。
 
 ## 兼容性
 
