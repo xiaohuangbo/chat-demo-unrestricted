@@ -1686,6 +1686,8 @@ export const zh = {
   billingRateLocalNote:
     '本地模型运行在浏览器或自建服务上：token 不计费，语音、搜索与文件解析仍按下方单价计费',
   dailyUsageLocalNote: '今日本地模型 token 已计入总量，但不计费，也不占用 token 额度',
+  changelogV274Reset:
+    '本地模型参数补齐可见标签（温度、Top P、最大输出、存在 / 频率惩罚），「恢复默认设置」会一并重置本地模型偏好并卸载当前显存模型，已下载权重保留',
   latestReminderLanguage: '中文',
   settingsLocaleZhCN: '简体中文',
   settingsLocaleEnUS: 'English',

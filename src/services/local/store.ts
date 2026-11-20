@@ -111,9 +111,13 @@ const read = (key: string): string | null => {
   }
 }
 
-const write = (key: string, value: string) => {
+const write = (key: string, value: string | null) => {
   try {
-    localStorage.setItem(key, value)
+    if (value === null) {
+      localStorage.removeItem(key)
+    } else {
+      localStorage.setItem(key, value)
+    }
   } catch {
     // 隐私模式下写入失败不影响本次会话
   }
@@ -210,6 +214,30 @@ export const setLocalSettings = (patch: Partial<LocalSettings>) => {
     enableThinking: next.enableThinking,
     mlcEndpoint: next.mlcEndpoint,
     autoLoad: next.autoLoad,
+  })
+}
+
+/**
+ * 恢复默认设置时一并重置本地模型偏好：缓存后端、上下文窗口、采样参数、
+ * MLC 地址与自动加载全部回到默认值；已下载的权重留在浏览器缓存里，不删除。
+ */
+export const resetLocalModelSettings = () => {
+  for (const key of Object.values(KEYS)) {
+    write(key, null)
+  }
+  useLocalModels.setState({
+    ...initialSettings(),
+    status: 'idle',
+    progressText: '',
+    progress: 0,
+    error: null,
+    loadedModelId: null,
+    downloadingId: null,
+    transfer: null,
+    mlcModels: [],
+    mlcLoading: false,
+    mlcError: null,
+    catalogSynced: false,
   })
 }
 

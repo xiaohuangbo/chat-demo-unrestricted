@@ -112,6 +112,8 @@ import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import { WebVMConsole } from '../webvm/WebVMConsole.js'
 import { LocalModelSettings } from '../local/LocalModelSettings.js'
+import { resetLocalModelSettings } from '../../services/local/store.js'
+import { disposeEngine } from '../../services/local/engine.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -327,6 +329,9 @@ const SettingsContent = () => {
           onCancel={() => setResetOpen(false)}
           onConfirm={() => {
             resetSettings()
+            // 本地模型偏好与当前显存里的模型一并回到默认状态
+            resetLocalModelSettings()
+            void disposeEngine()
             setResetOpen(false)
             showToast({ key: 'resetSettingsDone' })
           }}
@@ -752,6 +757,7 @@ const ChangelogSetting = () => {
         'changelogV274Mlc',
         'changelogV274Transfer',
         'changelogV274NoKey',
+        'changelogV274Reset',
         'changelogV274Docs',
         'changelogV274Apk',
       ],

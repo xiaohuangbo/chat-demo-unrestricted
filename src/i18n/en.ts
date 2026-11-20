@@ -1819,6 +1819,8 @@ export const en = {
     'Local models run in the browser or on your own server: tokens are free, while speech, search and file parsing are still billed at the rates below',
   dailyUsageLocalNote:
     'Local model tokens are included in the daily total but are neither billed nor counted against the token limit',
+  changelogV274Reset:
+    'Local model parameters now show visible labels (temperature, Top P, max output, presence / frequency penalties), and "Restore defaults" also resets local model preferences and unloads the resident model while keeping downloaded weights',
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',

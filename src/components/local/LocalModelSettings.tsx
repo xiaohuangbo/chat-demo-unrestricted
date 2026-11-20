@@ -548,46 +548,61 @@ export const LocalModelSettings = () => {
             setLocalSettings({ contextWindow: value === 'auto' ? null : Number(value) })
           }
         />
-        <ParamControl
-          label={`${t('localModelTemperature')}`}
-          value={temperature}
-          min={0}
-          max={2}
-          step={0.1}
-          onChange={(value) => setLocalSettings({ temperature: value ?? 0.7 })}
-        />
-        <ParamControl
-          label={`${t('localModelTopP')}`}
-          value={topP}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={(value) => setLocalSettings({ topP: value ?? 1 })}
-        />
-        <ParamControl
-          label={`${t('localModelMaxTokens')}`}
-          value={maxTokens}
-          min={256}
-          max={32768}
-          step={256}
-          onChange={(value) => setLocalSettings({ maxTokens: value ?? 2048 })}
-        />
-        <ParamControl
-          label={`${t('localModelPresencePenalty')}`}
-          value={presencePenalty}
-          min={-2}
-          max={2}
-          step={0.1}
-          onChange={(value) => setLocalSettings({ presencePenalty: value ?? 0 })}
-        />
-        <ParamControl
-          label={`${t('localModelFrequencyPenalty')}`}
-          value={frequencyPenalty}
-          min={-2}
-          max={2}
-          step={0.1}
-          onChange={(value) => setLocalSettings({ frequencyPenalty: value ?? 0 })}
-        />
+        <div className={styles.paramRow}>
+          <span className={styles.paramLabel}>{t('localModelTemperature')}</span>
+          <ParamControl
+            label={t('localModelTemperature')}
+            value={temperature}
+            min={0}
+            max={2}
+            step={0.1}
+            onChange={(value) => setLocalSettings({ temperature: value ?? 0.7 })}
+          />
+        </div>
+        <div className={styles.paramRow}>
+          <span className={styles.paramLabel}>{t('localModelTopP')}</span>
+          <ParamControl
+            label={t('localModelTopP')}
+            value={topP}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(value) => setLocalSettings({ topP: value ?? 1 })}
+          />
+        </div>
+        <div className={styles.paramRow}>
+          <span className={styles.paramLabel}>{t('localModelMaxTokens')}</span>
+          <ParamControl
+            label={t('localModelMaxTokens')}
+            value={maxTokens}
+            min={256}
+            max={32768}
+            step={256}
+            onChange={(value) => setLocalSettings({ maxTokens: value ?? 2048 })}
+          />
+        </div>
+        <div className={styles.paramRow}>
+          <span className={styles.paramLabel}>{t('localModelPresencePenalty')}</span>
+          <ParamControl
+            label={t('localModelPresencePenalty')}
+            value={presencePenalty}
+            min={-2}
+            max={2}
+            step={0.1}
+            onChange={(value) => setLocalSettings({ presencePenalty: value ?? 0 })}
+          />
+        </div>
+        <div className={styles.paramRow}>
+          <span className={styles.paramLabel}>{t('localModelFrequencyPenalty')}</span>
+          <ParamControl
+            label={t('localModelFrequencyPenalty')}
+            value={frequencyPenalty}
+            min={-2}
+            max={2}
+            step={0.1}
+            onChange={(value) => setLocalSettings({ frequencyPenalty: value ?? 0 })}
+          />
+        </div>
         <div className={nanoStyles.switchRow}>
           <div className={nanoStyles.switchText}>
             <div className={nanoStyles.switchLabel}>{t('localModelEnableThinking')}</div>

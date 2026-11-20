@@ -551,7 +551,8 @@ Ported from [`mlc-ai/web-llm-chat`](https://github.com/mlc-ai/web-llm-chat): its
 - “Download” is also “load”: weights and tokenizer go into the browser Cache Storage (`webllm/model`, `webllm/config`, `webllm/wasm`) and survive a page reload; “Use” writes the model into `chat-demo:model` and the chat bar reflects it immediately;
 - Model caches can be deleted; switching the cache backend (Cache Storage / IndexedDB) unloads the current model and leaves downloaded weights in the previous backend;
 - The context window follows the model recommendation (4K / 8K / …) or can be pinned from 1K to 128K; temperature, Top P, max output tokens, presence / frequency penalties and Qwen3 thinking mode all live in settings, and switching models applies the official recommended values first;
-- Auto-load on page open puts the last used in-browser model back into GPU memory after a reload; failures stay silent and are explained in the settings card.
+- Auto-load on page open puts the last used in-browser model back into GPU memory after a reload; failures stay silent and are explained in the settings card;
+- "Restore defaults" also resets local model preferences (cache backend, context window, sampling, MLC endpoint, auto-load) and unloads the resident model; downloaded weights are kept and can be selected again from the catalog.
 
 **MLC-LLM API**
 
