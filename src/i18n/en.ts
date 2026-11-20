@@ -1976,7 +1976,7 @@ export const en = {
   changelogV276Ui: 'The import card sets a target directory and overwrite mode; same names are renamed by default, and the toast shows path, size and any disk growth — visible in the terminal immediately',
   changelogV276Docs: 'Docs cover single-file import, the agent tool and capacity limits; version bumped to 2.7.6',
   changelogV276Apk: 'Builds the 2.7.6 APK (versionCode 276), signed with xiaohuangbo.jks',
-  changelogV276Pybot: 'NanoVM gains a PyBot toolchain: a pure-Python rule-based chatbot (~640k lines, no weights). After installing the bundled snapshot, pybot -p or piped input answers in about 8 seconds including startup',
+  changelogV276Pybot: 'NanoVM gains a PyBot toolchain: a pure-Python rule-based chatbot (~640k lines, no weights). After installing the bundled snapshot, pybot -i chats continuously, while pybot -p and piped input answer one-shot; the interactive session supports /reset and /exit, with ~6–8 s startup and 2–5 s per turn',
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',

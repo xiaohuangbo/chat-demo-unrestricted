@@ -3,7 +3,13 @@ import { translate } from '../../i18n/index.js'
 import { nanoVMConfig } from './config.js'
 import { vmFs } from './fs.js'
 import { loadEngine, useEngine } from './boot.js'
-import type { ToolchainId } from './types.js'
+import type { ToolchainId, ToolchainIO } from './types.js'
+import {
+  endPybotInteractive,
+  pybotTurn,
+  resetPybotInteractive,
+  startPybotInteractive,
+} from './packages.js'
 
 /**
  * 终端会话状态：标签页、输出行、历史、运行中的命令。
@@ -39,6 +45,12 @@ export type ShellTab = {
   booted: boolean
   /** 缺工具链时的提示目标 */
   pendingInstall: ToolchainId | null
+  /** 处于 PyBot 交互式对话（输入行不再当 shell 命令） */
+  pybotInteractive?: boolean
+  /** PyBot -v：每轮显示命中模块与耗时 */
+  pybotVerbose?: boolean
+  /** PyBot -s 的随机种子，/reset 时重新应用 */
+  pybotSeed?: number
 }
 
 export type VmKind = 'nanovm' | 'webvm'
@@ -249,10 +261,46 @@ export const shortPath = (cwd: string): string => {
 }
 
 export const promptFor = (tab: ShellTab): string => {
+  if (tab.pybotInteractive) {
+    return 'user>'
+  }
   const user = tab.env.USER || 'user'
   const host = tab.env.HOSTNAME || 'nanovm'
   return `${user}@${host}:${shortPath(tab.cwd)}$`
 }
+
+/** `pybot` / `pybot -i` 这类没有 -p 的调用进入交互式聊天；-h / --version 仍走一次性的 CLI */
+const parsePybotInteractive = (
+  raw: string
+): { verbose: boolean; seed?: number } | null => {
+  const tokens = raw.split(/\s+/).filter(Boolean)
+  if (tokens[0] !== 'pybot') {
+    return null
+  }
+  const args = tokens.slice(1)
+  if (args.some((arg) => arg === '-p' || arg === '--prompt')) {
+    return null
+  }
+  if (args.some((arg) => ['-h', '--help', '--version'].includes(arg))) {
+    return null
+  }
+  const seedIndex = args.findIndex((arg) => arg === '-s' || arg === '--seed')
+  const seedRaw = seedIndex >= 0 ? args[seedIndex + 1] : undefined
+  const seed = seedRaw && /^-?\d+$/.test(seedRaw) ? Number(seedRaw) : undefined
+  return {
+    verbose: args.includes('-v') || args.includes('--verbose'),
+    seed,
+  }
+}
+
+const pybotIo = (): ToolchainIO => ({
+  stdin: '',
+  stdout: () => {},
+  stderr: () => {},
+  fs: vmFs,
+  cwd: '/home/user',
+  env: defaultEnv(),
+})
 
 // ---------- 执行 ----------
 
@@ -305,6 +353,88 @@ const bootBanner = (tabId: string) => {
   })
 }
 
+/** 在标签页里启动 PyBot 交互式聊天（首次加载约 8 秒） */
+const startPybotTab = async (
+  tabId: string,
+  raw: string,
+  options: { verbose: boolean; seed?: number }
+): Promise<number> => {
+  const tab = useNanoVM.getState().tabs.find((item) => item.id === tabId)
+  if (!tab) {
+    return 1
+  }
+  pushLine(tabId, { kind: 'input', text: raw, prompt: promptFor(tab) })
+  patchTab(tabId, () => ({ running: true, pybotInteractive: true, pybotVerbose: options.verbose, pybotSeed: options.seed }))
+  pushLine(tabId, { kind: 'info', text: 'PyBot: 正在加载 64 万行规则…（首次约 8 秒）' })
+  try {
+    await startPybotInteractive(pybotIo(), { seed: options.seed })
+    pushLine(tabId, {
+      kind: 'info',
+      text: 'PyBot: 已就绪，直接输入消息开始聊天；/reset 清空对话，/help 查看命令，/exit 返回 shell。',
+    })
+    patchTab(tabId, () => ({ running: false, exitCode: 0 }))
+    return 0
+  } catch (error) {
+    patchTab(tabId, () => ({ running: false, pybotInteractive: false, exitCode: 1 }))
+    pushLine(tabId, {
+      kind: 'error',
+      text: `pybot: ${error instanceof Error ? error.message : String(error)}`,
+    })
+    return 1
+  }
+}
+
+/** PyBot 会话里的一行输入：命令或聊天消息 */
+const submitPybotMessage = async (
+  tabId: string,
+  tab: ShellTab,
+  raw: string
+): Promise<number> => {
+  pushLine(tabId, { kind: 'input', text: raw, prompt: promptFor(tab) })
+  const command = raw.trim().toLowerCase()
+  if (command === '/exit' || command === '/quit' || command === '/bye') {
+    endPybotInteractive()
+    patchTab(tabId, () => ({ pybotInteractive: false, pybotVerbose: undefined, pybotSeed: undefined }))
+    pushLine(tabId, { kind: 'info', text: '已退出 PyBot，回到 shell。' })
+    return 0
+  }
+  if (command === '/reset') {
+    resetPybotInteractive()
+    pushLine(tabId, { kind: 'info', text: 'PyBot: 新对话开始，之前的上下文已清空。' })
+    return 0
+  }
+  if (command === '/help') {
+    pushLine(tabId, {
+      kind: 'info',
+      text: 'PyBot 命令：直接输入消息聊天；/reset 清空对话；/help 显示帮助；/exit 返回 shell。',
+    })
+    return 0
+  }
+  if (!raw.trim()) {
+    return 0
+  }
+  patchTab(tabId, () => ({ running: true }))
+  try {
+    const result = pybotTurn(raw)
+    pushLine(tabId, { kind: 'stdout', text: `pybot: ${result.reply}` })
+    if (tab.pybotVerbose) {
+      pushLine(tabId, {
+        kind: 'info',
+        text: `[module: ${result.module || 'none'} | ${Math.round(result.ms)} ms]`,
+      })
+    }
+    patchTab(tabId, () => ({ running: false, exitCode: 0 }))
+    return 0
+  } catch (error) {
+    patchTab(tabId, () => ({ running: false, exitCode: 1 }))
+    pushLine(tabId, {
+      kind: 'error',
+      text: `pybot: ${error instanceof Error ? error.message : String(error)}`,
+    })
+    return 1
+  }
+}
+
 /**
  * 执行一条命令：回显 → 懒加载引擎 → 流式输出 → 更新 cwd / env。
  * 返回退出码，`running` 期间重复调用会被忽略。
@@ -323,6 +453,16 @@ export const submitNanoVMCommand = async (
     clearNanoVMScreen(tabId)
     return 0
   }
+
+  // PyBot 交互式会话：后续输入按聊天消息处理，/exit 回到 shell
+  if (tab.pybotInteractive) {
+    return submitPybotMessage(tabId, tab, raw)
+  }
+  const pybotStart = parsePybotInteractive(raw)
+  if (pybotStart) {
+    return startPybotTab(tabId, raw, pybotStart)
+  }
+
   pushLine(tabId, { kind: 'input', text: raw, prompt: promptFor(tab) })
   patchTab(tabId, (current) => ({
     running: true,
@@ -459,6 +599,7 @@ export const resetAgentShell = () => {
 /** 重置虚拟机后清理所有标签的输出与状态 */
 export const resetNanoVMSession = () => {
   resetAgentShell()
+  endPybotInteractive()
   const tabs = useNanoVM.getState().tabs
   for (const tab of tabs) {
     patchTab(tab.id, () => ({
@@ -471,6 +612,9 @@ export const resetNanoVMSession = () => {
       exitCode: null,
       booted: false,
       pendingInstall: null,
+      pybotInteractive: false,
+      pybotVerbose: undefined,
+      pybotSeed: undefined,
     }))
   }
 }

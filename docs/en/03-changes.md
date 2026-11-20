@@ -640,8 +640,9 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 
 - **Source**: a bundled snapshot of [huggingface/pybot](https://github.com/huggingface/pybot) (bot source commit `24cbc04`, Apache-2.0) packed as `public/pybot.zip` (~13 MB) and unpacked offline into `/opt/pybot`, so no network is needed at install time;
 - **Contents**: 528 Python files, roughly 640k lines of rules, no weights and no third-party dependencies;
-- **Usage**: `pybot -p "question"` for one reply, `echo "question" | pybot` for line-by-line piping, `-v` for the module and timing, `--version` for the snapshot commit;
+- **Interactive mode**: run `pybot` / `pybot -i` (or with `-v`) directly in the terminal for a continuous chat; the prompt becomes `user>`. `/reset` clears the context, `/help` lists commands and `/exit` returns to the shell. The session stays in memory instead of reloading each turn;
+- **One-shot mode**: `pybot -p "question"` for one reply, `echo "question" | pybot` for line-by-line piping, `-v` for the module and timing, `--version` for the snapshot commit;
 - **How it runs**: normal `python3` sync is capped at 16 MB, while PyBot raises the cap to 64 MB, syncs `/opt/pybot` into Pyodide and runs `pybot.py`; installation grows the virtual disk to about 83 MB automatically;
-- **Measured**: Python install ~23 s (12 MB Pyodide), PyBot unpack ~3 s, then each question takes about **8 s** including Pyodide startup and importing 528 modules before the rule engine replies; piped input works too.
+- **Measured**: Python install ~23 s (12 MB Pyodide), PyBot unpack ~3 s; interactive startup is about **6–8 s** and each turn takes 2–5 s. After “my name is Sam”, asking “what is my name?” answers “You're Sam.”; `/reset` then answers “I don't know it yet”. One-shot and piped modes work as well.
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

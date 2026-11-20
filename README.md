@@ -71,7 +71,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.6.apk` (24 MB, versionCode 276,
-SHA-256 `b47fa4ad51e7957bdf00b287ba727862587eb298ed4c4da57cc3e105c2700d6c`) — see [android/README.md](android/README.md).
+SHA-256 `9339f1a2c95e05f3ce3de6869422856b45a8d6622fa197ee7358c01b3bbf6753`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -99,7 +99,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 ## Recent versions
 
-- **2.7.6**: NanoVM gains single-file import for users and the agent — write any file from this device or the workspace straight into the VM without base64 shell commands, with automatic disk growth; new `nanovm_import` tool; PyBot toolchain (pure-Python rule chatbot, ~8 s per question) installs offline from a bundled snapshot; known limits now 80.
+- **2.7.6**: NanoVM gains single-file import for users and the agent — write any file from this device or the workspace straight into the VM without base64 shell commands, with automatic disk growth; new `nanovm_import` tool; PyBot toolchain (pure-Python rule chatbot) installs offline from a bundled snapshot and supports an interactive `pybot -i` chat with `/reset` and `/exit`; known limits now 80.
 - **2.7.5**: merges upstream 0.1.3 (resize oversized Files API images before reuse); local models can extract long-term memories (with a selectable extraction model), borrow a server-side search pre-pass, read text attachments and are restricted to Chat mode; local thinking merges into the composer’s Deep thinking control; ports Remember’s characters, My profile, compression threshold and account/usage overview; the local model settings icon becomes a chip; on mobile, auto-jailbreak and input perturbation keep their text labels instead of collapsing into circles; system prompts and chain-of-thought gain multiple named presets with create / clone / rename / delete and one-click switching; known limits now 78.
 - **2.7.4**: ports mlc-ai/web-llm-chat — Settings → Local models runs WebGPU models in the browser, downloads and caches weights, switches from the chat bar, imports/exports `.mlcmodel` bundles and talks to an MLC-LLM REST server; local tokens are free (speech, search and parsing still billed); the page title is now “网页里的deepseek unrestricted Chat Harness”; known limits now 73.
 - **2.7.3**: fixed the stretched NanoVM panel on mobile and the unscrollable WebVM terminal; added keyword refusal under Settings → Model (local match, works without a key, no API request); known limits now 67; WebVM gains sudo (root password password) and a one-click Root switch.

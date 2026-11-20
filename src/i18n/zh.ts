@@ -1836,7 +1836,7 @@ export const zh = {
   changelogV276Ui: '导入卡片可设目标目录与同名覆盖；同名默认自动改名，导入完成会显示路径、大小与扩容结果，终端立即可见',
   changelogV276Docs: '文档补充单文件导入、Agent 工具与容量限制，版本号推进到 2.7.6',
   changelogV276Apk: '同步构建 2.7.6 APK（versionCode 276），使用 xiaohuangbo.jks 签名',
-  changelogV276Pybot: 'NanoVM 工具链新增 PyBot 超级专家系统：纯 Python 规则聊天机器人（约 64 万行，无模型权重），安装内置快照后可用 pybot -p 提问或管道输入，实测约 8 秒完成加载与回答',
+  changelogV276Pybot: 'NanoVM 工具链新增 PyBot 超级专家系统：纯 Python 规则聊天机器人（约 64 万行，无模型权重），安装内置快照后可用 pybot -i 连续对话、pybot -p 单次提问或管道输入；交互模式支持 /reset 与 /exit，实测加载约 6–8 秒、每轮 2–5 秒',
   latestReminderLanguage: '中文',
   settingsLocaleZhCN: '简体中文',
   settingsLocaleEnUS: 'English',

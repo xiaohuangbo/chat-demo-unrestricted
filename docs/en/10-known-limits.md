@@ -95,7 +95,7 @@
 78. **Prompt and CoT presets stay on this device**: up to 30 each, stored as `chat-demo:system-prompt-presets` / `chat-demo:cot-presets` and not included in history exports; deleting the active preset clears the current prompt text.
 
 79. **NanoVM single-file import is capped**: a hard 256 MB per-file limit and a 2048 MB maximum disk; the disk grows before writing, and very large files make OPFS persist the whole filesystem as base64, which can take seconds to tens of seconds, so keep the page open.
-80. **PyBot startup is not instant**: each question syncs ~39 MB of source into Pyodide and imports 528 modules, measured at about 8 s; it needs the Python toolchain (~12 MB), and the offline snapshot is pinned to commit 24cbc04 — update it by rebuilding `public/pybot.zip`.
+80. **PyBot startup is not instant**: each question syncs ~39 MB of source into Pyodide and imports 528 modules, measured at about 8 s; it needs the Python toolchain (~12 MB), and the offline snapshot is pinned to commit 24cbc04 — update it by rebuilding `public/pybot.zip`; while an interactive session is active, terminal input is treated as chat, so run `/exit` before shell commands.
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

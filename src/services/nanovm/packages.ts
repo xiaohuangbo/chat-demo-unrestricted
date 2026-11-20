@@ -1456,6 +1456,96 @@ const installPybot = async (report: (progress: number) => void): Promise<void> =
   report(1)
 }
 
+// ---------- PyBot 交互式会话 ----------
+
+type PybotSession = {
+  pyodide: PyodideLike
+  /** 已同步过的根目录，避免每轮重复写 39MB */
+  ready: boolean
+}
+
+let pybotSession: PybotSession | null = null
+
+const PYBOT_BOOTSTRAP = `import json, sys, time
+sys.path.insert(0, '/opt/pybot')
+from bot import runtime as __nanovm_bot_runtime
+__nanovm_bot_memory = {}
+
+def __nanovm_pybot_reset():
+    global __nanovm_bot_memory
+    __nanovm_bot_memory = {}
+
+def __nanovm_pybot_turn(__text):
+    start = time.perf_counter()
+    try:
+        result = __nanovm_bot_runtime.turn(__text, __nanovm_bot_memory)
+        reply = ' '.join(str(result['reply']).split()) or 'Hello!'
+        module = result.get('module') or ''
+    except Exception:
+        reply, module = 'Hello!', ''
+    return json.dumps({'reply': reply, 'module': module, 'ms': (time.perf_counter() - start) * 1000})
+`
+
+export type PybotTurnResult = {
+  reply: string
+  module: string
+  ms: number
+}
+
+/** 启动 PyBot 交互式会话：只在开始时同步一次源码，之后每轮只调用 Python 函数 */
+export const startPybotInteractive = async (
+  io: ToolchainIO,
+  options: { seed?: number } = {}
+): Promise<void> => {
+  if (!stateOf('python').installed) {
+    throw new Error('PyBot 需要 Python 工具链，先执行 vm install python')
+  }
+  if (pybotSession) {
+    return
+  }
+  const runtime = await ensurePythonRuntime(io)
+  if (!runtime) {
+    throw new Error('Python 运行时加载失败')
+  }
+  const roots = [PYBOT_ROOT, '/home/user', '/tmp']
+  const { files, skipped } = collectFiles(io.fs, roots, PYBOT_SYNC_LIMIT)
+  if (skipped > 0) {
+    io.stderr(`pybot: 有 ${skipped} 个文件超过同步上限，可能影响模块加载\n`)
+  }
+  syncIntoPyodide(runtime.pyodide.FS, files)
+  runtime.pyodide.runPython(PYBOT_BOOTSTRAP)
+  if (options.seed !== undefined) {
+    runtime.pyodide.runPython(`import random; random.seed(${Math.round(options.seed)})`)
+  }
+  pybotSession = { pyodide: runtime.pyodide, ready: true }
+}
+
+/** 交互式会话的一轮：返回回复、命中模块与耗时 */
+export const pybotTurn = (text: string): PybotTurnResult => {
+  if (!pybotSession) {
+    throw new Error('PyBot 会话尚未启动')
+  }
+  const result = pybotSession.pyodide.runPython(
+    `__nanovm_pybot_turn(${JSON.stringify(text)})`
+  ) as unknown
+  const parsed = JSON.parse(String(result)) as Partial<PybotTurnResult>
+  return {
+    reply: typeof parsed.reply === 'string' ? parsed.reply : 'Hello!',
+    module: typeof parsed.module === 'string' ? parsed.module : '',
+    ms: typeof parsed.ms === 'number' ? parsed.ms : 0,
+  }
+}
+
+export const resetPybotInteractive = (): void => {
+  pybotSession?.pyodide.runPython('__nanovm_pybot_reset()')
+}
+
+export const endPybotInteractive = (): void => {
+  pybotSession = null
+}
+
+export const isPybotInteractive = (): boolean => pybotSession !== null
+
 /**
  * 运行 PyBot：源码在 /opt/pybot，直接同步进 Pyodide 后按脚本执行。
  *

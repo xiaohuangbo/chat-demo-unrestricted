@@ -93,7 +93,7 @@
 78. **提示词与思维链预设只存本机**：每类最多 30 套，存储键为 `chat-demo:system-prompt-presets` / `chat-demo:cot-presets`，不进入历史导出包；删除当前预设会清空当前提示词内容。
 
 79. **NanoVM 单文件导入有上限**：单文件硬上限 256MB，磁盘配额最高 2048MB；导入会先扩容再写入，超大文件在 OPFS 上落盘要按 base64 序列化整个文件系统，可能需要几秒到几十秒，期间不要关闭页面。
-80. **PyBot 启动不是即时的**：每次提问都要把约 39MB 源码同步进 Pyodide 并导入 528 个模块，实测约 8 秒；安装需要 Python 工具链（约 12MB），离线快照固定为提交 24cbc04，更新需重新打 `public/pybot.zip`。
+80. **PyBot 启动不是即时的**：每次提问都要把约 39MB 源码同步进 Pyodide 并导入 528 个模块，实测约 8 秒；安装需要 Python 工具链（约 12MB），离线快照固定为提交 24cbc04，更新需重新打 `public/pybot.zip`；交互会话期间终端输入按聊天消息处理，要执行 shell 命令先 `/exit`。
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

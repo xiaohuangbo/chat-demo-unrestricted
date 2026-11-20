@@ -640,8 +640,9 @@ Persona（官方身份分块）
 
 - **来源**：内置 [huggingface/pybot](https://github.com/huggingface/pybot) 快照（bot 源码提交 `24cbc04`，Apache-2.0），打包为 `public/pybot.zip`（约 13MB），安装时离线解压到虚拟机的 `/opt/pybot`，不依赖外网；
 - **内容**：528 个 Python 文件、约 64 万行规则代码，无模型权重、无第三方依赖；
-- **运行**：`pybot -p "问题"` 单次回答，`echo "问题" | pybot` 按行批量回答，`-v` 显示命中模块与耗时，`--version` 查看快照提交；
+- **交互模式**：终端直接输入 `pybot` / `pybot -i`（或 `-v`）进入连续对话，提示符变成 `user>`；`/reset` 清空上下文（例如忘记名字）、`/help` 看帮助、`/exit` 回到 shell；PyBot 的会话内存在终端里保持，不再每轮重新加载；
+- **一次性模式**：`pybot -p "问题"` 单次回答，`echo "问题" | pybot` 按行批量回答，`-v` 显示命中模块与耗时，`--version` 查看快照提交；
 - **实现**：普通 `python3` 的同步上限是 16MB，PyBot 单独放宽到 64MB，启动时把 `/opt/pybot` 同步进 Pyodide 再执行 `pybot.py`；安装会按源码体积自动扩容虚拟磁盘（默认到约 83MB）；
-- **实测**：首次安装 Python 约 23 秒（Pyodide 12MB），PyBot 解压约 3 秒；之后每次提问包含 Pyodide 加载与 528 个模块导入约 **8 秒**，随后返回规则引擎答案；管道输入同样可用。
+- **实测**：首次安装 Python 约 23 秒（Pyodide 12MB），PyBot 解压约 3 秒；交互模式启动约 **6–8 秒**，之后每轮 2–5 秒（含模块调用），例如「my name is Sam」后问「what is my name?」回答「You're Sam.」，`/reset` 后答「I don't know it yet」；一次性与管道模式同样可用。
 
 [← 返回 README](../../README.md) · [全部文档](README.md)
