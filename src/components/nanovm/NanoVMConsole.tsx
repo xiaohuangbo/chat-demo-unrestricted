@@ -20,6 +20,13 @@ import {
   useNanoVMConfig,
 } from '../../services/nanovm/config.js'
 import { vmFs } from '../../services/nanovm/fs.js'
+import {
+  importLocalFileToVm,
+  importWorkspaceFileToVm,
+  VmImportError,
+  vmFileLimitMB,
+} from '../../services/nanovm/importFile.js'
+import { hydrateWorkspace, useWorkspace } from '../../services/workspace/store.js'
 import { NetError, fetchNet, netStatus, type NetRoute } from '../../services/nanovm/netProxy.js'
 import {
   TOOLCHAIN_CATEGORIES,
@@ -400,6 +407,16 @@ const ToolchainCard = ({
  * 最后是「打开终端」。改内存 / 磁盘会重新分配 WASM 线性内存，所以顺手
  * resetEngine()，下一次执行命令时按新配额重建。
  */
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) {
+    return `${bytes} B`
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export const NanoVMConsole = () => {
   const t = useTranslate()
   const enabled = useNanoVMConfig((state) => state.enabled)
@@ -422,6 +439,14 @@ export const NanoVMConsole = () => {
   const [resetting, setResetting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
+  const [fileImporting, setFileImporting] = useState(false)
+  const [targetDir, setTargetDir] = useState('/home/user')
+  const [overwrite, setOverwrite] = useState(false)
+  const [workspaceOpen, setWorkspaceOpen] = useState(false)
+  const [workspaceBusy, setWorkspaceBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const workspaceFiles = useWorkspace((state) => state.files)
+  const workspaceHydrated = useWorkspace((state) => state.hydrated)
 
   const timeoutSeconds = Math.round(timeoutMs / 1000)
   const storageOpfs = vmFs.usage().opfs
@@ -481,6 +506,75 @@ export const NanoVMConsole = () => {
       })
     } finally {
       setImporting(false)
+    }
+  }
+
+  const importSingleFile = async (file: File) => {
+    setFileImporting(true)
+    try {
+      const result = await importLocalFileToVm(file, { targetDir, overwrite })
+      if (result.grownTo) {
+        showToast({
+          key: 'nanovmFileImportGrown',
+          params: { path: result.path, size: formatBytes(result.bytes), disk: result.grownTo },
+        })
+      } else {
+        showToast({
+          key: 'nanovmFileImportDone',
+          params: { path: result.path, size: formatBytes(result.bytes) },
+        })
+      }
+    } catch (error) {
+      showToast({
+        key: 'nanovmFileImportFailed',
+        params: {
+          reason: error instanceof VmImportError ? error.message : error instanceof Error ? error.message : String(error),
+        },
+        type: 'error',
+      })
+    } finally {
+      setFileImporting(false)
+    }
+  }
+
+  const importWorkspace = async (workspacePath: string) => {
+    setFileImporting(true)
+    try {
+      const result = await importWorkspaceFileToVm(workspacePath, { targetDir, overwrite })
+      setWorkspaceOpen(false)
+      if (result.grownTo) {
+        showToast({
+          key: 'nanovmFileImportGrown',
+          params: { path: result.path, size: formatBytes(result.bytes), disk: result.grownTo },
+        })
+      } else {
+        showToast({
+          key: 'nanovmFileImportDone',
+          params: { path: result.path, size: formatBytes(result.bytes) },
+        })
+      }
+    } catch (error) {
+      showToast({
+        key: 'nanovmFileImportFailed',
+        params: {
+          reason: error instanceof VmImportError ? error.message : error instanceof Error ? error.message : String(error),
+        },
+        type: 'error',
+      })
+    } finally {
+      setFileImporting(false)
+    }
+  }
+
+  const openWorkspacePicker = async () => {
+    setWorkspaceOpen(true)
+    if (!workspaceHydrated) {
+      setWorkspaceBusy(true)
+      try {
+        await hydrateWorkspace()
+      } finally {
+        setWorkspaceBusy(false)
+      }
     }
   }
 
@@ -611,6 +705,63 @@ export const NanoVMConsole = () => {
       <div className={styles.card}>
         <div className={styles.actionRow}>
           <div className={styles.actionText}>
+            <div className={styles.actionLabel}>{t('nanovmFileImport')}</div>
+            <div className={styles.hint}>{t('nanovmFileImportHint')}</div>
+          </div>
+          <div className={styles.fileImportActions}>
+            <Button
+              size="s"
+              variant="outlined"
+              disabled={fileImporting}
+              onClick={() => fileRef.current?.click()}
+            >
+              {t('nanovmImportLocal')}
+            </Button>
+            <Button
+              size="s"
+              variant="outlined"
+              disabled={fileImporting}
+              onClick={() => void openWorkspacePicker()}
+            >
+              {t('nanovmImportWorkspace')}
+            </Button>
+          </div>
+        </div>
+        <div className={styles.fileImportForm}>
+          <label className={styles.fileImportField}>
+            <span>{t('nanovmImportTarget')}</span>
+            <input
+              value={targetDir}
+              spellCheck={false}
+              aria-label={t('nanovmImportTarget')}
+              onChange={(event) => setTargetDir(event.target.value)}
+            />
+          </label>
+          <div className={styles.fileImportToggle}>
+            <span>{t('nanovmImportOverwrite')}</span>
+            <Switch checked={overwrite} onChange={setOverwrite} label={t('nanovmImportOverwrite')} />
+          </div>
+        </div>
+        <div className={styles.hint}>
+          {t('nanovmImportTargetHint')} · {t('nanovmFileLimit', { limit: vmFileLimitMB() })}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) {
+              void importSingleFile(file)
+            }
+          }}
+        />
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.actionRow}>
+          <div className={styles.actionText}>
             <div className={styles.actionLabel}>{t('nanovmExportImage')}</div>
             <div className={styles.hint}>{t('nanovmExportHint')}</div>
           </div>
@@ -732,6 +883,46 @@ export const NanoVMConsole = () => {
           }
         >
           {t('nanovmResetConfirm')}
+        </Modal>
+      ) : null}
+
+      {workspaceOpen ? (
+        <Modal
+          title={t('nanovmWorkspacePick')}
+          onClose={() => setWorkspaceOpen(false)}
+          className={styles.confirm}
+          footer={
+            <div className={styles.confirmActions}>
+              <Button variant="outlined" onClick={() => setWorkspaceOpen(false)}>
+                {t('cancel')}
+              </Button>
+            </div>
+          }
+        >
+          {workspaceBusy ? (
+            <div className={styles.hint}>{t('nanovmWorkspaceLoading')}</div>
+          ) : Object.keys(workspaceFiles).length === 0 ? (
+            <div className={styles.hint}>{t('nanovmWorkspaceEmpty')}</div>
+          ) : (
+            <div className={styles.workspaceList}>
+              {Object.values(workspaceFiles)
+                .toSorted((left, right) => right.updatedAt - left.updatedAt)
+                .map((file) => (
+                  <button
+                    key={file.path}
+                    type="button"
+                    className={styles.workspaceRow}
+                    disabled={fileImporting}
+                    onClick={() => void importWorkspace(file.path)}
+                  >
+                    <span className={styles.workspaceName}>{file.path}</span>
+                    <span className={styles.workspaceMeta}>
+                      {t('nanovmWorkspaceFileMeta', { size: formatBytes(file.size) })}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          )}
         </Modal>
       ) : null}
     </div>

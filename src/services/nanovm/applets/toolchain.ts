@@ -199,7 +199,7 @@ const vmInfo = async (ctx: AppletContext): Promise<AppletResult> => {
   }).join(' · ')
   const totalMB = memory.totalMB > 0 ? memory.totalMB : config.memoryMB
   const lines = [
-    `NanoVM Slim ${info?.version ?? '2.7.5'}`,
+    `NanoVM Slim ${info?.version ?? '2.7.6'}`,
     `引擎：${info?.wasm === false ? 'JS 兼容内核' : 'WASM Shell Engine'}（异步 chunk 懒加载）`,
   ]
   if (applets > 0) {
@@ -267,6 +267,9 @@ const vmList = (): AppletResult => {
 
 const progressText = (id: ToolchainId, percent: number): string => {
   const label = labelOf(id)
+  if (id === 'pybot') {
+    return `正在安装 ${label}（解压内置包）… ${percent}%`
+  }
   const sizeMB = toolchainSizeMB(id)
   return sizeMB > 0 ? `正在下载 ${label} 运行时… ${percent}%` : `正在启用 ${label}… ${percent}%`
 }
@@ -582,6 +585,25 @@ const makeApplet: Applet = {
   },
 }
 
+const pybotApplet: Applet = {
+  name: 'pybot',
+  summary: 'PyBot 超级专家系统：纯 Python 规则聊天机器人，依赖 Python 工具链',
+  summaryEn: 'PyBot: a rule-based chatbot written entirely in Python; requires the Python toolchain',
+  usage: 'pybot -p "问题"   或   echo "问题" | pybot   （-v 显示模块与耗时）',
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    if (!ctx.toolchains.installed('python')) {
+      return needToolchain(
+        'python',
+        'pybot: 需要 Python 工具链（约 12MB），先执行 vm install python\n'
+      )
+    }
+    if (!ctx.toolchains.installed('pybot')) {
+      return needToolchain('pybot', 'pybot: 未安装，执行 vm install pybot（内置包，约 13MB）\n')
+    }
+    return runToolchain(ctx, 'pybot', ctx.argv.slice(1))
+  },
+}
+
 /** 按需工具链命令；顺序即 help 里的展示顺序 */
 export const TOOLCHAIN_APPLETS: Applet[] = [
   pythonApplet('python3'),
@@ -598,5 +620,6 @@ export const TOOLCHAIN_APPLETS: Applet[] = [
   gitApplet,
   npmApplet,
   pipApplet,
+  pybotApplet,
   vmApplet,
 ]

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
-import { dirName, resolvePath, type FsEntry, type NanovmFS } from './fs.js'
+import { unzipSync } from 'fflate'
+import { dirName, resolvePath, vmFs, type FsEntry, type NanovmFS } from './fs.js'
+import { ensureVmCapacity } from './importFile.js'
 import { GIT_VERSION, runGit } from './git.js'
 import { NODE_VERSION, runNode } from './nodeRuntime.js'
 import { nanoVMConfig } from './config.js'
@@ -50,6 +52,7 @@ export const TOOLCHAIN_IDS: ToolchainId[] = [
   'prettier',
   'make',
   'git',
+  'pybot',
 ]
 
 /** 不需要下载、默认启用的运行时（可以 `vm uninstall` 关掉） */
@@ -153,6 +156,14 @@ const META: Record<ToolchainId, Meta> = {
     version: '4.x 兼容',
     category: 'build',
     hint: 'make',
+  },
+  pybot: {
+    label: 'PyBot',
+    summary: 'PyBot 超级专家系统：64 万行纯 Python 规则聊天机器人，无模型权重；依赖 Python 工具链',
+    sizeMB: 13,
+    version: '24cbc04',
+    category: 'tool',
+    hint: 'pybot -p "你好"',
   },
   git: {
     label: 'Git',
@@ -1400,6 +1411,98 @@ const buildPythonRunner = (
   return `${lines.join('\n')}\n`
 }
 
+/** PyBot 的源码目录：从内置 zip 解压到这里，和用户文件分开 */
+export const PYBOT_ROOT = '/opt/pybot'
+/** PyBot 单次同步上限：源码约 39MB，默认 16MB 会漏文件 */
+const PYBOT_SYNC_LIMIT = 64 * 1024 * 1024
+
+const installPybot = async (report: (progress: number) => void): Promise<void> => {
+  const url = new URL('pybot.zip', document.baseURI).href
+  let response: Response
+  try {
+    response = await fetch(url, { cache: 'no-store' })
+  } catch (error) {
+    throw new Error(`无法读取内置的 PyBot 包：${error instanceof Error ? error.message : String(error)}`)
+  }
+  if (!response.ok) {
+    throw new Error(`无法读取内置的 PyBot 包（HTTP ${response.status}）`)
+  }
+  report(0.2)
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  const entries = Object.entries(unzipSync(bytes)).filter(
+    ([name, data]) => !name.endsWith('/') && data.byteLength >= 0
+  )
+  if (entries.length === 0) {
+    throw new Error('PyBot 包为空或格式不正确')
+  }
+  const total = entries.reduce((sum, [, data]) => sum + data.byteLength, 0)
+  ensureVmCapacity(total)
+  vmFs.mkdir(PYBOT_ROOT, true)
+  let done = 0
+  for (const [name, data] of entries) {
+    const clean = name.replace(/^\.\//, '')
+    if (!clean || clean.includes('..')) {
+      continue
+    }
+    const target = `${PYBOT_ROOT}/${clean}`
+    vmFs.mkdir(dirName(target), true)
+    vmFs.write(target, data)
+    done += 1
+    if (done % 20 === 0 || done === entries.length) {
+      report(0.2 + (done / entries.length) * 0.75)
+    }
+  }
+  await vmFs.persist()
+  report(1)
+}
+
+/**
+ * 运行 PyBot：源码在 /opt/pybot，直接同步进 Pyodide 后按脚本执行。
+ *
+ * 普通 python3 的同步上限是 16MB，PyBot 有约 39MB / 528 个模块，所以单独放宽到
+ * 64MB，并且只同步 PyBot 目录与当前目录，不回写（PyBot 不修改自己的源码）。
+ */
+const runPybot = async (
+  io: ToolchainIO,
+  argv: string[]
+): Promise<{ code: number; error?: string }> => {
+  if (!stateOf('python').installed) {
+    return {
+      code: 127,
+      error: 'PyBot 需要 Python 工具链，先执行 vm install python（约 12MB）',
+    }
+  }
+  const runtime = await ensurePythonRuntime(io)
+  if (!runtime) {
+    return { code: 1, error: 'Python 运行时加载失败' }
+  }
+  const roots = [PYBOT_ROOT, '/home/user', '/tmp']
+  if (io.cwd && io.cwd !== '/') {
+    roots.push(io.cwd)
+  }
+  const { files, skipped } = collectFiles(io.fs, roots, PYBOT_SYNC_LIMIT)
+  if (skipped > 0) {
+    io.stderr(`pybot: 有 ${skipped} 个文件超过同步上限，可能影响模块加载\n`)
+  }
+  const pyodide = runtime.pyodide
+  attachPythonIO(io, pyodide, io.stdin)
+  syncIntoPyodide(pyodide.FS, files)
+  const runner = buildPythonRunner('script', {
+    script: `${PYBOT_ROOT}/pybot.py`,
+    code: '',
+    argv: ['pybot', ...argv],
+  })
+  let exitCode = 0
+  try {
+    pyodide.runPython(runner)
+    exitCode = readPythonExitCode(pyodide)
+  } catch (error) {
+    io.stderr(`pybot: ${error instanceof Error ? error.message : String(error)}\n`)
+    exitCode = 1
+  }
+  return { code: exitCode }
+}
+
 const runPython = async (io: ToolchainIO, argv: string[]): Promise<{ code: number }> => {
   // pip 这个 applet 会把命令原样交给 python 工具链：pip install … → python -m pip install …
   if (argv[0] === 'pip') {
@@ -1683,7 +1786,16 @@ export const installToolchain = async (
     onProgress?.(progress)
   }
   try {
-    if (id === 'python') {
+    if (id === 'pybot') {
+      await installPybot(report)
+      patchState(id, {
+        installed: true,
+        version: META.pybot.version,
+        progress: 1,
+        error: undefined,
+        sizeMB: META.pybot.sizeMB,
+      })
+    } else if (id === 'python') {
       const runtime = await loadPythonRuntime(report)
       patchState(id, {
         installed: true,
@@ -1734,6 +1846,14 @@ export const installToolchain = async (
 
 /** 卸载：释放内存里的运行时，并记住「用户主动卸载过」 */
 export const uninstallToolchain = async (id: ToolchainId): Promise<void> => {
+  if (id === 'pybot') {
+    try {
+      vmFs.remove(PYBOT_ROOT, true)
+      await vmFs.persist()
+    } catch {
+      // 目录不存在的重复卸载可以忽略
+    }
+  }
   if (id === 'python') {
     pythonRuntime = null
     pythonLoading = null
@@ -1767,6 +1887,9 @@ export const createToolchainHost = (): ToolchainHost => ({
     try {
       if (id === 'python') {
         return await runPython(io, argv)
+      }
+      if (id === 'pybot') {
+        return await runPybot(io, argv)
       }
       if (id === 'node') {
         return await runNodeCli(io, argv)

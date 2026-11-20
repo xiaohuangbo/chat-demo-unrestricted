@@ -11,6 +11,7 @@
 - Thanks to [DeepChat](https://github.com/YanJiuWeiYuanHui/DeepChat) for the long-term memory and daily token / cost alert reference.
 - Thanks to [Remember](https://github.com/luomiluomi/Remember) for the character cards, My profile, compression threshold and account/usage reference, under the MIT license; this fork rewrites the interactions and does not copy its artwork or app icon.
 - Thanks to [mlc-ai/web-llm-chat](https://github.com/mlc-ai/web-llm-chat) for the in-browser model catalog, WebLLM inference and MLC-LLM API client, Apache-2.0.
+- Thanks to [huggingface/pybot](https://github.com/huggingface/pybot) for the PyBot rule-based chatbot source (Apache-2.0); `public/pybot.zip` is an offline snapshot of commit `24cbc04` with no source changes.
 - The oversized-image resize logic is merged from upstream [deepseek-ai/chat-demo v0.1.3](https://github.com/deepseek-ai/chat-demo) (MIT).
 - **WebVM / CheerpX**: the x86 virtualisation runtime and the default Debian image come from [Leaning Technologies](https://cheerpx.io). CheerpX is proprietary software, free for personal and open-source projects, and requires a commercial licence otherwise; this repository only calls the public runtime on their CDN and does not redistribute the engine files.
 - **xterm.js**: the terminal component, MIT licensed, see [@xterm/xterm](https://github.com/xtermjs/xterm.js).

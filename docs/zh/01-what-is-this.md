@@ -2,14 +2,14 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.7.5**
+> 当前版本：**2.7.6**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
 - **解除限制与提示词**：解除限制模式、默认破限文档 / GODMODE 预设、每轮静默注入系统提示词、实验性中文翻译；
 - **浏览器工具**：从 DeepSeek-Agent 移植时间、定位、天气、通知、剪贴板、抓网页、生成文件、打开链接与可视化组件，十项能力各自开关；
 - **虚拟工作区**：浏览器 localStorage 里的长期文件库，可新建 / 编辑 / 删除、单文件下载、整包导入导出，并配有 5 个工作区工具；
-- **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 风格命令，桌面端右侧停靠、手机端底部面板；Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git 按需安装，还有一套虚拟机内虚拟网络，能跑 Node 与 Python 的 HTTP / WebSocket 服务；
+- **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 风格命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制），模型可用 `nanovm_import` 工具写入文件；桌面端右侧停靠、手机端底部面板；Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git / PyBot 按需安装，还有一套虚拟机内虚拟网络，能跑 Node 与 Python 的 HTTP / WebSocket 服务；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，内置 bash / coreutils / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
 - **聊天模式**：输入栏四档切换——仅聊天 / 网页 Agent / PTC / 创造，决定这一轮下发哪些客户端工具、允许多少次工具往返；创造模式让模型在虚拟机里自己装运行时、把脚本变成新命令；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术；命中用户输入时在本地直接生成拒答回复，不请求接口，未填 API Key 也能触发；

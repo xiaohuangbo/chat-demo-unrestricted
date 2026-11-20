@@ -99,6 +99,10 @@
 | [`src/services/local/stream.ts`](../../src/services/local/stream.ts) | Local generation → `MessageStreamEvent`: message flattening and chunk queue |
 | [`src/services/local/transfer.ts`](../../src/services/local/transfer.ts) | `.mlcmodel` bundle import/export: streaming container and cache writes |
 | [`src/services/local/store.ts`](../../src/services/local/store.ts) | Local model settings and runtime state (localStorage + zustand) |
+| [`public/pybot.zip`](../../public/pybot.zip) | PyBot source snapshot (Apache-2.0, ~13 MB), unpacked to /opt/pybot by the toolchain |
+| [`src/services/nanovm/packages.ts`](../../src/services/nanovm/packages.ts) | PyBot install / run: bundled unpack, 64 MB sync cap, Pyodide executing pybot.py |
+| [`src/services/nanovm/importFile.ts`](../../src/services/nanovm/importFile.ts) | NanoVM single-file import: device / workspace / content, auto-grow and naming |
+| [`src/components/nanovm/NanoVMConsole.tsx`](../../src/components/nanovm/NanoVMConsole.tsx) | Settings → Virtual machines: import card and workspace picker |
 | [`src/components/local/LocalModelSettings.tsx`](../../src/components/local/LocalModelSettings.tsx) | Settings → Local models: GPU status, catalog, MLC-LLM, bundles and parameters |
 | [`src/services/local/augment.ts`](../../src/services/local/augment.ts) | Local model extras: text attachments and server-side search pre-pass |
 | [`src/services/companion.ts`](../../src/services/companion.ts) | Character storage, active role, role system prompt |

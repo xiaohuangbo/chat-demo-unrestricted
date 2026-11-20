@@ -11,6 +11,7 @@
 - 感谢 [DeepChat](https://github.com/YanJiuWeiYuanHui/DeepChat)：长期记忆与每日 Token / 费用提醒的参考实现。
 - 感谢 [Remember（记得）](https://github.com/luomiluomi/Remember)：角色卡、我的资料、压缩触发阈值与账户用量概览的参考实现，遵循 MIT 许可；本仓库按其交互重写，未复制其美术资源与应用图标。
 - 感谢 [mlc-ai/web-llm-chat](https://github.com/mlc-ai/web-llm-chat)：浏览器本地模型的目录、WebLLM 推理与 MLC-LLM API 客户端，Apache-2.0 许可。
+- 感谢 [huggingface/pybot](https://github.com/huggingface/pybot)：PyBot 规则聊天机器人源码，Apache-2.0 许可；`public/pybot.zip` 为其提交 `24cbc04` 的离线快照，未修改源码。
 - 附件超限图片缩放逻辑合并自上游 [deepseek-ai/chat-demo v0.1.3](https://github.com/deepseek-ai/chat-demo)（MIT）。
 - **WebVM / CheerpX**：x86 虚拟化运行时与默认 Debian 镜像来自 [Leaning Technologies](https://cheerpx.io)，是专有软件，个人与开源项目可免费使用，商业使用需要商业许可；本仓库只调用其 CDN 上的公开运行时，不重新分发引擎文件。
 - **xterm.js**：终端组件，MIT 许可，见 [@xterm/xterm](https://github.com/xtermjs/xterm.js)。

@@ -20,6 +20,7 @@ export type ToolchainId =
   | 'prettier'
   | 'make'
   | 'git'
+  | 'pybot'
 
 /** 控制台里的分组：运行时 / 构建 / 工具 */
 export type ToolchainCategory = 'runtime' | 'build' | 'tool'

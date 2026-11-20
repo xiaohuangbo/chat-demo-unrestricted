@@ -1,6 +1,12 @@
 import { nanoVMAgentAvailable } from '../nanovm/config.js'
 import { hydrateNanovmFs, resolvePath, vmFs } from '../nanovm/fs.js'
 import { execAgentShell } from '../nanovm/session.js'
+import {
+  importContentToVm,
+  importWorkspaceFileToVm,
+  vmFileLimitMB,
+  VmImportError,
+} from '../nanovm/importFile.js'
 import type { FsEntry } from '../nanovm/fs.js'
 import type { AgentTool } from './tools.js'
 import { clip, fail, num, ok, str } from './tools.js'
@@ -177,6 +183,7 @@ const INSTALLABLE = [
   'prettier',
   'make',
   'git',
+  'pybot',
 ] as const
 
 const installTool: AgentTool = {
@@ -189,7 +196,8 @@ const installTool: AgentTool = {
     '在 NanoVM Slim 虚拟机里安装（启用）一个工具链：python（Pyodide 版 CPython，' +
     '约 12MB）、lua（wasmoon 版 Lua 5.4，约 0.4MB）、sqlite（sql.js 版 SQLite，约 1.3MB）、' +
     'esbuild（打包器，约 12MB）、typescript（官方 tsc，约 9MB）、sass（约 5.8MB）、' +
-    'terser（约 1.1MB）、prettier（约 2MB）、node 与 git 与 make（浏览器内置，无需下载）。' +
+    'terser（约 1.1MB）、prettier（约 2MB）、node 与 git 与 make（浏览器内置，无需下载）；' +
+    'pybot 是 PyBot 超级专家系统（纯 Python 规则聊天机器人，内置包约 13MB，依赖 python）。' +
     '安装完成后就能在 nanovm_shell 里直接使用对应命令。已安装时直接返回成功。',
   inputSchema: {
     type: 'object',
@@ -240,7 +248,84 @@ const installTool: AgentTool = {
   },
 }
 
+const importTool: AgentTool = {
+  id: 'nanovm_import',
+  label: '导入文件到 NanoVM',
+  labelEn: 'Import a file into NanoVM',
+  summary: '把工作区里的文件或一段文本直接写入 NanoVM（支持二进制），不需要 base64 命令行；需要确认。',
+  summaryEn:
+    'Write a workspace file or inline content directly into NanoVM (binary supported) without base64 shell commands; asks for confirmation.',
+  description:
+    '把单个文件直接写入 NanoVM Slim 的虚拟文件系统，绕过 shell 命令行，适合 zip / 图片 / 二进制大文件。' +
+    '来源二选一：workspace_path 指定工作区里的文件（原样按二进制写入），或 content + encoding=text/base64 写入一段内容。' +
+    'target 可以是目录（默认 /home/user）或完整文件路径；同名文件默认自动改名为 name-2.ext，overwrite=true 时覆盖。' +
+    '单文件上限 256MB；空间不足时会自动扩容虚拟磁盘并在结果里说明。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      workspace_path: {
+        type: 'string',
+        description: '工作区文件路径，例如 pybot.zip 或 projects/demo.zip',
+      },
+      content: { type: 'string', description: '直接写入的内容（与 workspace_path 二选一）' },
+      encoding: {
+        type: 'string',
+        enum: ['text', 'base64'],
+        description: 'content 的编码，默认 text',
+      },
+      target: {
+        type: 'string',
+        description: '目标目录或完整路径，默认 /home/user/<文件名>',
+      },
+      overwrite: { type: 'boolean', description: '同名时覆盖，默认 false（自动改名）' },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+  risk: 'write',
+  requiresApproval: true,
+  run: async (input, context) => {
+    if (!nanoVMAgentAvailable()) {
+      return fail('NanoVM Slim 未启用或未允许模型调用')
+    }
+    const workspacePath = str(input, 'workspace_path').trim()
+    const content = typeof input.content === 'string' ? input.content : null
+    const encoding = str(input, 'encoding') === 'base64' ? 'base64' : 'text'
+    const target = str(input, 'target').trim()
+    const overwrite = input.overwrite === true
+    if (!workspacePath && content === null) {
+      return fail('workspace_path 与 content 至少要提供一个')
+    }
+    try {
+      const result = workspacePath
+        ? await importWorkspaceFileToVm(workspacePath, { targetPath: target, overwrite })
+        : await importContentToVm(
+            target.split('/').filter(Boolean).pop() || 'import.txt',
+            content ?? '',
+            encoding,
+            { targetPath: target, overwrite }
+          )
+      context.progress(`已写入 ${result.path}`)
+      const lines = [
+        `已导入：${result.path}`,
+        `大小：${formatSize(result.bytes)}`,
+        `模式：${result.overwritten ? '覆盖同名文件' : '新建文件'}`,
+      ]
+      if (result.grownTo) {
+        lines.push(`虚拟磁盘已自动扩容到 ${result.grownTo} MB（单文件上限 ${vmFileLimitMB()} MB）`)
+      }
+      lines.push('', '可以直接用 nanovm_shell 打开或解压，例如：`cd /home/user && ls -l`。')
+      return ok(lines.join('\n'))
+    } catch (error) {
+      if (error instanceof VmImportError) {
+        return fail(error.message)
+      }
+      return fail(`导入失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  },
+}
+
 /** NanoVM 工具；顺序即设置页展示顺序 */
-export const NANOVM_TOOLS: AgentTool[] = [shellTool, lsTool, installTool]
+export const NANOVM_TOOLS: AgentTool[] = [shellTool, lsTool, importTool, installTool]
 
 export const NANOVM_TOOL_IDS: string[] = NANOVM_TOOLS.map((tool) => tool.id)

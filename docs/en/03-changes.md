@@ -624,4 +624,24 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 - **Restore defaults** clears the preset library too;
 - **Storage**: `chat-demo:system-prompt-presets`, `chat-demo:cot-presets` and two active ids stay on this device and are not part of history exports.
 
+### 3.35 NanoVM single-file import (2.7.6)
+
+**Where:** Settings → Virtual machines → "Import a single file", and the `nanovm_import` agent tool.
+
+- **User import**: pick any single file from this device (zip / images / binaries) or from the workspace list; the target directory defaults to `/home/user` (or `/tmp`); same names are renamed to `name-2.ext` unless "Overwrite same name" is on;
+- **Direct write**: files are no longer base64-encoded into shell commands. The page reads the `File` / workspace bytes and calls `vmFs.write()` then `persist()`, so a 46 MB file needs no dozens of command round trips;
+- **Auto-grow**: the default disk is 64 MB with a 32 MB per-file cap. Before writing, the disk quota is raised to fit the file plus current usage (up to 2048 MB, hard per-file cap 256 MB), and the toast reports the new size;
+- **Agent tool**: `nanovm_import` accepts `workspace_path`, or `content` with `encoding=text/base64`; `target` can be a directory or full path and `overwrite` controls replacement; like shell / install it asks for confirmation (auto-approved in Creator mode);
+- **Visibility**: writes call `vmFs.emit()` and persist immediately, so `ls` / `wc -c` show the file at once and the usage bar refreshes.
+
+### 3.36 NanoVM toolchain: PyBot (2.7.6)
+
+**Where:** Settings → Virtual machines → toolchains → PyBot, or `vm install pybot` in the terminal; requires Python first.
+
+- **Source**: a bundled snapshot of [huggingface/pybot](https://github.com/huggingface/pybot) (bot source commit `24cbc04`, Apache-2.0) packed as `public/pybot.zip` (~13 MB) and unpacked offline into `/opt/pybot`, so no network is needed at install time;
+- **Contents**: 528 Python files, roughly 640k lines of rules, no weights and no third-party dependencies;
+- **Usage**: `pybot -p "question"` for one reply, `echo "question" | pybot` for line-by-line piping, `-v` for the module and timing, `--version` for the snapshot commit;
+- **How it runs**: normal `python3` sync is capped at 16 MB, while PyBot raises the cap to 64 MB, syncs `/opt/pybot` into Pyodide and runs `pybot.py`; installation grows the virtual disk to about 83 MB automatically;
+- **Measured**: Python install ~23 s (12 MB Pyodide), PyBot unpack ~3 s, then each question takes about **8 s** including Pyodide startup and importing 528 modules before the rule engine replies; piped input works too.
+
 [← 返回 README](../../README.md) · [全部文档](README.md)

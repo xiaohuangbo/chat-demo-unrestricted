@@ -624,4 +624,24 @@ Persona（官方身份分块）
 - **恢复默认**：恢复默认设置会同时清空预设库；
 - **存储**：`chat-demo:system-prompt-presets`、`chat-demo:cot-presets` 与两个 active id，只存在本机，不进入历史导出包。
 
+### 3.35 NanoVM 单文件导入（2.7.6）
+
+**位置：** 设置 → 虚拟机 →「导入单个文件」，以及 Agent 工具 `nanovm_import`。
+
+- **用户导入**：可从本机选择任意单个文件（zip / 图片 / 二进制），或从工作区列表里挑一个文件；目标目录默认 `/home/user`，也可填 `/tmp`；同名默认自动改名 `name-2.ext`，打开「同名覆盖」则替换；
+- **直接写入**：不再把文件转 base64 塞进 shell 命令。页面读出 `File` / 工作区字节后调用 `vmFs.write()`，再 `persist()` 落盘；46MB 级文件也不需要几十轮命令；
+- **自动扩容**：默认磁盘 64MB、单文件上限 32MB。导入前按文件大小与当前用量计算磁盘需求，自动把 `diskMB` 扩到能容纳该文件（最高 2048MB，单文件硬上限 256MB），并在提示里说明扩容后的值；
+- **Agent 工具**：`nanovm_import` 支持 `workspace_path` 或 `content + encoding=text/base64`，`target` 可给目录或完整路径，`overwrite` 控制覆盖；与 shell / 安装工具一样需要确认（创造模式自动确认）；
+- **可见性**：写入后 `vmFs.emit()` + 落盘，终端 `ls` / `wc -c` 立即可见；设置页的用量条同步刷新。
+
+### 3.36 NanoVM 工具链：PyBot 超级专家系统（2.7.6）
+
+**位置：** 设置 → 虚拟机 → 工具链 → PyBot，或终端里 `vm install pybot`；需要先安装 Python。
+
+- **来源**：内置 [huggingface/pybot](https://github.com/huggingface/pybot) 快照（bot 源码提交 `24cbc04`，Apache-2.0），打包为 `public/pybot.zip`（约 13MB），安装时离线解压到虚拟机的 `/opt/pybot`，不依赖外网；
+- **内容**：528 个 Python 文件、约 64 万行规则代码，无模型权重、无第三方依赖；
+- **运行**：`pybot -p "问题"` 单次回答，`echo "问题" | pybot` 按行批量回答，`-v` 显示命中模块与耗时，`--version` 查看快照提交；
+- **实现**：普通 `python3` 的同步上限是 16MB，PyBot 单独放宽到 64MB，启动时把 `/opt/pybot` 同步进 Pyodide 再执行 `pybot.py`；安装会按源码体积自动扩容虚拟磁盘（默认到约 83MB）；
+- **实测**：首次安装 Python 约 23 秒（Pyodide 12MB），PyBot 解压约 3 秒；之后每次提问包含 Pyodide 加载与 528 个模块导入约 **8 秒**，随后返回规则引擎答案；管道输入同样可用。
+
 [← 返回 README](../../README.md) · [全部文档](README.md)

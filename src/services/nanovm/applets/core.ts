@@ -32,7 +32,7 @@ const UID = 1000
 const GID = 1000
 
 /** 与 engine.ts 的 VERSION 保持一致（uname -r 展示） */
-const APP_VERSION = '2.7.5'
+const APP_VERSION = '2.7.6'
 
 /** 模块加载时刻，uptime 从这里算起 */
 const loadedAt = Date.now()
