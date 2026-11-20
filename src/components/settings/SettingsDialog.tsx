@@ -118,6 +118,13 @@ import { LocalModelSettings } from '../local/LocalModelSettings.js'
 import { RolesSettings } from './RolesSettings.js'
 import { AccountSettings } from './AccountSettings.js'
 import { ProfileCard } from './ProfileCard.js'
+import { PromptPresetBar } from './PromptPresetBar.js'
+import {
+  ensurePromptPresetsMigrated,
+  resetPromptPresets,
+  updatePresetContent,
+  usePromptPresets,
+} from '../../services/promptPresets.js'
 import { resetLocalModelSettings } from '../../services/local/store.js'
 import { disposeEngine } from '../../services/local/engine.js'
 import paramStyles from './ParamControls.module.css'
@@ -214,6 +221,10 @@ const SettingsContent = () => {
   const isMobile = useIsMobile()
   // 打开时按调用方指定的分组选中，之后在弹窗内切换
   const section = useSettingsDialog((state) => state.section)
+  // 旧的自定义提示词 / 思维链各收进一个预设，之后可以克隆多套
+  useEffect(() => {
+    ensurePromptPresetsMigrated()
+  }, [])
   const navigationRef = useRef<HTMLDivElement>(null)
   // 手机端导航横向滚动：打开较后的分组时把选中项滚到可视区域
   useEffect(() => {
@@ -351,6 +362,7 @@ const SettingsContent = () => {
           onCancel={() => setResetOpen(false)}
           onConfirm={() => {
             resetSettings()
+            resetPromptPresets()
             // 本地模型偏好与当前显存里的模型一并回到默认状态
             resetLocalModelSettings()
             void disposeEngine()
@@ -779,6 +791,7 @@ const ChangelogSetting = () => {
         'changelogV275Thinking',
         'changelogV275LocalTools',
         'changelogV275Remember',
+        'changelogV275Presets',
         'changelogV275Icon',
         'changelogV275Docs',
         'changelogV275Apk',
@@ -1445,6 +1458,7 @@ const SystemPromptSetting = () => {
   const systemPrompt = useSettings((state) => state.systemPrompt)
   const promptPreset = useSettings((state) => state.promptPreset)
   const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
+  const activePresetId = usePromptPresets((state) => state.systemActiveId)
   const [draft, setDraft] = useState(systemPrompt ?? '')
 
   // 外部重置（恢复默认）或切换分组后同步草稿
@@ -1455,43 +1469,56 @@ const SystemPromptSetting = () => {
   const commit = (value: string) => {
     setDraft(value)
     setSystemPrompt(value)
+    if (activePresetId) {
+      updatePresetContent('system', activePresetId, value)
+    }
+  }
+
+  const applyPreset = (value: string) => {
+    setDraft(value)
+    setSystemPrompt(value)
   }
 
   return (
-    <div className={styles.systemPrompt}>
-      <div className={styles.systemPromptHead}>
-        <div className={styles.systemPromptLabel}>{t('settingsCustomPrompt')}</div>
-        <div className={styles.systemPromptDescription}>{t('settingsCustomPromptDescription')}</div>
-      </div>
-      <textarea
-        className={styles.systemPromptTextarea}
-        aria-label={t('settingsCustomPrompt')}
-        rows={6}
-        placeholder={t('settingsCustomPromptPlaceholder')}
-        value={draft}
-        onChange={(event) => commit(event.target.value)}
-      />
-      <div className={styles.systemPromptActions}>
-        <span className={styles.systemPromptHint}>
-          {t(systemPrompt === null ? 'settingsCustomPromptAuto' : 'settingsCustomPromptCustom')}
-        </span>
-        <Button
-          variant="outlined"
-          size="s"
-          onClick={() =>
-            commit(composeSystemPrompt(unrestricted, null, promptPreset, translateJailbreak))
-          }
-        >
-          {t('settingsCustomPromptFill')}
-        </Button>
-        <Button
-          variant="outlined"
-          size="s"
-          disabled={systemPrompt === null}
-          onClick={() => commit('')}
-        >
-          {t('settingsCustomPromptReset')}
-        </Button>
+    <div className={styles.systemPromptWrapper}>
+      <PromptPresetBar kind="system" content={draft} onApply={applyPreset} />
+      <div className={styles.systemPrompt}>
+        <div className={styles.systemPromptHead}>
+          <div className={styles.systemPromptLabel}>{t('settingsCustomPrompt')}</div>
+          <div className={styles.systemPromptDescription}>
+            {t('settingsCustomPromptDescription')}
+          </div>
+        </div>
+        <textarea
+          className={styles.systemPromptTextarea}
+          aria-label={t('settingsCustomPrompt')}
+          rows={6}
+          placeholder={t('settingsCustomPromptPlaceholder')}
+          value={draft}
+          onChange={(event) => commit(event.target.value)}
+        />
+        <div className={styles.systemPromptActions}>
+          <span className={styles.systemPromptHint}>
+            {t(systemPrompt === null ? 'settingsCustomPromptAuto' : 'settingsCustomPromptCustom')}
+          </span>
+          <Button
+            variant="outlined"
+            size="s"
+            onClick={() =>
+              commit(composeSystemPrompt(unrestricted, null, promptPreset, translateJailbreak))
+            }
+          >
+            {t('settingsCustomPromptFill')}
+          </Button>
+          <Button
+            variant="outlined"
+            size="s"
+            disabled={systemPrompt === null}
+            onClick={() => commit('')}
+          >
+            {t('settingsCustomPromptReset')}
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -1506,6 +1533,7 @@ const CustomCotSetting = () => {
   const enabled = useSettings((state) => state.customCotEnabled)
   const text = useSettings((state) => state.customCot)
   const thinking = useSettings((state) => state.thinking)
+  const activePresetId = usePromptPresets((state) => state.cotActiveId)
   const [draft, setDraft] = useState(text)
 
   // 恢复默认或从其他入口修改时同步草稿
@@ -1514,6 +1542,13 @@ const CustomCotSetting = () => {
   }, [text])
 
   const commit = (value: string) => {
+    setDraft(value)
+    setCustomCot(value)
+    if (activePresetId) {
+      updatePresetContent('cot', activePresetId, value)
+    }
+  }
+  const applyPreset = (value: string) => {
     setDraft(value)
     setCustomCot(value)
   }
@@ -1529,32 +1564,35 @@ const CustomCotSetting = () => {
           <Switch checked={enabled} onChange={setCustomCotEnabled} label={t('settingsCustomCot')} />
         }
       />
-      <div className={styles.systemPrompt}>
-        <div className={styles.systemPromptHead}>
-          <div className={styles.systemPromptLabel}>{t('settingsCustomCotEditorLabel')}</div>
-          <div className={styles.systemPromptDescription}>
-            {t('settingsCustomCotEditorDescription')}
+      <div className={styles.systemPromptWrapper}>
+        <PromptPresetBar kind="cot" content={draft} onApply={applyPreset} />
+        <div className={styles.systemPrompt}>
+          <div className={styles.systemPromptHead}>
+            <div className={styles.systemPromptLabel}>{t('settingsCustomCotEditorLabel')}</div>
+            <div className={styles.systemPromptDescription}>
+              {t('settingsCustomCotEditorDescription')}
+            </div>
           </div>
-        </div>
-        <textarea
-          className={styles.systemPromptTextarea}
-          aria-label={t('settingsCustomCotEditorLabel')}
-          rows={7}
-          maxLength={CUSTOM_COT_MAX_CHARS}
-          placeholder={t('settingsCustomCotPlaceholder')}
-          value={draft}
-          onChange={(event) => commit(event.target.value)}
-        />
-        <div className={styles.systemPromptActions}>
-          <span className={styles.systemPromptHint}>
-            {t('settingsCustomCotCount', { count: draft.length, max: CUSTOM_COT_MAX_CHARS })}
-          </span>
-          <Button variant="outlined" size="s" onClick={() => commit(DEFAULT_CUSTOM_COT)}>
-            {t('settingsCustomCotInsertExample')}
-          </Button>
-          <Button variant="outlined" size="s" disabled={draft === ''} onClick={() => commit('')}>
-            {t('settingsCustomCotClear')}
-          </Button>
+          <textarea
+            className={styles.systemPromptTextarea}
+            aria-label={t('settingsCustomCotEditorLabel')}
+            rows={7}
+            maxLength={CUSTOM_COT_MAX_CHARS}
+            placeholder={t('settingsCustomCotPlaceholder')}
+            value={draft}
+            onChange={(event) => commit(event.target.value)}
+          />
+          <div className={styles.systemPromptActions}>
+            <span className={styles.systemPromptHint}>
+              {t('settingsCustomCotCount', { count: draft.length, max: CUSTOM_COT_MAX_CHARS })}
+            </span>
+            <Button variant="outlined" size="s" onClick={() => commit(DEFAULT_CUSTOM_COT)}>
+              {t('settingsCustomCotInsertExample')}
+            </Button>
+            <Button variant="outlined" size="s" disabled={draft === ''} onClick={() => commit('')}>
+              {t('settingsCustomCotClear')}
+            </Button>
+          </div>
         </div>
       </div>
       <div className={styles.cotStatus} data-experimental={thinking || undefined}>

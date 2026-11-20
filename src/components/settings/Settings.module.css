@@ -988,3 +988,10 @@
     margin-left: 0;
   }
 }
+
+/* 提示词 / 思维链预设条与编辑器之间的间距 */
+.systemPromptWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

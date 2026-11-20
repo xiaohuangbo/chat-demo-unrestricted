@@ -54,7 +54,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 77 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 78 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -69,7 +69,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：`deepseek-unrestricted-2.7.5.apk`（12 MB，versionCode 275，
-SHA-256 `5b527817fced400d9a12ff775904b78d11e0f0403ab507744dc9b97cef4f4d9e`），详情见 [android/README.md](android/README.md)。
+SHA-256 `e1974bbf58dc755b7df594c1509e9a816d52f98541925fa314d7fe23608df785`），详情见 [android/README.md](android/README.md)。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -93,7 +93,7 @@ SHA-256 `5b527817fced400d9a12ff775904b78d11e0f0403ab507744dc9b97cef4f4d9e`），
 
 ## 最近版本
 
-- **2.7.5**：合并上游 0.1.3（复用 Files API 图片前按 4096 长边缩放）；本地模型支持自动提炼长期记忆（可选提炼模型）、借用服务端预检索联网、读取文本附件，并限定仅聊天模式；本地「思考模式」并入输入栏「深度思考」；移植 Remember 的角色、我的资料、压缩触发阈值与账户用量概览；本地模型设置图标换成芯片；已知限制补到 77 条。
+- **2.7.5**：合并上游 0.1.3（复用 Files API 图片前按 4096 长边缩放）；本地模型支持自动提炼长期记忆（可选提炼模型）、借用服务端预检索联网、读取文本附件，并限定仅聊天模式；本地「思考模式」并入输入栏「深度思考」；移植 Remember 的角色、我的资料、压缩触发阈值与账户用量概览；本地模型设置图标换成芯片；手机端自动越狱与扰动保留文字标签、不再折叠成圆；系统提示词与思维链支持多套命名预设，可新建 / 克隆 / 重命名 / 删除并一键切换；已知限制补到 78 条。
 - **2.7.4**：移植 mlc-ai/web-llm-chat——设置新增「本地模型」，浏览器用 WebGPU 直接运行模型，权重在线下载并缓存，聊天栏随时切换，支持 `.mlcmodel` 模型包导入导出与自建 MLC-LLM REST 服务；本地模型 token 不计费（语音、搜索、解析照常计费）；网页小标题改为「网页里的deepseek unrestricted Chat Harness」；已知限制补到 73 条。
 - **2.7.3**：修复手机端 NanoVM 面板被标签条撑高、WebVM 终端无法滚动的问题；设置 → 模型新增关键词拒答（本地匹配、无 Key 可用、不请求接口）；已知限制补到 67 条；WebVM 新增 sudo（root 密码 password）与 Root 一键切换。
 - **2.7.2**：新增 WebVM / CheerpX 终端：浏览器里的 x86 Debian 10，自带 gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出、编程环境检测与 `webvm_shell` / `webvm_ls` / `webvm_status` 三个模型工具。

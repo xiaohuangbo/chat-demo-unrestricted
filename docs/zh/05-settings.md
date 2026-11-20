@@ -29,6 +29,10 @@
 | 本地模型   | Qwen3 思考模式     | 关                        | `chat-demo:local-enable-thinking`           | 不受影响             |
 | 本地模型   | 打开页面自动加载   | 关                        | `chat-demo:local-auto-load`                 | 不受影响             |
 | 本地模型   | MLC-LLM 服务地址   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`              | 不受影响             |
+| 提示词     | 系统提示词预设     | 1 套（有自定义时）        | `chat-demo:system-prompt-presets`          | 不受影响             |
+| 提示词     | 当前预设           | 空（自动组装）            | `chat-demo:system-prompt-active`           | 不受影响             |
+| 思维链     | 思维链预设         | 1 套（当前内容）          | `chat-demo:cot-presets`                    | 不受影响             |
+| 思维链     | 当前预设           | 默认预设                  | `chat-demo:cot-active`                     | 不受影响             |
 | 提示词     | 解除限制模式       | 关                        | `chat-demo:unrestricted`                   | ——                   |
 | 提示词     | 自定义系统提示词   | 空（自动组装）            | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
 | 思维链     | 启用自定义思维链   | 关                        | `chat-demo:custom-cot-enabled`             | 不受影响             |

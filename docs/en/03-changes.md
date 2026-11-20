@@ -613,4 +613,15 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 
 > Character, profile, compression-threshold and account/usage interactions are inspired by Remember — with thanks.
 
+### 3.34 Multiple system-prompt and chain-of-thought presets (2.7.5)
+
+**Where:** Settings → Prompt (system prompt presets) and Settings → Chain of thought (CoT presets).
+
+- **Save several variants**: each preset has a name and body, up to 30; New saves the current editor content, Clone duplicates the active preset and names it "copy";
+- **One-click switch**: clicking a preset chip writes its content back to `settings.systemPrompt` / `settings.customCot`, taking effect on the next request; system prompts also offer "Auto-composed" to disable the custom prompt;
+- **Edits sync**: editing the body while a preset is active updates that preset; rename and delete live in the bar, and deleting the active preset clears the current content;
+- **Migration**: the first time settings open, existing custom prompt and CoT are each wrapped in a preset so nothing is lost;
+- **Restore defaults** clears the preset library too;
+- **Storage**: `chat-demo:system-prompt-presets`, `chat-demo:cot-presets` and two active ids stay on this device and are not part of history exports.
+
 [← 返回 README](../../README.md) · [全部文档](README.md)

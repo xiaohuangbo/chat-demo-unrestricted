@@ -189,6 +189,32 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
    * 桌面端接在模式胶囊后面（同一排），手机端放进 .advanced 单独一排并显示文字标签，
    * 这样窄屏也能一眼看到功能名，而不是只看到一个无文字的圆图标。
    */
+  const jailbreakToggle = (
+    <Tooltip content={t('autoJailbreakTooltip')}>
+      <button
+        type="button"
+        className={clsx(styles.toggle, styles.wideToggle, autoJailbreak && styles.selected)}
+        aria-label={t('autoJailbreak')}
+        aria-pressed={autoJailbreak}
+        onClick={() => setAutoJailbreak(!autoJailbreak)}
+      >
+        <IconRefreshOutline16 />
+        <span className={styles.toggleLabel}>{t('autoJailbreak')}</span>
+      </button>
+    </Tooltip>
+  )
+
+  const parseltongueToggle = (
+    <Tooltip content={t('parseltongueToggleTooltip')}>
+      <ParseltongueButton
+        text={text}
+        triggerClassName={clsx(styles.toggle, styles.wideToggle)}
+        selectedClassName={styles.selected}
+        labelClassName={styles.toggleLabel}
+      />
+    </Tooltip>
+  )
+
   const advanced = (
     <>
       <CustomCotButton
@@ -271,26 +297,12 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           <ModelPicker />
           <RolePicker sessionId={sessionId} />
           <span className={styles.toolbarDivider} aria-hidden />
-          <Tooltip content={t('autoJailbreakTooltip')}>
-            <button
-              type="button"
-              className={clsx(styles.toggle, autoJailbreak && styles.selected)}
-              aria-label={t('autoJailbreak')}
-              aria-pressed={autoJailbreak}
-              onClick={() => setAutoJailbreak(!autoJailbreak)}
-            >
-              <IconRefreshOutline16 />
-              <span className={styles.toggleLabel}>{t('autoJailbreak')}</span>
-            </button>
-          </Tooltip>
-          <Tooltip content={t('parseltongueToggleTooltip')}>
-            <ParseltongueButton
-              text={text}
-              triggerClassName={styles.toggle}
-              selectedClassName={styles.selected}
-              labelClassName={styles.toggleLabel}
-            />
-          </Tooltip>
+          {isMobile ? null : (
+            <>
+              {jailbreakToggle}
+              {parseltongueToggle}
+            </>
+          )}
           {/* 桌面端在此换行：下面的模式与三个开关占第二排 */}
           {isMobile ? null : <span className={styles.toolbarBreak} aria-hidden />}
           <ModePicker
@@ -300,7 +312,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           />
           {isMobile ? null : advanced}
         </div>
-        {isMobile ? <div className={styles.advanced}>{advanced}</div> : null}
+        {isMobile ? (
+          <div className={styles.advanced}>
+            {jailbreakToggle}
+            {parseltongueToggle}
+            {advanced}
+          </div>
+        ) : null}
         <div className={styles.right}>
           <ContextRing sessionId={sessionId} streaming={streaming} onOpen={openStats} />
           <IconButton

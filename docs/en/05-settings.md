@@ -29,6 +29,10 @@
 | Local models | Qwen3 thinking     | Off                      | `chat-demo:local-enable-thinking`  | Unaffected |
 | Local models | Auto-load on open  | Off                      | `chat-demo:local-auto-load`        | Unaffected |
 | Local models | MLC-LLM endpoint   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`     | Unaffected |
+| Prompt | System prompt presets | 1 (if custom text exists) | `chat-demo:system-prompt-presets` | Unaffected |
+| Prompt | Active system preset  | Empty (auto)              | `chat-demo:system-prompt-active`  | Unaffected |
+| CoT    | CoT presets           | 1 (current text)          | `chat-demo:cot-presets`           | Unaffected |
+| CoT    | Active CoT preset     | Default preset            | `chat-demo:cot-active`            | Unaffected |
 | Prompt            | Unrestricted mode                    | off                          | `chat-demo:unrestricted`                   | —                               |
 | Prompt            | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
 | Chain of thought  | Enable custom chain of thought       | off                          | `chat-demo:custom-cot-enabled`             | Unaffected                      |

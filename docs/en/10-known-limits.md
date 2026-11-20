@@ -92,6 +92,8 @@
 
 77. **Local models allow Chat mode only**: Agent / PTC / Creator are disabled, and search is a pre-pass rather than a model tool call; switch to a cloud model when you need tools.
 
+78. **Prompt and CoT presets stay on this device**: up to 30 each, stored as `chat-demo:system-prompt-presets` / `chat-demo:cot-presets` and not included in history exports; deleting the active preset clears the current prompt text.
+
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

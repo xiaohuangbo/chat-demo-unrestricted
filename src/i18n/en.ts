@@ -576,13 +576,16 @@ export const en = {
   memorySavedEnabledDesc:
     'Enabled memories are injected into every request system prompt; they stay on this device.',
   memoryAutoExtractLabel: 'Auto-extract long-term memory',
-  memoryAutoExtractDesc: 'Runs one extra model call after each turn to extract stable facts. By default it follows the current model: cloud chats use the Flash API and local chats use the local engine; this costs a little (local models incur no API fee).',
+  memoryAutoExtractDesc:
+    'Runs one extra model call after each turn to extract stable facts. By default it follows the current model: cloud chats use the Flash API and local chats use the local engine; this costs a little (local models incur no API fee).',
   memoryExtractEngineLabel: 'Extraction model',
-  memoryExtractEngineDesc: 'Choose which model auto-extract uses; “Local model” uses the last local model you selected, even during cloud chats.',
+  memoryExtractEngineDesc:
+    'Choose which model auto-extract uses; “Local model” uses the last local model you selected, even during cloud chats.',
   memoryExtractAuto: 'Follow the current model',
   memoryExtractFlash: 'DeepSeek Flash API',
   memoryExtractLocal: 'Local model',
-  memoryExtractLocalMissing: 'No local model selected yet: pick and download one under Local models first, otherwise extraction falls back to the Flash API.',
+  memoryExtractLocalMissing:
+    'No local model selected yet: pick and download one under Local models first, otherwise extraction falls back to the Flash API.',
   memoryAddPlaceholder: 'Add a memory, e.g. the user prefers TypeScript',
   memoryAddButton: 'Add',
   memoryEmpty: 'No long-term memories yet',
@@ -1930,6 +1933,28 @@ export const en = {
   changelogV275Apk: 'Builds the 2.7.5 APK (versionCode 275), signed with xiaohuangbo.jks',
   roleAutoMemoryHint:
     'When on, each finished turn extracts memories with the current model; local models do not call the Flash API.',
+  promptPresetsSystemTitle: 'System prompt presets',
+  promptPresetsCotTitle: 'Chain-of-thought presets',
+  promptPresetsHint:
+    'Save several variants for different situations; pick one to switch, and edits sync to the selected preset.',
+  promptPresetsNew: 'New',
+  promptPresetsClone: 'Clone',
+  promptPresetsRename: 'Rename',
+  promptPresetsDelete: 'Delete',
+  promptPresetsDeleteConfirm: 'Confirm delete',
+  promptPresetsAuto: 'Auto-composed',
+  promptPresetsNamePrefix: 'Preset',
+  promptPresetsCloneSuffix: 'copy',
+  promptPresetsEmpty: 'No presets yet: click New to save the current text as the first one.',
+  promptPresetsUnsaved: 'Current text is not saved as a preset',
+  promptPresetsActive: 'Active preset: {name}',
+  promptPresetsAutoHint: 'Using the auto-composed prompt; no custom system prompt is applied',
+  promptPresetsLimit: 'Preset limit reached (30)',
+  promptPresetsCreated: 'Preset created',
+  promptPresetsCloned: 'Preset cloned',
+  promptPresetsDeleted: 'Preset deleted',
+  changelogV275Presets:
+    'System prompts and chain-of-thought support multiple presets: create, clone, rename, delete and switch in one click, so different situations no longer require deleting and re-pasting; edits sync to the active preset',
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',

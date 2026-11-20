@@ -384,7 +384,7 @@
     display: none;
   }
 
-  /* 只把第一排的 chip 压成圆钮；第二排的三个开关保留文字标签 */
+  /* 只把第一排默认 chip 压成圆钮；自动越狱、扰动与第二排开关保留文字标签 */
   .toggles .toggle {
     width: 34px;
     padding: 0;
@@ -393,6 +393,17 @@
 
   .toggles .toggleLabel {
     display: none;
+  }
+
+  /* 自动越狱与扰动不再折叠成圆：恢复胶囊宽度与可见文字 */
+  .toggles .toggle.wideToggle {
+    width: auto;
+    padding: 0 10px;
+    border-radius: 18px;
+  }
+
+  .toggles .toggle.wideToggle .toggleLabel {
+    display: inline;
   }
 
   .functionRow {
