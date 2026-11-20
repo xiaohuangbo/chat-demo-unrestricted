@@ -1,3 +1,4 @@
+import { isLocalModel } from '../local/catalog.js'
 import type { TranslationKey, TranslationParams } from '../../i18n/index.js'
 import type { MessageUsage } from '../api/types.js'
 import type { AssistantMessage, Session } from './types.js'
@@ -284,12 +285,15 @@ export const estimateTokens = (text: string): number => {
 /** 按模型与时间取单价；未知模型按 flash 计 */
 export type ModelPrice = { cacheHit: number; cacheMiss: number; output: number }
 
+/** 本地模型（浏览器 WebLLM / 自建 MLC-LLM）不产生 API 费用 */
+export const LOCAL_MODEL_PRICE: ModelPrice = { cacheHit: 0, cacheMiss: 0, output: 0 }
+
 /** 未知模型按 Flash 价估算，避免云端模型没有价格时整段统计失效 */
 export const modelPriceFor = (model: string): ModelPrice =>
-  MODEL_PRICE[model] ?? MODEL_PRICE['deepseek-flash']
+  isLocalModel(model) ? LOCAL_MODEL_PRICE : (MODEL_PRICE[model] ?? MODEL_PRICE['deepseek-flash'])
 
-/** 是否在官方价格表里；界面用它提示「未知模型按 Flash 估算」 */
-export const isKnownModel = (model: string): boolean => model in MODEL_PRICE
+/** 是否在官方价格表里；界面用它提示「未知模型按 Flash 估算」，本地模型视为已知（免费） */
+export const isKnownModel = (model: string): boolean => isLocalModel(model) || model in MODEL_PRICE
 
 /** 用服务端上报的用量算一次请求的费用（元） */
 export const usageCost = (
@@ -325,6 +329,8 @@ export type CostLine = {
   key: TranslationKey
   amount: number
   params?: TranslationParams
+  /** 金额为 0 但仍要展示的 token 数（本地模型不计费，只统计用量） */
+  tokens?: number
 }
 
 export type CostBreakdown = {
@@ -343,6 +349,8 @@ export type CostBreakdown = {
     pages: number
     ttsChars: number
     asrSeconds: number
+    /** 本地模型（WebLLM / MLC-LLM）吃掉的 token，不计费 */
+    localTokens: number
   }
 }
 
@@ -368,6 +376,7 @@ export const estimateCost = (
     pages: 0,
     ttsChars: 0,
     asrSeconds: 0,
+    localTokens: 0,
   }
   let modelCost = 0
   const modelTotals = new Map<string, { replies: number; cost: number }>()
@@ -402,6 +411,12 @@ export const estimateCost = (
       entry.replies += 1
       entry.cost += replyCost
       modelTotals.set(model, entry)
+      if (isLocalModel(model)) {
+        usage.localTokens +=
+          (replyUsage.cache_read_input_tokens ?? 0) +
+          (replyUsage.input_tokens ?? 0) +
+          (replyUsage.output_tokens ?? 0)
+      }
       usage.cacheHit += replyUsage.cache_read_input_tokens ?? 0
       usage.cacheMiss += replyUsage.input_tokens ?? 0
       usage.output += replyUsage.output_tokens ?? 0
@@ -466,8 +481,14 @@ export const estimateCost = (
     { key: 'billingParse', amount: parseCost, params: { count: usage.pages } },
     { key: 'billingTts', amount: ttsCost },
     { key: 'billingAsr', amount: asrCost },
+    {
+      key: 'billingLocalTokens',
+      amount: 0,
+      tokens: usage.localTokens,
+      params: { tokens: formatTokens(usage.localTokens) },
+    },
   ]
-  const lines = allLines.filter((line) => line.amount > 0)
+  const lines = allLines.filter((line) => line.amount > 0 || (line.tokens ?? 0) > 0)
   return {
     lines,
     total: lines.reduce((sum, line) => sum + line.amount, 0),

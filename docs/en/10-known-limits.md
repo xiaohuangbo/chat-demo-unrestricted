@@ -72,6 +72,18 @@
 
 ---
 
+68. **Local models need WebGPU**: in-browser models run on WebGPU; without `navigator.gpu` or a GPU adapter you have to fall back to the MLC-LLM API, and Android WebView has no WebGPU either, so the APK is in the same boat. Software rendering (SwiftShader) usually lacks `shader-f16`, so q4f16 models fail to load there; pick q4f32 or use a real GPU.
+
+69. **Weights come from the public internet**: WebLLM model libraries and weights live on GitHub Raw and Hugging Face, so a restricted network breaks downloads; already downloaded models keep working and can move between devices as `.mlcmodel` bundles.
+
+70. **Browser storage is quota-limited**: a 1B model needs roughly 0.7–1 GB and an 8B model 4–5 GB; running out of quota aborts the download, so keep only one or two models, or switch to IndexedDB / delete old models.
+
+71. **Local models are text-only**: attachments, images, server-side web search and client tools are not sent; switch back to a cloud model when you need them.
+
+72. **Bundle size equals cache size**: `.mlcmodel` does not compress (weights are already compressed), so exporting a 4 GB model writes a 4 GB file; browsers without File System Access stage it in memory, where very large models may fail.
+
+73. **The MLC-LLM API needs your own server**: this project is only the client; start `mlc_llm serve` yourself. The endpoint and model list are unauthenticated, and cross-origin access must be allowed by the server.
+
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

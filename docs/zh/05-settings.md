@@ -12,6 +12,16 @@
 | 模型       | 拒答关键词         | 空                        | `chat-demo:refusal-keywords`                | 不受影响             |
 | 模型       | 区分大小写         | 关                        | `chat-demo:refusal-case-sensitive`          | 不受影响             |
 | 模型       | 自定义拒答话术     | 空（默认话术）            | `chat-demo:refusal-message`                 | 不受影响             |
+| 本地模型   | 缓存后端           | `cache`                   | `chat-demo:local-cache-backend`             | 不受影响             |
+| 本地模型   | 上下文窗口         | 跟随模型推荐值            | `chat-demo:local-context-window`            | 不受影响             |
+| 本地模型   | 温度               | 模型推荐值                | `chat-demo:local-temperature`               | 不受影响             |
+| 本地模型   | Top P              | 模型推荐值                | `chat-demo:local-top-p`                     | 不受影响             |
+| 本地模型   | 最大输出 Token     | `2048`                    | `chat-demo:local-max-tokens`                | 不受影响             |
+| 本地模型   | 存在惩罚           | `0`                       | `chat-demo:local-presence-penalty`          | 不受影响             |
+| 本地模型   | 频率惩罚           | `0`                       | `chat-demo:local-frequency-penalty`         | 不受影响             |
+| 本地模型   | Qwen3 思考模式     | 关                        | `chat-demo:local-enable-thinking`           | 不受影响             |
+| 本地模型   | 打开页面自动加载   | 关                        | `chat-demo:local-auto-load`                 | 不受影响             |
+| 本地模型   | MLC-LLM 服务地址   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`              | 不受影响             |
 | 提示词     | 解除限制模式       | 关                        | `chat-demo:unrestricted`                   | ——                   |
 | 提示词     | 自定义系统提示词   | 空（自动组装）            | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
 | 思维链     | 启用自定义思维链   | 关                        | `chat-demo:custom-cot-enabled`             | 不受影响             |

@@ -32,6 +32,7 @@ import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { isLocalModel } from '../../services/local/catalog.js'
 import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
@@ -160,8 +161,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    // 关键词拒答完全在本地生成回复，不需要 API Key；其余请求仍先校验 Key。
-    if ((!matchesRefusalKeyword(text) && !ensureApiKey()) || !sendMessage(sessionId)) {
+    // 关键词拒答与本地模型（WebLLM / MLC-LLM）都在本地或自建服务上生成，不需要 API Key。
+    const needsApiKey = !matchesRefusalKeyword(text) && !isLocalModel(useSettings.getState().model)
+    if ((needsApiKey && !ensureApiKey()) || !sendMessage(sessionId)) {
       return
     }
     stopReadAloud()

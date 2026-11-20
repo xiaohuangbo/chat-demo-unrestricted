@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { MessageUsage } from '../api/types.js'
+import { isLocalModel } from '../local/catalog.js'
 import { usageCost } from './sessionStats.js'
 import { useSettings } from '../settings.js'
 import { showToast } from '../../components/base/toastState.js'
@@ -15,7 +16,10 @@ export type DailyUsage = {
   date: string
   inputTokens: number
   outputTokens: number
+  /** 今日全部 token（含本地模型，仅用于展示） */
   totalTokens: number
+  /** 其中会计费的 token：本地模型（WebLLM / MLC-LLM）不计入，额度提醒只看这个值 */
+  billedTokens: number
   cost: number
   alertedTokenDate: string | null
   alertedCostDate: string | null
@@ -35,6 +39,7 @@ const empty = (date = todayKey()): DailyUsage => ({
   inputTokens: 0,
   outputTokens: 0,
   totalTokens: 0,
+  billedTokens: 0,
   cost: 0,
   alertedTokenDate: null,
   alertedCostDate: null,
@@ -58,6 +63,11 @@ const read = (): DailyUsage => {
       inputTokens: number(parsed.inputTokens),
       outputTokens: number(parsed.outputTokens),
       totalTokens: number(parsed.totalTokens),
+      // 旧版本没有 billedTokens：当时全部都是云端模型，按 totalTokens 迁移
+      billedTokens:
+        parsed.billedTokens === undefined
+          ? number(parsed.totalTokens)
+          : number(parsed.billedTokens),
       cost: number(parsed.cost),
       alertedTokenDate:
         typeof parsed.alertedTokenDate === 'string' ? parsed.alertedTokenDate : null,
@@ -105,23 +115,26 @@ export const noteDailyUsage = (model: string, usage: MessageUsage, at = new Date
     return
   }
   const cost = usageCost(model, usage, at)
+  // 本地模型的 token 不产生费用，也不占用「每日 token 额度」
+  const billed = isLocalModel(model) ? 0 : input + output
   const { dailyLimitEnabled, dailyTokenLimit, dailyCostLimit } = useSettings.getState()
   const next: DailyUsage = {
     date: today,
     inputTokens: base.inputTokens + input,
     outputTokens: base.outputTokens + output,
     totalTokens: base.totalTokens + input + output,
+    billedTokens: base.billedTokens + billed,
     cost: base.cost + cost,
     alertedTokenDate: base.alertedTokenDate,
     alertedCostDate: base.alertedCostDate,
   }
-  if (dailyLimitEnabled && dailyTokenLimit > 0 && next.totalTokens >= dailyTokenLimit) {
+  if (dailyLimitEnabled && dailyTokenLimit > 0 && next.billedTokens >= dailyTokenLimit) {
     if (next.alertedTokenDate !== today) {
       next.alertedTokenDate = today
       showToast({
         key: 'dailyTokenLimitToast',
         params: {
-          used: next.totalTokens.toLocaleString(),
+          used: next.billedTokens.toLocaleString(),
           limit: dailyTokenLimit.toLocaleString(),
         },
       })

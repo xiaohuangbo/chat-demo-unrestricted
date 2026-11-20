@@ -12,6 +12,16 @@
 | Model             | Refusal keywords                     | Empty                        | `chat-demo:refusal-keywords`               | Unaffected                      |
 | Model             | Case-sensitive keywords             | Off                          | `chat-demo:refusal-case-sensitive`         | Unaffected                      |
 | Model             | Custom refusal message               | Empty (default)              | `chat-demo:refusal-message`                | Unaffected                      |
+| Local models | Cache backend      | `cache`                  | `chat-demo:local-cache-backend`    | Unaffected |
+| Local models | Context window     | Model recommendation     | `chat-demo:local-context-window`   | Unaffected |
+| Local models | Temperature        | Model recommendation     | `chat-demo:local-temperature`      | Unaffected |
+| Local models | Top P              | Model recommendation     | `chat-demo:local-top-p`            | Unaffected |
+| Local models | Max output tokens  | `2048`                   | `chat-demo:local-max-tokens`       | Unaffected |
+| Local models | Presence penalty   | `0`                      | `chat-demo:local-presence-penalty` | Unaffected |
+| Local models | Frequency penalty  | `0`                      | `chat-demo:local-frequency-penalty`| Unaffected |
+| Local models | Qwen3 thinking     | Off                      | `chat-demo:local-enable-thinking`  | Unaffected |
+| Local models | Auto-load on open  | Off                      | `chat-demo:local-auto-load`        | Unaffected |
+| Local models | MLC-LLM endpoint   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`     | Unaffected |
 | Prompt            | Unrestricted mode                    | off                          | `chat-demo:unrestricted`                   | —                               |
 | Prompt            | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
 | Chain of thought  | Enable custom chain of thought       | off                          | `chat-demo:custom-cot-enabled`             | Unaffected                      |

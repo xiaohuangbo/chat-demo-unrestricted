@@ -19,6 +19,10 @@ Build the static site:
 ```sh
 pnpm build      # output in dist/
 ```
+Local models bundle `@mlc-ai/web-llm@0.2.87` into the build and emit an extra Web Worker chunk (~6 MB); model weights and wasm libraries are not in the bundle and are downloaded from Hugging Face / GitHub Raw on first use into browser storage.
+
+Local models must run on an http(s) page: under `file://` both the Worker and WebGPU are restricted, and an MLC-LLM API endpoint must allow cross-origin requests.
+
 
 `dist/` can be deployed to any static host, or opened locally by double-clicking `dist/index.html` (the browser must allow storage on `file://` pages and cross-origin requests to your API origin). Enter your API key under Settings → Data before the first chat.
 
@@ -36,11 +40,11 @@ WebVM (CheerpX) needs cross-origin isolation. On static hosting such as GitHub P
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.3.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.4.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.7.3 / 273), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.7.4 / 274), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -51,7 +55,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 273;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 274;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---

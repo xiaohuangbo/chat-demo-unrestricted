@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
+import { isLocalModel } from '../local/catalog.js'
+import { streamLocalMessage } from '../local/stream.js'
 import type { ChatModel, CreateMessageRequest, MessageParam } from '../api/types.js'
 import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
@@ -1407,7 +1409,10 @@ const maybeAutoRetry = (
  */
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
   const controller = new AbortController()
-  if (!getSession(sessionId)?.title) {
+  /** 本地模型（WebLLM / MLC-LLM API）没有附件上传、服务端工具与标题生成，走简化分支 */
+  const localModel = isLocalModel(initial.model ?? MODEL)
+  // 本地模型不向服务端要标题，也不该被当成「标题请求」跳过用量记账
+  if (!localModel && !getSession(sessionId)?.title) {
     titleRequests.add(controller)
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
@@ -1422,6 +1427,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   let firstTokenAt: number | null = null
   let fallbackNoReasoning = false
   beginLiveRun(sessionId, initial.model ?? MODEL)
+  // 附件走云端 Files API 上传，本地模型只接受文本：有附件时提示一次，不中断生成
+  if (localModel && request.question.files.length > 0) {
+    showToast({ key: 'localModelFilesIgnored' })
+  }
   const flush = (force = false) => {
     cancelAnimationFrame(frame)
     frame = 0
@@ -1441,7 +1450,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       let preparing = true
       let receivedContent = false
       try {
-        const prepared = await prepareFiles(sessionId, request, controller.signal)
+        const prepared = localModel
+          ? { history: request.history, question: request.question, prefix: request.prefix }
+          : await prepareFiles(sessionId, request, controller.signal)
         preparing = false
         // 附件就绪后获取本轮信息；续写沿用原回答快照，重新生成的快照独立保存。
         const latestReminder = prepared.prefix
@@ -1556,39 +1567,46 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           noteAutoTune(initial.id, autoTuned.detectedContext, autoTuned.params)
         }
         // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
-        const tools = requestTools(
-          (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
-          true
-        )
+        const tools = localModel
+          ? []
+          : requestTools((initial.search ?? false) && !shouldTakeoverSearch(poisonConfig), true)
         noteContextBreakdown(
           sessionId,
           buildContextBreakdown({ system: systemText, tools, messages })
         )
-        const events = streamMessage(
-          apiKey ?? '',
-          {
-            model: initial.model ?? MODEL,
-            system: systemText,
-            messages,
-            thinking: initial.thinking
-              ? fallbackNoReasoning
-                ? { type: 'enabled' }
-                : { type: 'enabled', budget_tokens: thinkingBudget(effort) }
-              : { type: 'disabled' },
-            // 思考强度：0 档与降级后都不下发
-            ...(initial.thinking && effort > 0 && !fallbackNoReasoning
-              ? { reasoning_effort: reasoningEffortValue(effort) }
-              : {}),
-            temperature: autoTuned?.params.temperature ?? temperature,
-            top_p: autoTuned?.params.top_p ?? topP,
-            ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
-            safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
-            // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
-            tools,
-            ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
-          },
-          controller.signal
-        )
+        const events = localModel
+          ? streamLocalMessage({
+              model: initial.model ?? MODEL,
+              // 本地模型没有 latest_reminder 角色，把本轮提醒拼到 system 末尾
+              system: requestReminder ? `${systemText}\n\n${requestReminder}`.trim() : systemText,
+              messages,
+              signal: controller.signal,
+            })
+          : streamMessage(
+              apiKey ?? '',
+              {
+                model: initial.model ?? MODEL,
+                system: systemText,
+                messages,
+                thinking: initial.thinking
+                  ? fallbackNoReasoning
+                    ? { type: 'enabled' }
+                    : { type: 'enabled', budget_tokens: thinkingBudget(effort) }
+                  : { type: 'disabled' },
+                // 思考强度：0 档与降级后都不下发
+                ...(initial.thinking && effort > 0 && !fallbackNoReasoning
+                  ? { reasoning_effort: reasoningEffortValue(effort) }
+                  : {}),
+                temperature: autoTuned?.params.temperature ?? temperature,
+                top_p: autoTuned?.params.top_p ?? topP,
+                ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
+                safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
+                // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
+                tools,
+                ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+              },
+              controller.signal
+            )
         const blockIndexes = new Map<number, number>()
         /** 本轮客户端工具调用：index → 累积中的参数 JSON */
         const toolSlots = new Map<number, { id: string; name: string; json: string }>()
@@ -1641,6 +1659,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settle(reply, 'done', Date.now())
+        // 本地模型不请求服务端标题：首轮用提问开头几个字作为会话标题
+        if (localModel && !getSession(sessionId)?.title) {
+          const title = request.question.content.replace(/\s+/g, ' ').trim().slice(0, 24)
+          if (title) {
+            updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
+          }
+        }
         // 客户端工具：模型请求了工具、且还有额度时，本地执行后带着结果再请求一轮
         if (
           reply.stopReason === 'tool_use' &&
@@ -1821,7 +1846,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       !titleRequests.has(controller) &&
       reply.usage &&
       useSettings.getState().savedMemoryEnabled &&
-      useSettings.getState().autoExtractMemory
+      useSettings.getState().autoExtractMemory &&
+      !localModel
     ) {
       const memoryKey = useSettings.getState().apiKey ?? ''
       const userText = request.question.content
@@ -1836,7 +1862,12 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       })
     }
     // 自定义结果在没有真实搜索步骤时补一个投毒步骤；错误与拒绝轮次不展示
-    if (poisonConfig.enabled && reply.status !== 'error' && reply.stopReason !== 'refusal') {
+    if (
+      !localModel &&
+      poisonConfig.enabled &&
+      reply.status !== 'error' &&
+      reply.stopReason !== 'refusal'
+    ) {
       reply = attachPoisonResults(reply, poisonConfig)
     }
     reply = sanitizePoisonedReply(reply, poisonConfig)

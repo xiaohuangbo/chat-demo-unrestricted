@@ -1,4 +1,13 @@
 import { API_ORIGIN } from './client.js'
+import {
+  findLocalModel,
+  isLocalModel,
+  isMlcModel,
+  isWebllmModel,
+  mlcModelId,
+  webllmModelId,
+} from '../local/catalog.js'
+import { shortModelName } from '../local/mlcApi.js'
 
 /**
  * 模型列表：默认使用内置 DeepSeek Flash / V4 Pro，
@@ -9,7 +18,11 @@ import { API_ORIGIN } from './client.js'
 export type ModelOption = {
   id: string
   label: string
-  source: 'remote' | 'builtin'
+  /**
+   * remote：云端 /models 拉到的模型；builtin：内置 Flash / V4 Pro；
+   * local：浏览器内 WebLLM 已下载模型；mlc：远端 MLC-LLM API 提供的模型
+   */
+  source: 'remote' | 'builtin' | 'local' | 'mlc'
 }
 
 export const BUILTIN_MODELS: ModelOption[] = [
@@ -33,8 +46,21 @@ export const prettyModelName = (id: string): string =>
     .map((part) => (part.length <= 3 ? part.toUpperCase() : part[0].toUpperCase() + part.slice(1)))
     .join(' ')
 
-export const modelLabel = (id: string): string =>
-  BUILTIN_MODELS.find((item) => item.id === id)?.label ?? prettyModelName(id)
+/** 本地模型的展示名：WebLLM 用「家族 + 型号」，MLC-LLM API 用服务端 id 的最后一段 */
+export const modelLabel = (id: string): string => {
+  if (isWebllmModel(id)) {
+    const info = findLocalModel(webllmModelId(id))
+    return info ? `${info.familyLabel} ${info.name}` : shortModelName(webllmModelId(id))
+  }
+  if (isMlcModel(id)) {
+    return shortModelName(mlcModelId(id))
+  }
+  return BUILTIN_MODELS.find((item) => item.id === id)?.label ?? prettyModelName(id)
+}
+
+/** 本地模型的来源标签，聊天栏与设置页共用 */
+export const modelSource = (id: string): 'cloud' | 'local' | 'mlc' =>
+  isLocalModel(id) ? (isWebllmModel(id) ? 'local' : 'mlc') : 'cloud'
 
 export const readCachedModels = (): ModelOption[] | null => {
   try {

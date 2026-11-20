@@ -24,8 +24,8 @@ KEYSTORE="${KEYSTORE:-$HOME/桌面/xiaohuangbo.jks}"
 KEY_ALIAS="${KEY_ALIAS:-xiaohuangbo}"
 : "${KS_PASS:?set KS_PASS (keystore password)}"
 KEY_PASS="${KEY_PASS:-$KS_PASS}"
-VERSION_CODE="${VERSION_CODE:-273}"
-VERSION_NAME="${VERSION_NAME:-2.7.3}"
+VERSION_CODE="${VERSION_CODE:-274}"
+VERSION_NAME="${VERSION_NAME:-2.7.4}"
 OUT="${OUT:-$HERE/deepseek-unrestricted-$VERSION_NAME.apk}"
 
 for tool in aapt2 d8 zipalign apksigner; do

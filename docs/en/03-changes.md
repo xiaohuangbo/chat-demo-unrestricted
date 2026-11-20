@@ -2,12 +2,13 @@
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to sixteen:
+The settings dialog grows from two groups to seventeen:
 
 | Group                 | Contents                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | General               | Theme, language, TTS voice, location, daily usage and alerts                                                                                                                                   |
 | **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies, keyword refusal                              |
+| **Local models**      | WebGPU probe, in-browser catalog (download / load / switch / delete / export), MLC-LLM API address and model list, bundle import, cache backend, context window and local sampling parameters  |
 | **Prompt**            | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                                                                        |
 | **Chain of thought**  | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off                                               |
 | **Advanced**          | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                                                                  |
@@ -247,6 +248,15 @@ Prices (yuan per million tokens, off-peak; peak ×2):
 
 The billing section in the stats dialog gains a "By model" breakdown with reply counts and cost per model.
 
+**Local models (2.7.4)**: the top group of the model list holds downloaded WebLLM models and MLC-LLM API models:
+
+- Selection values use the `webllm/<model_id>` and `mlc/<model_id>` prefixes; anything else still goes to the cloud API, and a switch only affects new replies;
+- Local tokens cost nothing and do not consume the daily token quota, while speech synthesis, speech recognition, document parsing and server search are still billed (statistics show "Local · free" per model and a zero-cost local-token line in the cost breakdown);
+- Local models need no DeepSeek API key, so the composer no longer sends you to "enter an API key";
+- Local models take text only: attachments are skipped with a one-time notice, and the session title is derived from the question.
+
+See 3.31.
+
 ### 3.17 Long-term memory and daily usage
 
 **Long-term memory** (Settings → Memory):
@@ -364,7 +374,7 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 - **Input composition ring**: uncached input / cached input / cache write / output, each with tokens and share, so it is obvious which part drives the bill.
 - **Per-model split**: requests, tokens and cost for each model seen in the range; unknown ids fall back to Flash prices.
 - **Session ranking**: the busiest sessions in the range by tokens, with cost and request count; **Open** jumps straight into that session (disabled once the session is gone).
-- **Auxiliary usage**: web searches, parsed document pages, TTS characters and ASR seconds — the parts of the bill that token counts do not cover.
+- **Auxiliary usage**: web searches, parsed document pages, TTS characters and ASR seconds — the parts of the bill that token counts do not cover; local models only zero out token costs, these extras are still billed.
 - **Context statistics management**: the current session's context against the model window and the compaction threshold, then a table of tracked sessions with context size, window share and last request time. Clear a single record, clear all records, export the ledger as JSON or CSV, or wipe the ledger entirely.
 - **Ledger v2**: per-day records now also carry an hourly histogram and a per-session breakdown. Older v1 ledgers are read with the missing fields defaulted, so upgrading never needs a migration script; corrupt JSON is treated as an empty ledger instead of crashing the page.
 - **Context breakdown**: the latest request of the session is split into system prompt, tool definitions, user messages, model replies, model thinking, tool calls, tool results and attachments, each with estimated tokens and share. Estimates use character weights, so server-reported numbers in the KPI band remain the authoritative ones.
@@ -525,6 +535,48 @@ The mode only decides **which client tools are sent to the model this turn** —
 - **Works with perturbation:** both the raw input and the transformed `content` are checked, so input perturbation cannot bypass a keyword.
 - **Not a security boundary:** it is a local substring match, not semantic moderation; attachments, model output and image text are not inspected.
 - Config lives in localStorage: `chat-demo:refusal-enabled` / `chat-demo:refusal-keywords` / `chat-demo:refusal-case-sensitive` / `chat-demo:refusal-message`.
+
+---
+
+### 3.31 Local models (ported from web-llm-chat)
+
+**Where:** Settings → **Local models**, and the “Local models” group at the top of the composer model card.
+
+Ported from [`mlc-ai/web-llm-chat`](https://github.com/mlc-ai/web-llm-chat): its model catalog, WebLLM inference, MLC-LLM API client and recommended sampling parameters are kept, rewritten as standalone services and a settings group for this project's static build.
+
+**In-browser models (WebLLM)**
+
+- The catalog comes from the installed `@mlc-ai/web-llm` `prebuiltAppConfig`, keeping only the models the current version supports (embedding models excluded); family, provider, parameter size, quantization, VRAM needs and recommended sampling values come from the ported `DEFAULT_MODEL_BASES`;
+- Inference runs in a Web Worker (`src/services/local/worker.ts`); the main thread only receives progress, so weight downloads, wasm compilation and GPU setup happen in the background;
+- “Download” is also “load”: weights and tokenizer go into the browser Cache Storage (`webllm/model`, `webllm/config`, `webllm/wasm`) and survive a page reload; “Use” writes the model into `chat-demo:model` and the chat bar reflects it immediately;
+- Model caches can be deleted; switching the cache backend (Cache Storage / IndexedDB) unloads the current model and leaves downloaded weights in the previous backend;
+- The context window follows the model recommendation (4K / 8K / …) or can be pinned from 1K to 128K; temperature, Top P, max output tokens, presence / frequency penalties and Qwen3 thinking mode all live in settings, and switching models applies the official recommended values first;
+- Auto-load on page open puts the last used in-browser model back into GPU memory after a reload; failures stay silent and are explained in the settings card.
+
+**MLC-LLM API**
+
+- Enter the address of a self-hosted `mlc_llm serve` instance (default `http://127.0.0.1:8000`); “Connect” reads `GET /v1/models`, and selecting a model streams from `POST /v1/chat/completions`;
+- It shares the same message pipeline as in-browser models: generation is wrapped into the same `MessageStreamEvent` stream as the cloud API, so streaming rendering, stop, statistics and Markdown all behave identically;
+- No WebGPU is needed, which suits phones and the APK; attachments are text-only here as well.
+
+**Bundle import / export**
+
+- Export writes `.mlcmodel`: file bytes followed by a footer JSON and its length; the footer records each file's URL, cache scope, offset and size. With File System Access support the bundle streams straight to disk, otherwise it falls back to a Blob download;
+- Import slices the file by offset and writes each segment back into Cache Storage, so multi-GB weights never have to fit in memory; the cache is verified right after import and the model appears in the chat bar;
+- Only the Cache Storage backend is supported; with IndexedDB the buttons are disabled with an explanation.
+
+**Measured (2026-11, Intel Arc B390 / Chrome + WebGPU)**
+
+- The catalog holds 161 chat models; downloading and loading `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` (277 MB of weights plus a 5.7 MB wasm) took 57 s, moving from "Preparing the model…" to "Resident in GPU memory";
+- "1+1 equals?" answered "2" in about 2 s; a three-sentence self-introduction produced 64 output tokens in about 3 s including prefill (~21 tok/s);
+- Exporting the `.mlcmodel` bundle wrote 277.4 MB across 12 files covering all three cache scopes in about 1 s; importing it into a brand-new browser profile immediately showed "Downloaded" and answered "9" with no network attached, only local requests and zero `api.deepseek.com` calls;
+- Usage accounting: one Qwen2.5-0.5B turn used 192 input / 64 output tokens with `billed 0` and `cost 0`.
+
+**Differences from cloud models**
+
+- Local models send no server tools (web search, file parsing, client tools), and there is no server title or thinking signature;
+- There is no server-side refusal verdict: `stop_reason` is mapped from finish_reason (`length` → `max_tokens`, `content_filter` → `refusal`);
+- Usage comes from the engine's prompt / completion tokens, costs zero, and the daily token quota only counts cloud models through the new `billedTokens` field.
 
 ---
 

@@ -111,6 +111,7 @@ import { WorkspaceSetting } from './WorkspaceSetting.js'
 import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import { WebVMConsole } from '../webvm/WebVMConsole.js'
+import { LocalModelSettings } from '../local/LocalModelSettings.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -132,6 +133,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     icon: <IconSettingsOutline16 />,
   },
   { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
+  {
+    value: 'local',
+    label: 'settingDialogAsideLocalOptionLabel',
+    icon: <IconTerminalOutline16 />,
+  },
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
   { value: 'cot', label: 'settingDialogAsideCotOptionLabel', icon: <IconCustomCotOutline16 /> },
   {
@@ -242,6 +248,8 @@ const SettingsContent = () => {
             </>
           ) : section === 'model' ? (
             <ModelSettings />
+          ) : section === 'local' ? (
+            <LocalModelSettings />
           ) : section === 'prompt' ? (
             <UnrestrictedSetting />
           ) : section === 'cot' ? (
@@ -457,10 +465,17 @@ const DailyUsageSetting = () => {
       />
       <SettingCell
         label={t('dailyUsageTitle')}
-        description={t('dailyUsageText', {
-          tokens: formatTokens(usage.totalTokens),
-          cost: formatMoney(usage.cost),
-        })}
+        description={
+          usage.totalTokens > usage.billedTokens
+            ? `${t('dailyUsageText', {
+                tokens: formatTokens(usage.totalTokens),
+                cost: formatMoney(usage.cost),
+              })}\n${t('dailyUsageLocalNote')}`
+            : t('dailyUsageText', {
+                tokens: formatTokens(usage.totalTokens),
+                cost: formatMoney(usage.cost),
+              })
+        }
         status={null}
         action={
           <Button
@@ -729,6 +744,18 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV274Title',
+      items: [
+        'changelogV274Webllm',
+        'changelogV274Switch',
+        'changelogV274Mlc',
+        'changelogV274Transfer',
+        'changelogV274NoKey',
+        'changelogV274Docs',
+        'changelogV274Apk',
+      ],
+    },
     {
       title: 'changelogV273Title',
       items: [

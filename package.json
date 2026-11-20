@@ -1,6 +1,6 @@
 {
   "name": "chat-demo",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "description": "基于 DeepSeek API 的静态聊天示例。",
   "license": "MIT",
   "private": true,
@@ -13,6 +13,7 @@
     "format": "oxfmt --write ."
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "0.2.87",
     "@types/katex": "^0.16.5",
     "@types/mdast": "~4.0.3",
     "@types/prismjs": "^1.26.1",

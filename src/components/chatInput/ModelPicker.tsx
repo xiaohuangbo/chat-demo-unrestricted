@@ -16,6 +16,20 @@ import {
 } from '../../services/api/models.js'
 import { setModel, useSettings } from '../../services/settings.js'
 import { formatMoney, isKnownModel, modelPriceFor } from '../../services/chat/sessionStats.js'
+import {
+  localCatalog,
+  refreshMlcModels,
+  selectLocalModel,
+  useLocalModels,
+} from '../../services/local/store.js'
+import {
+  isLocalModel,
+  mlcSelection,
+  webllmModelId,
+  webllmSelection,
+} from '../../services/local/catalog.js'
+import { refreshDownloaded } from '../../services/local/engine.js'
+import { openSettings } from '../settings/settingsDialogState.js'
 import { showToast } from '../base/toastState.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ModelPicker.module.css'
@@ -27,6 +41,9 @@ const mergeModels = (remote: ModelOption[]): ModelOption[] => {
 
 /** 每个模型下方的价格：命中 / 未命中 / 输出，单位每 1M tokens */
 const priceText = (model: string, t: ReturnType<typeof useTranslate>): string => {
+  if (isLocalModel(model)) {
+    return t('modelPriceLocalFree')
+  }
   if (!isKnownModel(model)) {
     return t('modelPriceUnknown')
   }
@@ -35,12 +52,18 @@ const priceText = (model: string, t: ReturnType<typeof useTranslate>): string =>
 }
 
 /**
- * 模型选择卡片：默认内置 Flash / V4 Pro，可从云端 GET /models 拉取并缓存。
- * 选择结果写入设置，下一条消息就用新模型；旧回复保留自己的模型与计费。
+ * 模型选择卡片：默认内置 Flash / V4 Pro，可从云端 GET /models 拉取并缓存；
+ * 本地模型（浏览器 WebLLM 已下载的权重、MLC-LLM API 的模型）排在最前，
+ * 切换后下一条消息就走对应后端，旧回复保留自己的模型与计费。
  */
 export const ModelPicker = () => {
   const t = useTranslate()
   const model = useSettings((state) => state.model)
+  const downloaded = useLocalModels((state) => state.downloaded)
+  const catalogSynced = useLocalModels((state) => state.catalogSynced)
+  const mlcModels = useLocalModels((state) => state.mlcModels)
+  const mlcEndpoint = useLocalModels((state) => state.mlcEndpoint)
+  const gpu = useLocalModels((state) => state.gpu)
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<ModelOption[]>(() => mergeModels(readCachedModels() ?? []))
   const [loading, setLoading] = useState(false)
@@ -55,9 +78,30 @@ export const ModelPicker = () => {
     offset: 8,
     maxHeight: 360,
     minSpace: 220,
-    measureKey: models.length,
+    measureKey: models.length + Object.keys(downloaded).length,
   })
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
+
+  const localOptions = useMemo<ModelOption[]>(() => {
+    const list = localCatalog()
+      .filter((item) => downloaded[item.id] || webllmSelection(item.id) === model)
+      .map((item) => ({
+        id: webllmSelection(item.id),
+        label: `${item.familyLabel} ${item.name}`,
+        source: 'local' as const,
+      }))
+    return list
+  }, [downloaded, model])
+
+  const mlcOptions = useMemo<ModelOption[]>(
+    () =>
+      mlcModels.map((item) => ({
+        id: mlcSelection(item.id),
+        label: item.label,
+        source: 'mlc' as const,
+      })),
+    [mlcModels]
+  )
 
   const refresh = useCallback(async (silent = false) => {
     const apiKey = useSettings.getState().apiKey ?? ''
@@ -91,6 +135,22 @@ export const ModelPicker = () => {
     }
   }, [open, refresh])
 
+  // 第一次展开时同步「哪些本地模型已经下载」，之后每次导入/删除都会主动刷新
+  useEffect(() => {
+    if (!open || catalogSynced) {
+      return
+    }
+    void refreshDownloaded()
+  }, [open, catalogSynced])
+
+  // 配置了 MLC-LLM 地址但还没有模型列表时拉一次，失败只留在本地模型设置里提示
+  useEffect(() => {
+    if (!open || mlcModels.length > 0 || !mlcEndpoint.trim()) {
+      return
+    }
+    void refreshMlcModels()
+  }, [open, mlcModels.length, mlcEndpoint])
+
   const sourceText = useMemo(() => {
     if (loading) {
       return t('modelFetching')
@@ -98,6 +158,78 @@ export const ModelPicker = () => {
     const count = models.filter((item) => item.source === 'remote').length
     return count > 0 ? t('modelRemoteOk', { count }) : t('modelBuiltinFallback')
   }, [loading, models, t])
+
+  const choose = (item: ModelOption) => {
+    if (item.source === 'local' || item.source === 'mlc') {
+      selectLocalModel(item.id)
+      if (item.source === 'local' && !downloaded[webllmModelId(item.id)]) {
+        showToast({ key: 'localModelWillDownload' })
+      }
+    } else {
+      setModel(item.id)
+    }
+    setOpen(false)
+  }
+
+  const localSection =
+    localOptions.length > 0 || mlcOptions.length > 0 ? (
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>
+          <span>{t('localModelsSection')}</span>
+          <button
+            type="button"
+            className={styles.manage}
+            onClick={() => {
+              setOpen(false)
+              openSettings('local')
+            }}
+          >
+            {t('localModelsManage')}
+          </button>
+        </div>
+        {[...localOptions, ...mlcOptions].map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="option"
+            aria-selected={item.id === model}
+            className={clsx(styles.option, item.id === model && styles.active)}
+            onClick={() => choose(item)}
+          >
+            <span className={styles.optionMain}>
+              <span className={styles.optionNameRow}>
+                <span className={styles.optionName}>{item.label}</span>
+                <span className={styles.sourceTag}>
+                  {item.source === 'local' ? t('modelSourceLocal') : t('modelSourceMlc')}
+                </span>
+              </span>
+              <span className={styles.optionId}>{item.id}</span>
+              <span className={styles.optionPrice}>{priceText(item.id, t)}</span>
+            </span>
+            {item.id === model ? <IconCheckedOutline14 /> : null}
+          </button>
+        ))}
+      </div>
+    ) : (
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>
+          <span>{t('localModelsSection')}</span>
+          <button
+            type="button"
+            className={styles.manage}
+            onClick={() => {
+              setOpen(false)
+              openSettings('local')
+            }}
+          >
+            {t('localModelsManage')}
+          </button>
+        </div>
+        <div className={styles.localEmpty}>
+          {gpu && !gpu.supported ? t('localModelsGpuMissingHint') : t('localModelsEmptyHint')}
+        </div>
+      </div>
+    )
 
   return (
     <>
@@ -137,6 +269,7 @@ export const ModelPicker = () => {
                   {loading ? t('modelFetching') : t('modelFetch')}
                 </button>
               </div>
+              {localSection}
               <div className={styles.list}>
                 {models.map((item) => (
                   <button
@@ -145,10 +278,7 @@ export const ModelPicker = () => {
                     role="option"
                     aria-selected={item.id === model}
                     className={clsx(styles.option, item.id === model && styles.active)}
-                    onClick={() => {
-                      setModel(item.id)
-                      setOpen(false)
-                    }}
+                    onClick={() => choose(item)}
                   >
                     <span className={styles.optionMain}>
                       <span className={styles.optionNameRow}>

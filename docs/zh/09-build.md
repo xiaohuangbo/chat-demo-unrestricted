@@ -19,8 +19,12 @@ pnpm dev        # http://localhost:8090
 ```sh
 pnpm build      # 产物在 dist/
 ```
+本地模型用到的 `@mlc-ai/web-llm@0.2.87` 会打进构建产物，并额外产出一个 Web Worker chunk（约 6 MB）；模型权重与 wasm 库不在包里，首次使用时从 Hugging Face / GitHub Raw 下载并写入浏览器缓存。
+
 
 `dist/` 可以直接部署到静态服务器，也可以双击 `dist/index.html` 本地打开（需要浏览器允许 `file://` 页面使用存储，并允许跨域请求你的 API 地址）。首次使用在设置 → 数据管理里填写 API Key。
+
+本地模型必须在 http(s) 页面下运行：`file://` 打开时 Worker 与 WebGPU 都受限制；MLC-LLM API 也需要目标服务允许跨域。
 
 | 命令          | 用途                   |
 | ------------- | ---------------------- |
@@ -36,11 +40,11 @@ WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.3.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.4.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.3 / 273），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.4 / 274），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -51,7 +55,7 @@ WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 273；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 274；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---

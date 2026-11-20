@@ -91,6 +91,15 @@
 | [`mcp-server/`](../../mcp-server/README.md)                                                                          | Local EasyJailbreak MCP backend                                                                                                                                                                             |
 | [`src/components/lab/`](../../src/components/lab/LabView.tsx)                                                        | Jailbreak lab page                                                                                                                                                                                          |
 | [`src/services/lab/`](../../src/services/lab/mcpClient.ts)                                                           | MCP client and lab state                                                                                                                                                                                    |
+| [`src/services/local/catalogData.ts`](../../src/services/local/catalogData.ts) | WebLLM catalog ported from web-llm-chat: provider, family and recommended sampling |
+| [`src/services/local/catalog.ts`](../../src/services/local/catalog.ts) | Catalog building, `webllm/` `mlc/` prefixes and display names |
+| [`src/services/local/worker.ts`](../../src/services/local/worker.ts) | WebLLM inference worker (`WebWorkerMLCEngineHandler`) |
+| [`src/services/local/engine.ts`](../../src/services/local/engine.ts) | Engine singleton: load / switch / interrupt, cache probing, WebGPU probe |
+| [`src/services/local/mlcApi.ts`](../../src/services/local/mlcApi.ts) | MLC-LLM REST client: `/v1/models`, `/v1/chat/completions` SSE |
+| [`src/services/local/stream.ts`](../../src/services/local/stream.ts) | Local generation → `MessageStreamEvent`: message flattening and chunk queue |
+| [`src/services/local/transfer.ts`](../../src/services/local/transfer.ts) | `.mlcmodel` bundle import/export: streaming container and cache writes |
+| [`src/services/local/store.ts`](../../src/services/local/store.ts) | Local model settings and runtime state (localStorage + zustand) |
+| [`src/components/local/LocalModelSettings.tsx`](../../src/components/local/LocalModelSettings.tsx) | Settings → Local models: GPU status, catalog, MLC-LLM, bundles and parameters |
 
 ---
 

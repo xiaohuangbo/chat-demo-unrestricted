@@ -42,6 +42,7 @@ import { selectSession, useChatStore } from '../../services/chat/store.js'
 import { closeSettings } from './settingsDialogState.js'
 import { setServerSearchFree, useSettings } from '../../services/settings.js'
 import { modelLabel } from '../../services/api/models.js'
+import { isLocalModel } from '../../services/local/catalog.js'
 import settingsStyles from './Settings.module.css'
 import styles from './StatsSettings.module.css'
 
@@ -402,7 +403,11 @@ export const StatsSettings = () => {
                     ),
                   })}
                 </span>
-                <span className={styles.modelCost}>{formatMoney(item.usage.cost)}</span>
+                <span className={styles.modelCost}>
+                  {isLocalModel(item.model)
+                    ? t('statsModelLocalFree')
+                    : formatMoney(item.usage.cost)}
+                </span>
               </div>
             ))}
           </div>
@@ -537,11 +542,13 @@ export const StatsSettings = () => {
               {t('billingRateModel', { model: modelLabel(model) })}
             </span>
             <span className={styles.rateValue}>
-              {t('billingRateTokens', {
-                miss: price.cacheMiss,
-                hit: price.cacheHit,
-                output: price.output,
-              })}
+              {isLocalModel(model)
+                ? t('billingRateLocalNote')
+                : t('billingRateTokens', {
+                    miss: price.cacheMiss,
+                    hit: price.cacheHit,
+                    output: price.output,
+                  })}
             </span>
           </div>
           <div className={styles.rateRow}>

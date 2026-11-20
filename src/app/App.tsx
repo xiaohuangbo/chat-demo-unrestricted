@@ -30,6 +30,9 @@ import { CollapsedSider } from '../components/sider/CollapsedSider.js'
 import { closeMobileSider } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
 import { NanoVMHost } from '../components/nanovm/NanoVMHost.js'
+import { isLocalModel, isWebllmModel, webllmModelId } from '../services/local/catalog.js'
+import { loadModel, refreshDownloaded } from '../services/local/engine.js'
+import { useLocalModels } from '../services/local/store.js'
 import styles from './App.module.css'
 
 export const App = () => {
@@ -76,8 +79,27 @@ export const App = () => {
 
   useEffect(() => {
     void initChat()
-    // 首次打开先在设置里输入 API Key
-    ensureApiKey()
+    // 首次打开先在设置里输入 API Key；选中本地模型时不需要云端 Key
+    if (!isLocalModel(useSettings.getState().model)) {
+      ensureApiKey()
+    }
+  }, [])
+
+  // 自动加载：开启后刷新页面即把上次的浏览器模型放进显存，失败时静默（设置页能看到原因）
+  useEffect(() => {
+    const model = useSettings.getState().model
+    if (!useLocalModels.getState().autoLoad || !isWebllmModel(model)) {
+      return
+    }
+    const modelId = webllmModelId(model)
+    void (async () => {
+      if (!useLocalModels.getState().catalogSynced) {
+        await refreshDownloaded([modelId])
+      }
+      if (useLocalModels.getState().downloaded[modelId]) {
+        await loadModel(modelId)
+      }
+    })().catch(() => {})
   }, [])
 
   return (

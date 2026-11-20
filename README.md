@@ -35,6 +35,7 @@
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox commands, docked right on desktop and a bottom panel on phones; Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
 - **Chat modes**: Chat only / Web agent / PTC / Creator decide which client tools and round limit apply;
+- **Local models**: a port of mlc-ai/web-llm-chat — WebGPU models (Llama / Qwen / Gemma / Phi / DeepSeek) run in the browser, downloaded weights stay cached on device, the chat bar switches between them, `.mlcmodel` bundles import/export, and a self-hosted MLC-LLM REST endpoint is supported;
 - **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match refuses locally without calling the API, even without a key;
 - **Statistics and billing**: usage ledger, context breakdown, per-model pricing and the free server-search switch;
 - **Android**: APK builds, in-app update check and a built-in network proxy for NanoVM; WebVM stays browser-only because Android WebView has no cross-origin isolation.
@@ -54,7 +55,7 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 67 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 73 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -68,12 +69,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: `deepseek-unrestricted-2.7.3.apk` (7.5 MB, versionCode 273,
-SHA-256 `2ece6f548764698cac63379b0918a6e271a7fb884bcdbd51cddf2dce046b9d62`) — see [android/README.md](android/README.md).
+Prebuilt artifact: `deepseek-unrestricted-2.7.4.apk` (12 MB, versionCode 274,
+SHA-256 `4b19c7410de505ad9b0862a4abeafb536fc4cd222568aae3bdea3f720af4ba56`) — see [android/README.md](android/README.md).
+Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.3, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.4, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -84,6 +86,7 @@ Last regression run (2026-11, v2.7.3, both `compat` and `compat-prod` matrices):
 | NanoVM           | Terminal, quotas, tool calls, 11 toolchains, virtual net | 21/21  |
 | WebVM / CheerpX  | Cross-origin isolation, boot, xterm input, scrolling, import/export, switching, agent tools | pass |
 | Keyword refusal | Switch, case sensitivity, keyless local reply, no API request | pass |
+| Local models    | WebGPU on Intel Arc: Qwen2.5-0.5B q4f16 downloaded (277 MB in 57 s) and answered at ~21 tok/s; 277 MB bundle exported and imported into a fresh profile, then ran offline with zero cloud API calls | pass |
 | Chat modes       | Tool groups and round limits for all four modes          | 10/10  |
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
@@ -92,6 +95,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 ## Recent versions
 
+- **2.7.4**: ports mlc-ai/web-llm-chat — Settings → Local models runs WebGPU models in the browser, downloads and caches weights, switches from the chat bar, imports/exports `.mlcmodel` bundles and talks to an MLC-LLM REST server; local tokens are free (speech, search and parsing still billed); the page title is now “网页里的deepseek unrestricted Chat Harness”; known limits now 73.
 - **2.7.3**: fixed the stretched NanoVM panel on mobile and the unscrollable WebVM terminal; added keyword refusal under Settings → Model (local match, works without a key, no API request); known limits now 67; WebVM gains sudo (root password password) and a one-click Root switch.
 - **2.7.2**: new WebVM / CheerpX terminal — a real x86 Debian 10 in the browser with gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export, an environment check and the `webvm_shell` / `webvm_ls` / `webvm_status` model tools.
 - **2.7.1**: a virtual network inside the VM (`vm serve` + `serve` + `wscat`, curl to 127.0.0.1 routes automatically); Node gains `http`/`ws`, Python gains `pip install` and Flask/WSGI; new tsc / Sass / Terser / Prettier toolchains and 12 developer commands.
