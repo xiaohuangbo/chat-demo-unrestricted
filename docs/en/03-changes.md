@@ -576,7 +576,7 @@ Ported from [`mlc-ai/web-llm-chat`](https://github.com/mlc-ai/web-llm-chat): its
 
 **Local model enhancements (2.7.5)**
 
-- **Auto memory**: with auto-extract or a character's auto memory on, the current local model performs memory extraction instead of forcing the Flash API; it works without an API key;
+- **Auto memory**: Settings → Memory gains an extraction-model selector — follow the current model, force the Flash API, or force a local model. By default cloud chats use Flash and local chats use the local engine; cloud chats can also use the last selected local model, and local chats no longer have to call Flash. Local extraction works without an API key;
 - **Thinking merge**: the local model thinking switch is now the composer's Deep thinking control — level 0 is off and levels 1–4 enable thinking for Qwen3; WebLLM receives `enable_thinking` and the MLC-LLM API forwards the same field when the server supports it;
 - **Web search (experimental)**: with Smart search on and an API key configured, a DeepSeek server-side pre-pass fetches search highlights and sources, injects them into the system prompt, then the local model answers; without a key the search is skipped with a toast;
 - **Text attachments (experimental)**: local models bypass the Files API; on send the page reads txt / md / csv / json / code attachments as plain text (8K per file, 24K total) into the system prompt; images and binary files are skipped with a notice;

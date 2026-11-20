@@ -576,8 +576,13 @@ export const en = {
   memorySavedEnabledDesc:
     'Enabled memories are injected into every request system prompt; they stay on this device.',
   memoryAutoExtractLabel: 'Auto-extract long-term memory',
-  memoryAutoExtractDesc:
-    'Runs one extra Flash call after each turn to extract stable facts; this costs a little.',
+  memoryAutoExtractDesc: 'Runs one extra model call after each turn to extract stable facts. By default it follows the current model: cloud chats use the Flash API and local chats use the local engine; this costs a little (local models incur no API fee).',
+  memoryExtractEngineLabel: 'Extraction model',
+  memoryExtractEngineDesc: 'Choose which model auto-extract uses; “Local model” uses the last local model you selected, even during cloud chats.',
+  memoryExtractAuto: 'Follow the current model',
+  memoryExtractFlash: 'DeepSeek Flash API',
+  memoryExtractLocal: 'Local model',
+  memoryExtractLocalMissing: 'No local model selected yet: pick and download one under Local models first, otherwise extraction falls back to the Flash API.',
   memoryAddPlaceholder: 'Add a memory, e.g. the user prefers TypeScript',
   memoryAddButton: 'Add',
   memoryEmpty: 'No long-term memories yet',

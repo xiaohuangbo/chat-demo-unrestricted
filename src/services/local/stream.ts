@@ -123,13 +123,16 @@ export const generateLocalText = async ({
   user,
   maxTokens,
   signal,
+  model,
 }: {
   system: string
   user: string
   maxTokens: number
   signal?: AbortSignal
+  /** 指定本地模型（云端对话时用记住的本地模型提炼记忆） */
+  model?: string
 }): Promise<string> => {
-  const selection = useSettings.getState().model
+  const selection = model ?? useSettings.getState().model
   const state = useLocalModels.getState()
   const messages: LocalChatMessage[] = [
     { role: 'system', content: system },

@@ -12,6 +12,7 @@
 | 模型       | 拒答关键词         | 空                        | `chat-demo:refusal-keywords`                | 不受影响             |
 | 模型       | 区分大小写         | 关                        | `chat-demo:refusal-case-sensitive`          | 不受影响             |
 | 模型       | 自定义拒答话术     | 空（默认话术）            | `chat-demo:refusal-message`                 | 不受影响             |
+| 记忆       | 自动提炼模型       | `auto`（跟随当前模型）    | `chat-demo:memory-extract-engine`           | 不受影响             |
 | 角色       | 角色列表 / 人设    | 仅 DeepSeek               | `chat-demo:roles`                           | 不受影响             |
 | 角色       | 会话角色           | 跟随当前角色              | 会话字段 `roleId`                           | 不受影响             |
 | 通用       | 我的昵称           | `我`                      | `chat-demo:profile-name`                    | 不受影响             |

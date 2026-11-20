@@ -29,6 +29,7 @@ import {
 } from '../../services/chat/memoryArchive.js'
 import {
   setAutoExtractMemory,
+  setMemoryExtractEngine,
   setMemoryBankDimension,
   setMemoryBankEnabled,
   setMemoryBankLimit,
@@ -45,6 +46,8 @@ import { Switch } from '../base/Switch.js'
 import { Modal } from '../base/Modal.js'
 import { IconEditOutline16, IconTrashOutline16 } from '../base/icons.js'
 import { showToast } from '../base/toastState.js'
+import { isLocalModel } from '../../services/local/catalog.js'
+import { lastLocalModelSelection } from '../../services/local/store.js'
 import styles from './MemorySettings.module.css'
 
 const DIMENSIONS = [64, 128, 256, 384, 768]
@@ -334,6 +337,29 @@ export const MemorySettings = () => {
           checked={settings.autoExtractMemory}
           onChange={setAutoExtractMemory}
           label={t('memoryAutoExtractLabel')}
+        />
+      </div>
+
+      <div className={styles.toggleRow}>
+        <div className={styles.text}>
+          <div className={styles.label}>{t('memoryExtractEngineLabel')}</div>
+          <div className={styles.desc}>
+            {settings.memoryExtractEngine === 'local' &&
+            !isLocalModel(settings.model) &&
+            !lastLocalModelSelection()
+              ? t('memoryExtractLocalMissing')
+              : t('memoryExtractEngineDesc')}
+          </div>
+        </div>
+        <Select
+          value={settings.memoryExtractEngine}
+          ariaLabel={t('memoryExtractEngineLabel')}
+          options={[
+            { value: 'auto', label: t('memoryExtractAuto') },
+            { value: 'flash', label: t('memoryExtractFlash') },
+            { value: 'local', label: t('memoryExtractLocal') },
+          ]}
+          onChange={(value) => setMemoryExtractEngine(value as 'auto' | 'flash' | 'local')}
         />
       </div>
 

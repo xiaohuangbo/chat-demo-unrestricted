@@ -71,7 +71,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.5.apk` (12 MB, versionCode 275,
-SHA-256 `ccada335ae56c7d00be5564c7367f3ce68f6be787a9b0b4b0faaa316303e2ac3`) — see [android/README.md](android/README.md).
+SHA-256 `5b527817fced400d9a12ff775904b78d11e0f0403ab507744dc9b97cef4f4d9e`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -99,7 +99,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 ## Recent versions
 
-- **2.7.5**: merges upstream 0.1.3 (resize oversized Files API images before reuse); local models can extract long-term memories, borrow a server-side search pre-pass, read text attachments and are restricted to Chat mode; local thinking merges into the composer’s Deep thinking control; ports Remember’s characters, My profile, compression threshold and account/usage overview; the local model settings icon becomes a chip; known limits now 77.
+- **2.7.5**: merges upstream 0.1.3 (resize oversized Files API images before reuse); local models can extract long-term memories (with a selectable extraction model), borrow a server-side search pre-pass, read text attachments and are restricted to Chat mode; local thinking merges into the composer’s Deep thinking control; ports Remember’s characters, My profile, compression threshold and account/usage overview; the local model settings icon becomes a chip; known limits now 77.
 - **2.7.4**: ports mlc-ai/web-llm-chat — Settings → Local models runs WebGPU models in the browser, downloads and caches weights, switches from the chat bar, imports/exports `.mlcmodel` bundles and talks to an MLC-LLM REST server; local tokens are free (speech, search and parsing still billed); the page title is now “网页里的deepseek unrestricted Chat Harness”; known limits now 73.
 - **2.7.3**: fixed the stretched NanoVM panel on mobile and the unscrollable WebVM terminal; added keyword refusal under Settings → Model (local match, works without a key, no API request); known limits now 67; WebVM gains sudo (root password password) and a one-click Root switch.
 - **2.7.2**: new WebVM / CheerpX terminal — a real x86 Debian 10 in the browser with gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export, an environment check and the `webvm_shell` / `webvm_ls` / `webvm_status` model tools.

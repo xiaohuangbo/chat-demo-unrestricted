@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { isLocalModel } from '../local/catalog.js'
 import { generateLocalText } from '../local/stream.js'
+import { lastLocalModelSelection } from '../local/store.js'
 import { streamMessage } from '../api/client.js'
 import { useSettings } from '../settings.js'
 import { translate } from '../../i18n/index.js'
@@ -245,8 +246,20 @@ export const extractMemoriesFromTurn = async ({
   assistantText: string
 }): Promise<boolean> => {
   const question = userText.trim()
-  const local = isLocalModel(useSettings.getState().model)
-  if (local ? !question : !apiKey || !question) {
+  if (!question) {
+    return false
+  }
+  const settings = useSettings.getState()
+  const currentModel = settings.model
+  const localSelection = isLocalModel(currentModel) ? currentModel : lastLocalModelSelection()
+  // auto：云端对话走 Flash、本地对话走本地；flash / local 由用户强制指定
+  const local =
+    settings.memoryExtractEngine === 'local'
+      ? localSelection !== null
+      : settings.memoryExtractEngine === 'auto'
+        ? isLocalModel(currentModel)
+        : false
+  if (!local && !apiKey) {
     return false
   }
   const existing = useSavedMemories.getState().items
@@ -273,6 +286,7 @@ export const extractMemoriesFromTurn = async ({
         user: prompt,
         maxTokens: 300,
         signal: controller.signal,
+        model: localSelection ?? undefined,
       })
     } else {
       const events = streamMessage(

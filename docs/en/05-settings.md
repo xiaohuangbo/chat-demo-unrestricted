@@ -12,6 +12,7 @@
 | Model             | Refusal keywords                     | Empty                        | `chat-demo:refusal-keywords`               | Unaffected                      |
 | Model             | Case-sensitive keywords             | Off                          | `chat-demo:refusal-case-sensitive`         | Unaffected                      |
 | Model             | Custom refusal message               | Empty (default)              | `chat-demo:refusal-message`                | Unaffected                      |
+| Memory     | Extraction model    | `auto` (follow model)    | `chat-demo:memory-extract-engine`  | Unaffected |
 | Characters | Role list / persona | DeepSeek only            | `chat-demo:roles`                  | Unaffected |
 | Characters | Session character   | Follows active role      | session field `roleId`             | Unaffected |
 | General    | My name             | `我`                     | `chat-demo:profile-name`           | Unaffected |

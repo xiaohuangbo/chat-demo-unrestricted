@@ -255,6 +255,18 @@ export const contextWindowForModel = (modelId: string): number => {
 export const localCatalog = (): LocalModelInfo[] => buildWebllmCatalog()
 
 /** 选中本地模型：写 settings.model，并按前缀同步到本地模型状态 */
+/** 最后一次选择的本地模型：云端对话时也能用它做记忆提炼 */
+const LAST_LOCAL_KEY = 'chat-demo:last-local-model'
+
+export const lastLocalModelSelection = (): string | null => {
+  try {
+    const saved = localStorage.getItem(LAST_LOCAL_KEY)
+    return saved && (isWebllmModel(saved) || isMlcModel(saved)) ? saved : null
+  } catch {
+    return null
+  }
+}
+
 export const selectLocalModel = (selection: string) => {
   if (isWebllmModel(selection)) {
     const info = findLocalModel(webllmModelId(selection))
@@ -265,6 +277,11 @@ export const selectLocalModel = (selection: string) => {
     // MLC-LLM API 的采样参数交给现有设置里的温度 / top_p，只切换端点模型
   } else {
     return
+  }
+  try {
+    localStorage.setItem(LAST_LOCAL_KEY, selection)
+  } catch {
+    // 隐私模式下写不进去时只影响之后的提炼默认值
   }
   setModel(selection as ChatModel)
 }
