@@ -55,8 +55,10 @@ const stem = (name: string): { base: string; ext: string } => {
 
 /** 文件名只保留末段，替换路径分隔符与 shell 不友好的字符 */
 const safeName = (input: string): string =>
-  baseName(input)
-    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
+  [...baseName(input).replace(/[\\/:*?"<>|]/g, '_')]
+    // 去掉控制字符（用码点判断，避免在正则里写控制字符范围）
+    .filter((char) => (char.codePointAt(0) ?? 0) >= 32)
+    .join('')
     .trim()
     .slice(0, 180)
 
