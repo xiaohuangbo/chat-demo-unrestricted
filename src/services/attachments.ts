@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { LinkedMessage, TranslationMessage } from '../i18n/index.js'
+import { isUploadImageOversized } from '../utils/resizeUploadImage.js'
 import { uploadFile } from './api/client.js'
 import {
   applyAttachmentPoison,
@@ -9,6 +10,8 @@ import {
 import { classifyApiError, getUploadErrorInfo, isRetryableApiError } from './api/errors.js'
 import type { FilePurpose } from './api/types.js'
 import { ACCEPT_FILE_EXTS } from './uploadExts.js'
+import { loadFile } from './chat/db.js'
+import type { FileAttachment } from './chat/types.js'
 import { useSettings } from './settings.js'
 
 /** 内置默认值：单文件 64 MB、user_data 32 MB、单会话 50 个，可在设置 → 附件里覆盖 */
@@ -278,6 +281,30 @@ export const restartUpload = (
   }
   current.controller.abort()
   void current.promise.catch(() => {}).finally(start)
+}
+
+/** 检查旧图片的 file_id。超限返回 null 以触发补传，无法读取原件时保留原 ID。 */
+export const checkImageFileIds = async (files: FileAttachment[], signal: AbortSignal) => {
+  const checked = new Map<string, string | null>()
+  for (const file of files) {
+    if (!file.isImage || !file.serverId || file.imageSizeChecked || checked.has(file.id)) {
+      continue
+    }
+    signal.throwIfAborted()
+    const oversized = await loadFile(file.id)
+      .then((blob) => blob && isUploadImageOversized(blob))
+      .catch(() => undefined)
+    if (oversized === undefined) {
+      continue
+    }
+    signal.throwIfAborted()
+    const task = useUploads.getState().tasks[file.id]
+    if (oversized && task?.status === 'done' && task.serverId === file.serverId) {
+      cancelUpload(file.id)
+    }
+    checked.set(file.id, oversized ? null : file.serverId)
+  }
+  return checked
 }
 
 /** 各扩展名对应的 MIME：部分系统（如 Windows）给不出 file.type，按扩展名补齐 */

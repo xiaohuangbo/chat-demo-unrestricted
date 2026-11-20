@@ -52,8 +52,6 @@ type LocalSettings = {
   maxTokens: number
   presencePenalty: number
   frequencyPenalty: number
-  /** Qwen3 系列是否开启思考模式 */
-  enableThinking: boolean
   /** 远端 MLC-LLM 服务地址，如 http://127.0.0.1:8000 */
   mlcEndpoint: string
   /** 打开页面时自动加载上次用过的浏览器模型 */
@@ -98,7 +96,6 @@ const KEYS = {
   maxTokens: 'chat-demo:local-max-tokens',
   presencePenalty: 'chat-demo:local-presence-penalty',
   frequencyPenalty: 'chat-demo:local-frequency-penalty',
-  enableThinking: 'chat-demo:local-enable-thinking',
   mlcEndpoint: 'chat-demo:local-mlc-endpoint',
   autoLoad: 'chat-demo:local-auto-load',
 } as const
@@ -159,7 +156,6 @@ const initialSettings = (): LocalSettings => ({
   maxTokens: Math.round(readNumber(KEYS.maxTokens, 2048, 1, 131072)),
   presencePenalty: readNumber(KEYS.presencePenalty, 0, -2, 2),
   frequencyPenalty: readNumber(KEYS.frequencyPenalty, 0, -2, 2),
-  enableThinking: read(KEYS.enableThinking) === 'true',
   mlcEndpoint: initialEndpoint(),
   autoLoad: read(KEYS.autoLoad) === 'true',
 })
@@ -200,7 +196,6 @@ export const setLocalSettings = (patch: Partial<LocalSettings>) => {
   write(KEYS.maxTokens, String(next.maxTokens))
   write(KEYS.presencePenalty, String(next.presencePenalty))
   write(KEYS.frequencyPenalty, String(next.frequencyPenalty))
-  write(KEYS.enableThinking, String(next.enableThinking))
   write(KEYS.mlcEndpoint, next.mlcEndpoint)
   write(KEYS.autoLoad, String(next.autoLoad))
   useLocalModels.setState({
@@ -211,7 +206,6 @@ export const setLocalSettings = (patch: Partial<LocalSettings>) => {
     maxTokens: next.maxTokens,
     presencePenalty: next.presencePenalty,
     frequencyPenalty: next.frequencyPenalty,
-    enableThinking: next.enableThinking,
     mlcEndpoint: next.mlcEndpoint,
     autoLoad: next.autoLoad,
   })
@@ -248,7 +242,6 @@ export const applyRecommendedParams = (info: LocalModelInfo) => {
     topP: info.topP,
     presencePenalty: info.presencePenalty,
     frequencyPenalty: info.frequencyPenalty,
-    enableThinking: false,
   })
 }
 

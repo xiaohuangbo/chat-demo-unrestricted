@@ -5,6 +5,7 @@ import { getReplyAnswerText } from './reply.js'
 import type { Session, SessionCompression } from './types.js'
 import { estimateTokens } from './sessionStats.js'
 import { reserveGeometry } from './contextPressure.js'
+import { useSettings } from '../settings.js'
 
 /**
  * 长对话压缩：把较早的轮次交给模型总结成摘要，摘要进入后续请求的上下文，
@@ -45,8 +46,11 @@ export type AutoCompressInput = {
  * 先按阈值判断压力，再要求至少有一组可压缩轮次、且距上次压缩有新增内容。
  */
 export const autoCompressNeeded = (session: Session, pressure: AutoCompressInput): boolean => {
-  const reserve = reserveGeometry(pressure.window, pressure.maxOutputTokens)
-  if (!reserve || pressure.tokens < reserve.threshold) {
+  const geometry = reserveGeometry(pressure.window, pressure.maxOutputTokens)
+  const custom = useSettings.getState().compressThreshold
+  // 自定义阈值优先：达到阈值且仍有可压缩轮次就触发；0 表示沿用上下文压力规则
+  const threshold = custom > 0 ? custom : (geometry?.threshold ?? 0)
+  if (threshold <= 0 || pressure.tokens < threshold) {
     return false
   }
   if (roundCount(session) < MIN_ROUNDS + KEEP_ROUNDS) {

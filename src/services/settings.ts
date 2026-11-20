@@ -50,6 +50,8 @@ type Settings = {
   thinkingAsBody: boolean
   /** 长对话自动压缩 */
   autoCompress: boolean
+  /** 自动压缩触发阈值（tokens）；0 表示跟随上下文压力自动判断 */
+  compressThreshold: number
   /** 保存的长期记忆是否注入 system */
   savedMemoryEnabled: boolean
   /** 每轮结束后自动提炼长期记忆（额外一次模型调用） */
@@ -151,6 +153,7 @@ const KEYS = {
   translateJailbreakZh: 'chat-demo:translate-jailbreak-zh',
   thinkingAsBody: 'chat-demo:thinking-as-body',
   autoCompress: 'chat-demo:auto-compress',
+  compressThreshold: 'chat-demo:compress-threshold',
   savedMemoryEnabled: 'chat-demo:saved-memory-enabled',
   autoExtractMemory: 'chat-demo:auto-extract-memory',
   memoryBankEnabled: 'chat-demo:memory-bank-enabled',
@@ -428,6 +431,7 @@ export const useSettings = create<Settings>(() => ({
   translateJailbreakZh: read(KEYS.translateJailbreakZh) === 'true',
   thinkingAsBody: read(KEYS.thinkingAsBody) === 'true',
   autoCompress: read(KEYS.autoCompress) === 'true',
+  compressThreshold: Math.round(initialNumber(KEYS.compressThreshold, 0, 0, 800_000)),
   savedMemoryEnabled: read(KEYS.savedMemoryEnabled) !== 'false',
   autoExtractMemory: read(KEYS.autoExtractMemory) === 'true',
   memoryBankEnabled: read(KEYS.memoryBankEnabled) !== 'false',
@@ -833,6 +837,13 @@ export const setAutoCompress = (autoCompress: boolean) => {
   useSettings.setState({ autoCompress })
 }
 
+/** 自动压缩阈值：0 表示跟随上下文压力；其余按 token 数触发 */
+export const setCompressThreshold = (value: number) => {
+  const threshold = Math.min(800_000, Math.max(0, Math.round(value)))
+  write(KEYS.compressThreshold, String(threshold))
+  useSettings.setState({ compressThreshold: threshold })
+}
+
 /**
  * 恢复默认设置：清空本机所有设置键并回到默认值。
  * API Key 是凭据不是偏好，保留；对话、附件、统计等数据不在设置键里，同样不受影响。
@@ -861,6 +872,7 @@ export const resetSettings = () => {
     translateJailbreakZh: false,
     thinkingAsBody: false,
     autoCompress: false,
+    compressThreshold: 0,
     savedMemoryEnabled: true,
     autoExtractMemory: false,
     memoryBankEnabled: true,

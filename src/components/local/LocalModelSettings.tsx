@@ -64,7 +64,6 @@ export const LocalModelSettings = () => {
   const maxTokens = useLocalModels((state) => state.maxTokens)
   const presencePenalty = useLocalModels((state) => state.presencePenalty)
   const frequencyPenalty = useLocalModels((state) => state.frequencyPenalty)
-  const enableThinking = useLocalModels((state) => state.enableThinking)
   const autoLoad = useLocalModels((state) => state.autoLoad)
 
   const [query, setQuery] = useState('')
@@ -601,17 +600,6 @@ export const LocalModelSettings = () => {
             max={2}
             step={0.1}
             onChange={(value) => setLocalSettings({ frequencyPenalty: value ?? 0 })}
-          />
-        </div>
-        <div className={nanoStyles.switchRow}>
-          <div className={nanoStyles.switchText}>
-            <div className={nanoStyles.switchLabel}>{t('localModelEnableThinking')}</div>
-            <div className={nanoStyles.hint}>{t('localModelEnableThinkingHint')}</div>
-          </div>
-          <Switch
-            checked={enableThinking}
-            onChange={(value) => setLocalSettings({ enableThinking: value })}
-            label={t('localModelEnableThinking')}
           />
         </div>
         <div className={nanoStyles.switchRow}>

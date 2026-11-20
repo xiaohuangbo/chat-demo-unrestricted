@@ -3,11 +3,20 @@ import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
 import { isLocalModel } from '../local/catalog.js'
+import { activeRole, getRole, roleSystemPrompt } from '../companion.js'
+import { useProfile } from '../profile.js'
 import { streamLocalMessage } from '../local/stream.js'
+import { buildLocalAugment } from '../local/augment.js'
 import type { ChatModel, CreateMessageRequest, MessageParam } from '../api/types.js'
 import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
-import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
+import {
+  cancelUpload,
+  checkImageFileIds,
+  describeUploadError,
+  uploadAttachment,
+  useUploads,
+} from '../attachments.js'
 import {
   matchesRefusalKeyword,
   reasoningEffortValue,
@@ -654,6 +663,7 @@ export const forkSession = (sessionId: string): string | null => {
     updatedAt: now,
     messages: remapped,
     rootMessageId: remapped[0]?.id ?? null,
+    ...(source.roleId ? { roleId: source.roleId } : {}),
     ...(source.systemPrompt ? { systemPrompt: source.systemPrompt } : {}),
     ...(source.compression && mappedCutoff
       ? { compression: { ...source.compression, upToMessageId: mappedCutoff } }
@@ -738,6 +748,17 @@ export const selectSession = (id: string) => {
     void ensureSessionLoaded(id)
     trimSessionCache()
   }
+}
+
+/** 切换会话角色；角色提示词在下一轮请求时生效 */
+export const setSessionRole = (id: string, roleId: string) => {
+  updateSession(id, (session) => ({ ...session, roleId }))
+  set((state) => ({
+    sessions: state.sessions.map((summary) =>
+      summary.id === id ? { ...summary, roleId } : summary
+    ),
+  }))
+  persist(id)
 }
 
 export const renameSession = (id: string, title: string) => {
@@ -833,7 +854,12 @@ export const sendMessage = (targetSessionId: string | null) => {
   if (get().importingHistory || !get().ready) {
     return false
   }
-  const prepared = prepareDraftMessage(getDraft(targetSessionId), useUploads.getState().tasks)
+  const localOnly = isLocalModel(useSettings.getState().model)
+  const prepared = prepareDraftMessage(
+    getDraft(targetSessionId),
+    useUploads.getState().tasks,
+    localOnly
+  )
   if (!prepared) {
     return false
   }
@@ -871,6 +897,7 @@ export const sendMessage = (targetSessionId: string | null) => {
       updatedAt: now,
       messages: [],
       rootMessageId: null,
+      roleId: activeRole().id,
       ...(pendingSystemPrompt ? { systemPrompt: pendingSystemPrompt } : {}),
     }
     pendingSystemPrompt = null
@@ -893,7 +920,9 @@ export const sendMessage = (targetSessionId: string | null) => {
     content,
     files: files.map(({ id, serverId, name, size, isImage, mimeType, poison, generated }) => ({
       id,
-      serverId,
+      serverId: serverId === '' ? null : serverId,
+      // 草稿附件已上传成功，每张图片都在上传前检查过长边，超限的已缩小。
+      ...(isImage ? { imageSizeChecked: true } : {}),
       name,
       size,
       isImage,
@@ -1162,6 +1191,30 @@ const saveServerIds = (sessionId: string, uploads: Map<string, UploadedFile>) =>
   persist(sessionId)
 }
 
+/** 写回旧图片尺寸检查结果：null 清除超限图片的 serverId，交给补传流程 */
+const applyCheckedImageIds = (sessionId: string, checked: ReadonlyMap<string, string | null>) => {
+  if (checked.size === 0) {
+    return
+  }
+  updateSession(sessionId, (session) => ({
+    ...session,
+    messages: session.messages.map((message) =>
+      message.role === 'user' && message.files.some((file) => checked.has(file.id))
+        ? {
+            ...message,
+            files: message.files.map((file) => {
+              const serverId = checked.get(file.id)
+              return serverId === undefined
+                ? file
+                : { ...file, serverId, imageSizeChecked: serverId !== null }
+            }),
+          }
+        : message
+    ),
+  }))
+  persist(sessionId)
+}
+
 /**
  * 附件的服务端 id：已有且投毒指纹匹配时直接用；正在上传的等待同一任务；
  * 否则读取本地原件按当前投毒配置补传。本地没有原件时保留旧 serverId（只展示旧文件）。
@@ -1229,6 +1282,16 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   const aborted = new Promise<never>((_, reject) => {
     signal.addEventListener('abort', () => reject(signal.reason), { once: true })
   })
+  // 旧图片超限时先清除 ID，交给下方已有的附件补传流程。
+  const imageFiles = [
+    ...request.question.files,
+    ...getContextRounds(request.history).flatMap(([user]) => user.files),
+  ]
+  const checked = await Promise.race([checkImageFileIds(imageFiles, signal), aborted])
+  if (checked.size > 0) {
+    applyCheckedImageIds(sessionId, checked)
+    request = refreshRequest(sessionId, request)
+  }
   const uploads = Promise.allSettled(
     request.question.files.map(async (file) => {
       const uploaded = await ensureServerId(apiKey, file)
@@ -1427,10 +1490,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   let firstTokenAt: number | null = null
   let fallbackNoReasoning = false
   beginLiveRun(sessionId, initial.model ?? MODEL)
-  // 附件走云端 Files API 上传，本地模型只接受文本：有附件时提示一次，不中断生成
-  if (localModel && request.question.files.length > 0) {
-    showToast({ key: 'localModelFilesIgnored' })
-  }
   const flush = (force = false) => {
     cancelAnimationFrame(frame)
     frame = 0
@@ -1518,8 +1577,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               .filter(Boolean)
               .join('\n\n')
         const mode = modePolicy()
+        const role = getRole(getSession(sessionId)?.roleId)
+        const profileName = useProfile.getState().name
+        const roleText = roleSystemPrompt(role, '')
         const systemText = [
           baseSystemText,
+          profileName && profileName !== '我' ? `用户称呼：${profileName}` : '',
+          roleText,
           // 自定义思维链放在角色 / 破限规则之后、记忆与搜索上下文之前；
           // 首轮同时携带标题生成请求，也必须带上，否则新会话的第一条回复不会生效。
           // 使用回复创建时的快照，续写 / 重新生成不会因中途改设置而前后不一致。
@@ -1574,11 +1638,31 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           sessionId,
           buildContextBreakdown({ system: systemText, tools, messages })
         )
+        // 本地模型实验性增强：文本附件由页面读取，联网搜索借用服务端搜索做预检索
+        let localAugment = ''
+        if (localModel) {
+          if (useSettings.getState().search && !(apiKey ?? '').trim()) {
+            showToast({ key: 'localModelSearchNeedsKey' })
+          }
+          const augment = await buildLocalAugment({
+            files: prepared.question.files,
+            question: prepared.question.content,
+            apiKey: apiKey ?? '',
+            signal: controller.signal,
+          })
+          localAugment = augment.context
+          if (augment.skippedFiles > 0) {
+            showToast({
+              key: 'localModelFilesSkipped',
+              params: { count: augment.skippedFiles },
+            })
+          }
+        }
         const events = localModel
           ? streamLocalMessage({
               model: initial.model ?? MODEL,
-              // 本地模型没有 latest_reminder 角色，把本轮提醒拼到 system 末尾
-              system: requestReminder ? `${systemText}\n\n${requestReminder}`.trim() : systemText,
+              // 本地模型没有 latest_reminder 角色，把本轮提醒与增强上下文拼到 system 末尾
+              system: [systemText, localAugment, requestReminder].filter(Boolean).join('\n\n'),
               messages,
               signal: controller.signal,
             })
@@ -1846,8 +1930,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       !titleRequests.has(controller) &&
       reply.usage &&
       useSettings.getState().savedMemoryEnabled &&
-      useSettings.getState().autoExtractMemory &&
-      !localModel
+      (useSettings.getState().autoExtractMemory || getRole(getSession(sessionId)?.roleId).auto)
     ) {
       const memoryKey = useSettings.getState().apiKey ?? ''
       const userText = request.question.content

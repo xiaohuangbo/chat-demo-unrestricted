@@ -12,6 +12,12 @@
 | 模型       | 拒答关键词         | 空                        | `chat-demo:refusal-keywords`                | 不受影响             |
 | 模型       | 区分大小写         | 关                        | `chat-demo:refusal-case-sensitive`          | 不受影响             |
 | 模型       | 自定义拒答话术     | 空（默认话术）            | `chat-demo:refusal-message`                 | 不受影响             |
+| 角色       | 角色列表 / 人设    | 仅 DeepSeek               | `chat-demo:roles`                           | 不受影响             |
+| 角色       | 会话角色           | 跟随当前角色              | 会话字段 `roleId`                           | 不受影响             |
+| 通用       | 我的昵称           | `我`                      | `chat-demo:profile-name`                    | 不受影响             |
+| 通用       | 我的头像           | 空                        | `chat-demo:profile-avatar`                  | 不受影响             |
+| 模型       | 压缩触发阈值       | `0`（跟随上下文压力）     | `chat-demo:compress-threshold`              | 不受影响             |
+| 账户与用量 | 余额查询           | ——                        | 不存储（实时请求）                          | 不受影响             |
 | 本地模型   | 缓存后端           | `cache`                   | `chat-demo:local-cache-backend`             | 不受影响             |
 | 本地模型   | 上下文窗口         | 跟随模型推荐值            | `chat-demo:local-context-window`            | 不受影响             |
 | 本地模型   | 温度               | 模型推荐值                | `chat-demo:local-temperature`               | 不受影响             |

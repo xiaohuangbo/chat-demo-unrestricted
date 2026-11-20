@@ -13,6 +13,7 @@ import {
 } from '../attachments.js'
 import { createPoisonSidecar, type AttachmentPoisonConfig } from '../attachmentPoison.js'
 import { useSettings } from '../settings.js'
+import { isLocalModel } from '../local/catalog.js'
 import type { FileAttachment } from './types.js'
 
 export type DraftAttachment = {
@@ -106,7 +107,10 @@ export const addDraftFiles = (
   }
   const next = [...added, ...sidecars]
   updateDraft(sessionId, (draft) => ({ ...draft, attachments: [...draft.attachments, ...next] }))
-  next.forEach((attachment) => upload(attachment, apiKey))
+  // 本地模型不走 Files API：附件原件留在 IndexedDB，发送时由页面读成纯文本
+  if (!isLocalModel(useSettings.getState().model)) {
+    next.forEach((attachment) => upload(attachment, apiKey))
+  }
   return null
 }
 
@@ -141,7 +145,11 @@ export const restartDraftAttachment = (
 }
 
 /** 发送按钮和实际提交共用规则：有内容，且全部附件已上传成功。 */
-export const prepareDraftMessage = (draft: Draft, tasks: Record<string, UploadTask>) => {
+export const prepareDraftMessage = (
+  draft: Draft,
+  tasks: Record<string, UploadTask>,
+  localOnly = false
+) => {
   const text = draft.text.trim()
   if (!text && draft.attachments.length === 0) {
     return null
@@ -149,17 +157,18 @@ export const prepareDraftMessage = (draft: Draft, tasks: Record<string, UploadTa
   const files: (FileAttachment & { serverId: string; blob: Blob })[] = []
   for (const attachment of draft.attachments) {
     const task = tasks[attachment.id]
-    if (task?.status !== 'done' || !task.serverId) {
+    if (!localOnly && (task?.status !== 'done' || !task.serverId)) {
       return null
     }
     files.push({
       id: attachment.id,
-      serverId: task.serverId,
+      serverId: task?.status === 'done' ? task.serverId : '',
       name: attachment.file.name,
       size: attachment.file.size,
       isImage: attachment.isImage,
       mimeType: resolveMimeType(attachment.file),
-      poison: task.poison,
+      poison: task?.status === 'done' ? task.poison : '',
+      ...(localOnly ? { imageSizeChecked: true } : {}),
       ...(attachment.generated ? { generated: true } : {}),
       blob: attachment.file,
     })

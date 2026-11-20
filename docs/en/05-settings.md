@@ -12,6 +12,12 @@
 | Model             | Refusal keywords                     | Empty                        | `chat-demo:refusal-keywords`               | Unaffected                      |
 | Model             | Case-sensitive keywords             | Off                          | `chat-demo:refusal-case-sensitive`         | Unaffected                      |
 | Model             | Custom refusal message               | Empty (default)              | `chat-demo:refusal-message`                | Unaffected                      |
+| Characters | Role list / persona | DeepSeek only            | `chat-demo:roles`                  | Unaffected |
+| Characters | Session character   | Follows active role      | session field `roleId`             | Unaffected |
+| General    | My name             | `我`                     | `chat-demo:profile-name`           | Unaffected |
+| General    | My avatar           | Empty                    | `chat-demo:profile-avatar`         | Unaffected |
+| Model      | Compression threshold | `0` (context pressure) | `chat-demo:compress-threshold`     | Unaffected |
+| Account    | Balance query       | —                        | not stored (live request)          | Unaffected |
 | Local models | Cache backend      | `cache`                  | `chat-demo:local-cache-backend`    | Unaffected |
 | Local models | Context window     | Model recommendation     | `chat-demo:local-context-window`   | Unaffected |
 | Local models | Temperature        | Model recommendation     | `chat-demo:local-temperature`      | Unaffected |

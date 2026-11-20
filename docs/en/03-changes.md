@@ -2,12 +2,13 @@
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to seventeen:
+The settings dialog grows from two groups to nineteen:
 
 | Group                 | Contents                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | General               | Theme, language, TTS voice, location, daily usage and alerts                                                                                                                                   |
 | **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies, keyword refusal                              |
+| **Characters**        | Role cards: name, gender, persona prompt, avatar, auto memory; sessions pick a character in the composer and the persona is injected into the system prompt                                     |
 | **Local models**      | WebGPU probe, in-browser catalog (download / load / switch / delete / export), MLC-LLM API address and model list, bundle import, cache backend, context window and local sampling parameters  |
 | **Prompt**            | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                                                                        |
 | **Chain of thought**  | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off                                               |
@@ -573,12 +574,43 @@ Ported from [`mlc-ai/web-llm-chat`](https://github.com/mlc-ai/web-llm-chat): its
 - Exporting the `.mlcmodel` bundle wrote 277.4 MB across 12 files covering all three cache scopes in about 1 s; importing it into a brand-new browser profile immediately showed "Downloaded" and answered "9" with no network attached, only local requests and zero `api.deepseek.com` calls;
 - Usage accounting: one Qwen2.5-0.5B turn used 192 input / 64 output tokens with `billed 0` and `cost 0`.
 
+**Local model enhancements (2.7.5)**
+
+- **Auto memory**: with auto-extract or a character's auto memory on, the current local model performs memory extraction instead of forcing the Flash API; it works without an API key;
+- **Thinking merge**: the local model thinking switch is now the composer's Deep thinking control — level 0 is off and levels 1–4 enable thinking for Qwen3; WebLLM receives `enable_thinking` and the MLC-LLM API forwards the same field when the server supports it;
+- **Web search (experimental)**: with Smart search on and an API key configured, a DeepSeek server-side pre-pass fetches search highlights and sources, injects them into the system prompt, then the local model answers; without a key the search is skipped with a toast;
+- **Text attachments (experimental)**: local models bypass the Files API; on send the page reads txt / md / csv / json / code attachments as plain text (8K per file, 24K total) into the system prompt; images and binary files are skipped with a notice;
+- **Chat-only mode**: Agent / PTC / Creator are disabled while a local model is selected, so tools the model cannot run are never sent.
+
 **Differences from cloud models**
 
-- Local models send no server tools (web search, file parsing, client tools), and there is no server title or thinking signature;
+- Local models send no client tools (Agent / PTC / Creator disabled); search is a pre-generation server-side pre-pass rather than a model tool call;
 - There is no server-side refusal verdict: `stop_reason` is mapped from finish_reason (`length` → `max_tokens`, `content_filter` → `refusal`);
 - Usage comes from the engine's prompt / completion tokens, costs zero, and the daily token quota only counts cloud models through the new `billedTokens` field.
 
 ---
+
+### 3.32 Merging upstream chat-demo 0.1.3
+
+Upstream 0.1.3 contains one attachment safety fix (`b53b77f`): before reusing a Files API image `file_id`, check the local original against the 4096 px long edge; oversized images are resized on re-upload, and stale oversized ids in old sessions are cleared and re-uploaded.
+
+How it was merged without breaking this fork's attachment pipeline:
+
+- New `src/utils/resizeUploadImage.ts`: decode the image, scale the long edge to 4096 px, keep JPEG / WebP, otherwise encode PNG;
+- `uploadFile` resizes only images (`purpose === null`); documents and text attachments are untouched;
+- `FileAttachment` gains `imageSizeChecked`, set for successfully uploaded draft images;
+- `prepareFiles` calls `checkImageFileIds` before re-uploading, clears oversized stale ids and writes them back to the session, then lets the existing upload path run; the fork's poisoning fingerprints, attachment import/export and local-model attachment handling are preserved.
+
+### 3.33 Features ported from Remember (2.7.5)
+
+Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), rewritten for this fork's zustand + IndexedDB architecture rather than copying its Flutter / web styling:
+
+- **Characters**: `src/services/companion.ts` stores role cards (name, gender, persona prompt, avatar, auto memory); manage them under Settings → Characters, switch via the composer chip, and sessions record a `roleId`; the persona and user salutation are injected into the system prompt while the default DeepSeek role keeps the native style;
+- **My profile**: name and avatar in general settings, device-only; the name is injected as the user salutation;
+- **Compression threshold**: Settings → Model gains a threshold selector — follow context pressure, or 32K / 64K / 128K / 256K / 512K / 800K; auto-compress triggers at that token count while keeping the existing round-count guards;
+- **Account & usage**: Settings → Account & usage queries the DeepSeek balance (`/user/balance`) and shows today's tokens / cost, last-30-day tokens / cost / requests, searches, parsed pages and voice usage, reading the same daily usage and ledger as Statistics, with a shortcut to the Statistics tab;
+- **Not ported**: app icon and name, appearance and colour schemes, chat font size and other cosmetic options; characters and profile use `chat-demo:roles`, `chat-demo:active-role` and `chat-demo:profile-*`.
+
+> Character, profile, compression-threshold and account/usage interactions are inspired by Remember — with thanks.
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

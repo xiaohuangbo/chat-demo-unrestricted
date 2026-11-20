@@ -43,6 +43,7 @@ import { VoiceButton } from './VoiceButton.js'
 import { ParseltongueButton } from './ParseltonguePanel.js'
 import { CustomCotButton } from './CustomCotPanel.js'
 import { ModelPicker } from './ModelPicker.js'
+import { RolePicker } from '../companion/RolePicker.js'
 import { ModePicker } from './ModePicker.js'
 import { ThinkingSlider } from './ThinkingSlider.js'
 import { ContextRing } from './ContextRing.js'
@@ -61,7 +62,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const draft = useDrafts((state) => state.drafts.get(sessionId) ?? EMPTY_DRAFT)
   const { text, attachments } = draft
   const setText = (value: string) => setDraftText(sessionId, value)
-  const draftReady = useUploads((state) => prepareDraftMessage(draft, state.tasks) !== null)
+  const localModel = useSettings((state) => isLocalModel(state.model))
+  const draftReady = useUploads(
+    (state) => prepareDraftMessage(draft, state.tasks, localModel) !== null
+  )
   const streaming = useChatStore(
     (state) => sessionId !== null && Object.hasOwn(state.streaming, sessionId)
   )
@@ -80,7 +84,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const acceptFiles = (files: File[]) => {
-    if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
+    // 本地模型不需要 API Key：文本附件在发送时由页面直接读取
+    const needsKey = !isLocalModel(useSettings.getState().model)
+    if (
+      files.length === 0 ||
+      useChatStore.getState().importingHistory ||
+      (needsKey && !ensureApiKey())
+    ) {
       return
     }
     const error = addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '')
@@ -156,7 +166,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     if (
       useChatStore.getState().importingHistory ||
       voice.status !== 'idle' ||
-      !prepareDraftMessage(getDraft(sessionId), useUploads.getState().tasks)
+      !prepareDraftMessage(getDraft(sessionId), useUploads.getState().tasks, localModel)
     ) {
       return
     }
@@ -259,6 +269,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         */}
         <div className={styles.toggles}>
           <ModelPicker />
+          <RolePicker sessionId={sessionId} />
           <span className={styles.toolbarDivider} aria-hidden />
           <Tooltip content={t('autoJailbreakTooltip')}>
             <button
@@ -319,7 +330,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             icon={<IconPaperclipOutline16 />}
             tooltip={t('uploadFile')}
             disabled={importingHistory}
-            onClick={() => ensureApiKey() && fileInputRef.current?.click()}
+            onClick={() =>
+              (isLocalModel(useSettings.getState().model) || ensureApiKey()) &&
+              fileInputRef.current?.click()
+            }
           />
           <input
             ref={fileInputRef}

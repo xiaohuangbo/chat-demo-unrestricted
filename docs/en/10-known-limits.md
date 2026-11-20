@@ -84,6 +84,14 @@
 
 73. **The MLC-LLM API needs your own server**: this project is only the client; start `mlc_llm serve` yourself. The endpoint and model list are unauthenticated, and cross-origin access must be allowed by the server.
 
+74. **Local web search needs an API key**: search is a pre-generation server-side pre-pass (DeepSeek Flash plus server search). Without a key the turn simply skips search with a notice and the local chat continues.
+
+75. **Local model attachments are text-only**: txt / md / csv / json / code files are injected as plain text, capped at 8K per file and 24K characters in total; images and binary files are skipped with a notice — switch back to a cloud model for images.
+
+76. **Characters and My profile stay on this device**: `chat-demo:roles` and `chat-demo:profile-*` are not part of history exports, so a new device starts from scratch; a role prompt enters the system prompt and can noticeably change the answering style.
+
+77. **Local models allow Chat mode only**: Agent / PTC / Creator are disabled, and search is a pre-pass rather than a model tool call; switch to a cloud model when you need tools.
+
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

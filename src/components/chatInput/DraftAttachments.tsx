@@ -2,6 +2,8 @@ import clsx from 'clsx'
 import { memo } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { useUploads, type UploadTask } from '../../services/attachments.js'
+import { useSettings } from '../../services/settings.js'
+import { isLocalModel } from '../../services/local/catalog.js'
 import type { DraftAttachment } from '../../services/chat/drafts.js'
 import { IconCloseFill14, IconRefreshOutline16 } from '../base/icons.js'
 import { Tooltip } from '../base/Tooltip.js'
@@ -50,11 +52,16 @@ const AttachmentItem = ({
 }) => {
   const t = useTranslate()
   const { image, url, link } = useFileView(item.file, item.file.name)
-  const task = useUploads((state) => state.tasks[item.id] ?? UPLOADING)
-  const status = task.status
-  const error = task.status === 'error' ? t(task.error.key, task.error.params) : undefined
+  const task = useUploads((state) => state.tasks[item.id])
+  // 本地模型的附件不进 Files API，没有任务时直接按完成展示
+  const localOnly = useSettings((state) => isLocalModel(state.model))
+  const resolved =
+    task ?? (localOnly ? { status: 'done' as const, serverId: '', poison: '' } : UPLOADING)
+  const status = resolved.status
+  const error =
+    resolved.status === 'error' ? t(resolved.error.key, resolved.error.params) : undefined
   // 过大、格式不支持等重试无效的失败只提示原因，需删除后再发送
-  const retry = task.status === 'error' && task.retryable ? onRetry : undefined
+  const retry = resolved.status === 'error' && resolved.retryable ? onRetry : undefined
   const failed = status === 'error'
   const retryLabel = t('uploadRetry', { message: error ?? t('uploadFileStatusFailed') })
   // 「上传失败」只显示重试图标，其余原因写在图片上：可重试时在图标下方，不可重试时贴底

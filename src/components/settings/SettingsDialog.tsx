@@ -15,7 +15,9 @@ import {
   IconRefreshOutline16,
   IconSearchWarningOutline16,
   IconChartOutline16,
+  IconChipOutline16,
   IconRobotOutline16,
+  IconWalletOutline16,
   IconSettingsOutline16,
   IconTerminalOutline16,
   IconThinkOutline16,
@@ -51,6 +53,7 @@ import {
   setAttachmentMaxMB,
   setAutoCompress,
   setAutoTune,
+  setCompressThreshold,
   setAutoTuneStrategy,
   setCustomCot,
   setCustomCotEnabled,
@@ -112,11 +115,19 @@ import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import { WebVMConsole } from '../webvm/WebVMConsole.js'
 import { LocalModelSettings } from '../local/LocalModelSettings.js'
+import { RolesSettings } from './RolesSettings.js'
+import { AccountSettings } from './AccountSettings.js'
+import { ProfileCard } from './ProfileCard.js'
 import { resetLocalModelSettings } from '../../services/local/store.js'
 import { disposeEngine } from '../../services/local/engine.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
-import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
+import {
+  closeSettings,
+  setSettingsSection,
+  useSettingsDialog,
+  type SettingsSection,
+} from './settingsDialogState.js'
 import styles from './Settings.module.css'
 
 /**
@@ -135,10 +146,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     icon: <IconSettingsOutline16 />,
   },
   { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
+  { value: 'roles', label: 'settingDialogAsideRolesOptionLabel', icon: <IconRobotOutline16 /> },
   {
     value: 'local',
     label: 'settingDialogAsideLocalOptionLabel',
-    icon: <IconTerminalOutline16 />,
+    icon: <IconChipOutline16 />,
   },
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
   { value: 'cot', label: 'settingDialogAsideCotOptionLabel', icon: <IconCustomCotOutline16 /> },
@@ -183,6 +195,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     icon: <IconTerminalOutline16 />,
   },
   { value: 'stats', label: 'settingDialogAsideStatsOptionLabel', icon: <IconChartOutline16 /> },
+  {
+    value: 'account',
+    label: 'settingDialogAsideAccountOptionLabel',
+    icon: <IconWalletOutline16 />,
+  },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
   { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconLinkOutline16 /> },
   {
@@ -196,7 +213,7 @@ const SettingsContent = () => {
   const t = useTranslate()
   const isMobile = useIsMobile()
   // 打开时按调用方指定的分组选中，之后在弹窗内切换
-  const [section, setSection] = useState(() => useSettingsDialog.getState().section)
+  const section = useSettingsDialog((state) => state.section)
   const navigationRef = useRef<HTMLDivElement>(null)
   // 手机端导航横向滚动：打开较后的分组时把选中项滚到可视区域
   useEffect(() => {
@@ -232,7 +249,7 @@ const SettingsContent = () => {
               role="tab"
               aria-selected={section === item.value}
               className={clsx(styles.navItem, section === item.value && styles.navItemActive)}
-              onClick={() => setSection(item.value)}
+              onClick={() => setSettingsSection(item.value)}
             >
               {item.icon}
               {t(item.label)}
@@ -242,6 +259,7 @@ const SettingsContent = () => {
         <div role="tabpanel" className={styles.content}>
           {section === 'general' ? (
             <>
+              <ProfileCard />
               <ThemeSetting />
               <LocaleSetting />
               <TtsVoiceSetting />
@@ -250,6 +268,8 @@ const SettingsContent = () => {
             </>
           ) : section === 'model' ? (
             <ModelSettings />
+          ) : section === 'roles' ? (
+            <RolesSettings />
           ) : section === 'local' ? (
             <LocalModelSettings />
           ) : section === 'prompt' ? (
@@ -277,6 +297,8 @@ const SettingsContent = () => {
             </>
           ) : section === 'stats' ? (
             <StatsSettings />
+          ) : section === 'account' ? (
+            <AccountSettings />
           ) : section === 'about' ? (
             <AboutSetting />
           ) : section === 'changelog' ? (
@@ -750,6 +772,19 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV275Title',
+      items: [
+        'changelogV275Upstream',
+        'changelogV275LocalMemory',
+        'changelogV275Thinking',
+        'changelogV275LocalTools',
+        'changelogV275Remember',
+        'changelogV275Icon',
+        'changelogV275Docs',
+        'changelogV275Apk',
+      ],
+    },
+    {
       title: 'changelogV274Title',
       items: [
         'changelogV274Webllm',
@@ -1122,6 +1157,7 @@ const ModelSettings = () => {
   // 越狱模式下两项限制强制执行，开关显示为已开启且不可单独关闭。
   const unrestricted = useSettings((state) => state.unrestricted)
   const autoCompress = useSettings((state) => state.autoCompress)
+  const compressThreshold = useSettings((state) => state.compressThreshold)
   return (
     <>
       <SettingCell
@@ -1225,6 +1261,27 @@ const ModelSettings = () => {
             checked={autoCompress}
             onChange={setAutoCompress}
             label={t('settingsAutoCompress')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsCompressThreshold')}
+        description={t('settingsCompressThresholdDescription')}
+        status={null}
+        action={
+          <Select
+            value={String(compressThreshold)}
+            ariaLabel={t('settingsCompressThreshold')}
+            options={[
+              { value: '0', label: t('settingsCompressThresholdAuto') },
+              { value: '32000', label: '32K' },
+              { value: '64000', label: '64K' },
+              { value: '128000', label: '128K' },
+              { value: '256000', label: '256K' },
+              { value: '512000', label: '512K' },
+              { value: '800000', label: '800K' },
+            ]}
+            onChange={(value) => setCompressThreshold(Number(value))}
           />
         }
       />

@@ -145,10 +145,8 @@ export const writeServices = (fs: AppletContext['fs'], entries: ServiceEntry[]):
 }
 
 /** 按端口找服务 */
-export const findService = (
-  fs: AppletContext['fs'],
-  port: number
-): ServiceEntry | undefined => readServices(fs).find((entry) => entry.port === port)
+export const findService = (fs: AppletContext['fs'], port: number): ServiceEntry | undefined =>
+  readServices(fs).find((entry) => entry.port === port)
 
 /** 注册服务（同端口覆盖） */
 export const addService = (fs: AppletContext['fs'], entry: ServiceEntry): ServiceEntry[] => {

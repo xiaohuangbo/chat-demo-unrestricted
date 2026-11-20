@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
+import { isLocalModel } from '../local/catalog.js'
+import { generateLocalText } from '../local/stream.js'
 import { streamMessage } from '../api/client.js'
 import { useSettings } from '../settings.js'
 import { translate } from '../../i18n/index.js'
@@ -243,7 +245,8 @@ export const extractMemoriesFromTurn = async ({
   assistantText: string
 }): Promise<boolean> => {
   const question = userText.trim()
-  if (!apiKey || !question) {
+  const local = isLocalModel(useSettings.getState().model)
+  if (local ? !question : !apiKey || !question) {
     return false
   }
   const existing = useSavedMemories.getState().items
@@ -260,27 +263,37 @@ export const extractMemoriesFromTurn = async ({
       ? `已有记忆：\n${existingBlock}\n\n本轮对话：\n用户：${question}\n助手：${assistantText.slice(0, 600)}`
       : `Existing memories:\n${existingBlock}\n\nThis turn:\nUser: ${question}\nAssistant: ${assistantText.slice(0, 600)}`
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), EXTRACTOR_TIMEOUT)
+  // 本地模型首次提炼可能要等权重加载，给更长的超时
+  const timer = setTimeout(() => controller.abort(), local ? 180_000 : EXTRACTOR_TIMEOUT)
   try {
     let output = ''
-    const events = streamMessage(
-      apiKey,
-      {
-        model: 'deepseek-flash',
+    if (local) {
+      output = await generateLocalText({
         system,
-        messages: [{ role: 'user', content: prompt }],
-        thinking: { type: 'disabled' },
-        temperature: 0,
-        max_tokens: 300,
-        tools: [],
-      },
-      controller.signal
-    )
-    for await (const event of events) {
-      if (event.type === 'content_block_start' && event.content_block.type === 'text') {
-        output += event.content_block.text
-      } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        output += event.delta.text
+        user: prompt,
+        maxTokens: 300,
+        signal: controller.signal,
+      })
+    } else {
+      const events = streamMessage(
+        apiKey,
+        {
+          model: 'deepseek-flash',
+          system,
+          messages: [{ role: 'user', content: prompt }],
+          thinking: { type: 'disabled' },
+          temperature: 0,
+          max_tokens: 300,
+          tools: [],
+        },
+        controller.signal
+      )
+      for await (const event of events) {
+        if (event.type === 'content_block_start' && event.content_block.type === 'text') {
+          output += event.content_block.text
+        } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          output += event.delta.text
+        }
       }
     }
     const ops = parseOperations(output)

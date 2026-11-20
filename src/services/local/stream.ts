@@ -3,6 +3,7 @@ import { generate, LocalModelError, type LocalChatMessage } from './engine.js'
 import { generateMlc } from './mlcApi.js'
 import { isMlcModel, isWebllmModel, mlcModelId } from './catalog.js'
 import { useLocalModels } from './store.js'
+import { useSettings } from '../settings.js'
 
 /**
  * 把本地模型（WebLLM / MLC-LLM API）的生成过程包装成和云端一致的 `MessageStreamEvent` 流。
@@ -113,6 +114,55 @@ const createChunkQueue = () => {
   return { push, close, next }
 }
 
+/**
+ * 只需要一段完整文本的本地调用（长期记忆提炼、压缩摘要等）：
+ * 复用同一个引擎，温度固定为 0，避免额外分支。
+ */
+export const generateLocalText = async ({
+  system,
+  user,
+  maxTokens,
+  signal,
+}: {
+  system: string
+  user: string
+  maxTokens: number
+  signal?: AbortSignal
+}): Promise<string> => {
+  const selection = useSettings.getState().model
+  const state = useLocalModels.getState()
+  const messages: LocalChatMessage[] = [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ]
+  if (isWebllmModel(selection)) {
+    const result = await generate({
+      messages,
+      temperature: 0,
+      topP: 1,
+      maxTokens,
+      presencePenalty: 0,
+      frequencyPenalty: 0,
+      signal,
+      enableThinking: useSettings.getState().thinking,
+    })
+    return result.content
+  }
+  if (isMlcModel(selection)) {
+    const result = await generateMlc({
+      endpoint: state.mlcEndpoint,
+      model: mlcModelId(selection),
+      messages,
+      temperature: 0,
+      topP: 1,
+      maxTokens,
+      signal,
+    })
+    return result.content
+  }
+  return ''
+}
+
 /** 本地模型的统一入口：按前缀分发到 WebLLM 或 MLC-LLM API */
 export async function* streamLocalMessage(
   options: LocalStreamOptions
@@ -141,7 +191,8 @@ export async function* streamLocalMessage(
         maxTokens: state.maxTokens || undefined,
         presencePenalty: state.presencePenalty,
         frequencyPenalty: state.frequencyPenalty,
-        enableThinking: state.enableThinking,
+        // 与输入栏「深度思考」联动：0 档关闭，1–4 档交给 Qwen3 的 thinking 开关
+        enableThinking: useSettings.getState().thinking,
         signal: options.signal,
         onDelta: queue.push,
       })

@@ -19,6 +19,8 @@ export type MlcGenerateParams = {
   temperature?: number
   topP?: number
   maxTokens?: number
+  /** Qwen3 等模型是否开启 thinking（服务端支持时生效） */
+  enableThinking?: boolean
   signal?: AbortSignal
   onDelta?: (chunk: string) => void
 }
@@ -156,6 +158,7 @@ export const generateMlc = async (params: MlcGenerateParams): Promise<MlcGenerat
     temperature: params.temperature,
     top_p: params.topP,
     max_tokens: params.maxTokens,
+    ...(params.enableThinking ? { enable_thinking: true } : {}),
     ...(params.onDelta ? { stream_options: { include_usage: true } } : {}),
   }
   let response: Response

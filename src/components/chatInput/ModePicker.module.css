@@ -174,3 +174,9 @@
     width: 320px;
   }
 }
+
+/* 本地模型只允许仅聊天：其余模式置灰 */
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -100,6 +100,15 @@
 | [`src/services/local/transfer.ts`](../../src/services/local/transfer.ts) | `.mlcmodel` bundle import/export: streaming container and cache writes |
 | [`src/services/local/store.ts`](../../src/services/local/store.ts) | Local model settings and runtime state (localStorage + zustand) |
 | [`src/components/local/LocalModelSettings.tsx`](../../src/components/local/LocalModelSettings.tsx) | Settings → Local models: GPU status, catalog, MLC-LLM, bundles and parameters |
+| [`src/services/local/augment.ts`](../../src/services/local/augment.ts) | Local model extras: text attachments and server-side search pre-pass |
+| [`src/services/companion.ts`](../../src/services/companion.ts) | Character storage, active role, role system prompt |
+| [`src/services/profile.ts`](../../src/services/profile.ts) | My profile: name, avatar and cropping |
+| [`src/components/companion/RolePicker.tsx`](../../src/components/companion/RolePicker.tsx) | Composer character chip |
+| [`src/components/settings/RolesSettings.tsx`](../../src/components/settings/RolesSettings.tsx) | Settings → Characters: list and editor |
+| [`src/components/settings/ProfileCard.tsx`](../../src/components/settings/ProfileCard.tsx) | General settings → My profile |
+| [`src/components/settings/AccountSettings.tsx`](../../src/components/settings/AccountSettings.tsx) | Settings → Account & usage: balance, today and 30-day overview |
+| [`src/services/api/balance.ts`](../../src/services/api/balance.ts) | DeepSeek account balance client |
+| [`src/utils/resizeUploadImage.ts`](../../src/utils/resizeUploadImage.ts) | Upstream 0.1.3: upload image resizing and size check |
 
 ---
 

@@ -18,6 +18,8 @@ import type {
 export type FileAttachment = {
   id: string
   serverId: string | null
+  /** 当前 serverId 对应的上传图片已确认符合长边限制。旧记录缺少此字段。 */
+  imageSizeChecked?: boolean
   name: string
   size: number
   /** 附件类别；导入时沿用归档的 is_image，不由 MIME 识别结果决定。 */
@@ -144,15 +146,18 @@ export type Session = {
   systemPrompt?: string
   /** 长对话压缩：较早内容的摘要与截止消息 */
   compression?: SessionCompression
+  /** 会话绑定的角色 id；缺省或 deepseek 表示默认风格 */
+  roleId?: string
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */
-export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'>
+export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt' | 'roleId'>
 
 /** 显式提取字段，避免将完整会话的消息带进列表。 */
 export const toSessionSummary = (session: SessionSummary): SessionSummary => ({
+  ...(session.roleId ? { roleId: session.roleId } : {}),
   id: session.id,
   title: session.title,
   createdAt: session.createdAt,

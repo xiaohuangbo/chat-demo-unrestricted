@@ -666,3 +666,51 @@ export const IconModeLayers16 = () => (
     />
   </svg>
 )
+
+/** 本地模型：芯片轮廓，与终端 / 机器人 / 数据等分组图标区分 */
+export const IconChipOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="3.75"
+      y="3.75"
+      width="8.5"
+      height="8.5"
+      rx="1.6"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <rect
+      x="6.1"
+      y="6.1"
+      width="3.8"
+      height="3.8"
+      rx="0.8"
+      stroke="currentColor"
+      strokeWidth="1.1"
+    />
+    <path
+      d="M6 1.9v1.85M10 1.9v1.85M6 12.25v1.85M10 12.25v1.85M1.9 6h1.85M1.9 10h1.85M12.25 6h1.85M12.25 10h1.85"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+/** 账户与用量：钱包轮廓 */
+export const IconWalletOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="1.75"
+      y="4.25"
+      width="12.5"
+      height="8.5"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <path d="M1.9 6.4h12.2" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M10.3 9.35h2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M4.1 4.2 9.9 2.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+)
