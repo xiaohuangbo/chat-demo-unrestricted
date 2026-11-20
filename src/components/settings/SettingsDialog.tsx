@@ -733,6 +733,7 @@ const ChangelogSetting = () => {
       title: 'changelogV273Title',
       items: [
         'changelogV273Mobile',
+        'changelogV273Root',
         'changelogV273WebVmScroll',
         'changelogV273Refusal',
         'changelogV273Docs',

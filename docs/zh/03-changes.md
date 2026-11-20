@@ -498,6 +498,7 @@ Persona（官方身份分块）
 | 导出         | 在 VM 里 `tar czf - -C /home/user . \| base64 -w0`，浏览器捕获并下载 `webvm-home.tar.gz`；上限 32MB                                                     |
 | 模型调用     | 新增 `webvm_shell` / `webvm_ls` / `webvm_status` 三个工具；与 NanoVM 工具同一分组（PTC / 创造模式才下发），执行前确认，创造模式自动放行               |
 | 检测         | 设置卡片里的「检测环境」会在 VM 里跑 `uname`、`/etc/debian_version` 与 24 个命令的 `command -v`，直接显示哪些语言 / 工具存在                            |
+| 提权         | WebVM 默认以 user 运行；预置 sudo 函数（调用镜像的 setuid `su`，root 密码 `password`），`sudo -i` 或工具栏 Root 按钮进入 root；root 只在浏览器虚拟机沙箱内有效 |
 
 - **为什么不能用 `cx.run()` 跑模型命令：** CheerpX 的 Linux 只有一个控制台。再起一个进程虽然能输出，但它退出后交互式 bash 的 stdin 不再回来，用户之后敲什么都没反应。所以 WebVM 的模型命令与导入导出都写到 `/data/agent_xxx.sh`，在**现有 shell** 里用 `timeout N bash /data/...` 执行，并用开始 / 结束标记框住输出。
 - **并发与超时：** 模型命令串行执行，单次工具上限 5 分钟（首次启动要等镜像块）；普通命令 30–60 秒。超时只保证工具返回，已启动的命令仍可能继续跑完。

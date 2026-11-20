@@ -54,7 +54,7 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 66 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 67 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -69,7 +69,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.3.apk` (7.5 MB, versionCode 273,
-SHA-256 `77d8ccbe13c44d8371703664589dff072813c411064315939403f2bda63a02de`) — see [android/README.md](android/README.md).
+SHA-256 `2ece6f548764698cac63379b0918a6e271a7fb884bcdbd51cddf2dce046b9d62`) — see [android/README.md](android/README.md).
 
 ## Compatibility
 
@@ -92,7 +92,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 ## Recent versions
 
-- **2.7.3**: fixed the stretched NanoVM panel on mobile and the unscrollable WebVM terminal; added keyword refusal under Settings → Model (local match, works without a key, no API request); known limits now 66.
+- **2.7.3**: fixed the stretched NanoVM panel on mobile and the unscrollable WebVM terminal; added keyword refusal under Settings → Model (local match, works without a key, no API request); known limits now 67; WebVM gains sudo (root password password) and a one-click Root switch.
 - **2.7.2**: new WebVM / CheerpX terminal — a real x86 Debian 10 in the browser with gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export, an environment check and the `webvm_shell` / `webvm_ls` / `webvm_status` model tools.
 - **2.7.1**: a virtual network inside the VM (`vm serve` + `serve` + `wscat`, curl to 127.0.0.1 routes automatically); Node gains `http`/`ws`, Python gains `pip install` and Flask/WSGI; new tsc / Sass / Terser / Prettier toolchains and 12 developer commands.
 - **2.7.0**: the mobile input bar moves chain-of-thought / search / deep thinking to a second row with visible labels (desktop unchanged); 26 new NanoVM commands plus a jq subset; Lua / SQLite / esbuild / make toolchains in settings.

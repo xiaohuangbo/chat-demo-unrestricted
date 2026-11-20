@@ -499,6 +499,7 @@ The mode only decides **which client tools are sent to the model this turn** —
 | Export            | Runs `tar czf - -C /home/user . \| base64 -w0` inside the VM; the browser captures it and downloads `webvm-home.tar.gz` (32 MB cap) |
 | Model access      | New `webvm_shell` / `webvm_ls` / `webvm_status` tools, in the same group as the NanoVM tools (only PTC / Creator send them); each run asks first, and Creator auto-approves |
 | Environment check | “Check environment” in the settings card runs `uname`, `/etc/debian_version` and `command -v` for 24 tools, then prints what exists |
+| Privilege escalation | WebVM runs as user by default; a sudo function is preinstalled (it calls the image's setuid `su`, root password `password`), `sudo -i` or the Root toolbar button enters root; root applies only inside the browser VM sandbox |
 
 - **Why model commands do not use `cx.run()`:** a CheerpX Linux has a single console. Starting another process does produce output, but after it exits the interactive bash no longer receives stdin — typing appears dead. WebVM therefore writes model commands and import/export scripts to `/data/agent_xxx.sh` and runs them from the **existing shell** with `timeout N bash /data/...`, framing the output with begin/end markers.
 - **Serialisation and timeouts:** model commands run one at a time; the tool timeout is 5 minutes (the first launch waits for image blocks), while a normal command gets 30–60 seconds. The timeout only guarantees the tool returns; a command that already started may still finish.

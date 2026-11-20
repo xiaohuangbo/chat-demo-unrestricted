@@ -13,7 +13,7 @@
 `android/deepseek-unrestricted-2.7.3.apk`，versionCode 273，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`77d8ccbe13c44d8371703664589dff072813c411064315939403f2bda63a02de`（7.5 MB）。
+SHA-256：`2ece6f548764698cac63379b0918a6e271a7fb884bcdbd51cddf2dce046b9d62`（7.5 MB）。
 
 ## 构建
 

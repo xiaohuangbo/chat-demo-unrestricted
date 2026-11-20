@@ -228,6 +228,7 @@ export const WebVMConsole = () => {
           checked={autoBoot}
           onChange={(value) => setWebVMConfig({ autoBoot: value })}
         />
+        <div className={nanoStyles.hint}>{t('webvmSudoHint')}</div>
       </div>
 
       <div className={nanoStyles.groupTitle}>{t('webvmImage')}</div>

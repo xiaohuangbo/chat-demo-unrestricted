@@ -1542,6 +1542,9 @@ export const en = {
   webvmPasteFailed: 'Paste failed: the browser denied clipboard access',
   webvmScrollUp: 'Scroll up (older output)',
   webvmScrollDown: 'Scroll down (latest output)',
+  webvmBecomeRoot: 'Switch to root (types the image root password automatically)',
+  webvmSudoHint:
+    'sudo is preinstalled: run sudo <command> in the user shell and enter the root password password when prompted; sudo -i opens a root login shell, and the Root toolbar button switches with one click.',
   webvmPaste: 'Paste',
   webvmCtrlC: 'Ctrl+C',
   webvmPhaseRuntime: 'Loading the CheerpX runtime…',
@@ -1600,6 +1603,8 @@ export const en = {
   nanovmNetChecking: 'Testing…',
   settingDialogAsideNanoVMOptionLabel: 'Virtual machines',
   changelogV273Title: 'v2.7.3 · 2026-11',
+  changelogV273Root:
+    'WebVM gains sudo and root: sudo <command> in the user shell prompts for the image root password password, sudo -i opens a root login shell, and the Root toolbar button switches with one click; root only applies inside the browser VM',
   changelogV273Mobile:
     'Fixed the mobile NanoVM panel being stretched by the tab bar: the tabs now sit in a fixed-height row instead of growing as a vertical flex child, so the switcher, tabs, toolbar and terminal are compact again',
   changelogV273WebVmScroll:

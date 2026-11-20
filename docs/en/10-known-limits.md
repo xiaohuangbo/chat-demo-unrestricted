@@ -68,6 +68,8 @@
 
 66. **Keyword refusal is a local substring match**: it only checks user text, not attachments, image text or model output, and performs no semantic moderation; Chinese is unaffected by case, while English is lower-cased when case sensitivity is off. A match skips the API, search and tools, but it cannot stop a user from rephrasing.
 
+67. **WebVM root is password-based inside the image**: `sudo` is implemented on top of the image's setuid `su`, with the fixed root password `password`; it is not the real sudo package and only changes permissions inside the VM, never on the host. `sudo` in non-interactive scripts or agent commands waits for a password and may time out; use it in the terminal or click the Root button.
+
 ---
 
 ---

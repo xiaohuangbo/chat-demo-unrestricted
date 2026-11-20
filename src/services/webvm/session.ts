@@ -279,6 +279,7 @@ const shellEnv = [
   'LANG=C.UTF-8',
   'LC_ALL=C',
   'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+  'BASH_FUNC_sudo%%=() { if [ "$(id -u)" -eq 0 ]; then "$@"; return $?; fi; if [ $# -eq 0 ]; then echo "usage: sudo command (root password: password)" >&2; return 1; fi; if [ "$1" = "-i" ] || [ "$1" = "-s" ]; then exec su - root; fi; su -c "$*" root; }',
 ]
 
 export type WebVmRunResult = {
@@ -416,7 +417,15 @@ export const ensureWebVmLinux = async (): Promise<CheerpXLinux> => {
   return linux
 }
 
-const runShellLoop = (file: string, args: string[]) => {
+const runShellLoop = (
+  file: string,
+  args: string[],
+  options: { uid: number; gid: number; env: string[] } = {
+    uid: 1000,
+    gid: 1000,
+    env: shellEnv,
+  }
+) => {
   const current = linux
   if (!current) {
     return
@@ -427,10 +436,10 @@ const runShellLoop = (file: string, args: string[]) => {
       try {
         const started = Date.now()
         const result = await current.run(file, args, {
-          env: shellEnv,
+          env: options.env,
           cwd: '/home/user',
-          uid: 1000,
-          gid: 1000,
+          uid: options.uid,
+          gid: options.gid,
         })
         const elapsed = Date.now() - started
         if (disposed || linux !== current) {

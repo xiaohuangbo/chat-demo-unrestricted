@@ -130,6 +130,8 @@ export const WebVmTerminal = ({
   const [envText, setEnvText] = useState('')
   const [envBusy, setEnvBusy] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
+  const rootPending = useRef(false)
+  const rootTail = useRef('')
 
   const booting = status === 'loading' || status === 'connecting' || status === 'booting'
   const webview = coi === 'unsupported' && coiReason === 'webview'
@@ -174,6 +176,14 @@ export const WebVmTerminal = ({
 
     const write = subscribeWebVmOutput((chunk) => {
       terminal.write(chunk)
+      if (rootPending.current) {
+        rootTail.current = (rootTail.current + new TextDecoder().decode(chunk)).slice(-200)
+        if (/password:/i.test(rootTail.current)) {
+          rootPending.current = false
+          rootTail.current = ''
+          sendWebVmText('password\r')
+        }
+      }
       // 便于移动端排查滚动问题：记录当前 buffer 类型 / 行数 / 已滚动行数
       host.dataset.buffer = `${terminal.buffer.active.type}:${terminal.buffer.active.length}:${terminal.buffer.active.baseY}:${terminal.buffer.active.viewportY}`
     })
@@ -475,6 +485,18 @@ export const WebVmTerminal = ({
     }
   }
 
+  /** 一键切到 root：检测到 su 的 Password: 提示后再输入镜像 root 密码 */
+  const becomeRoot = () => {
+    rootPending.current = true
+    rootTail.current = ''
+    sendWebVmText('su - root\r')
+    focusTerminal()
+    window.setTimeout(() => {
+      rootPending.current = false
+      rootTail.current = ''
+    }, 6000)
+  }
+
   return (
     <div className={styles.wrap} data-status={status}>
       <div className={styles.statusRow}>
@@ -653,6 +675,14 @@ export const WebVmTerminal = ({
           onClick={() => scrollPage(1)}
         >
           PgDn
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          title={t('webvmBecomeRoot')}
+          onClick={becomeRoot}
+        >
+          Root
         </button>
         <button type="button" className={styles.tool} onClick={() => void paste()}>
           {t('webvmPaste')}

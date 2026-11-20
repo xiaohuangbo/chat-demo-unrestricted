@@ -1424,6 +1424,9 @@ export const zh = {
   webvmPasteFailed: '粘贴失败：浏览器拒绝了剪贴板权限',
   webvmScrollUp: '向上翻页（查看更早的输出）',
   webvmScrollDown: '向下翻页（回到最新输出）',
+  webvmBecomeRoot: '切换到 root 用户（自动输入镜像的 root 密码）',
+  webvmSudoHint:
+    'sudo 已预装：在用户 shell 里执行 sudo <命令>，按提示输入 root 密码 password；sudo -i 可进入 root 登录 shell，工具栏的 Root 按钮也可一键切换。',
   webvmPaste: '粘贴',
   webvmCtrlC: 'Ctrl+C',
   webvmPhaseRuntime: '正在加载 CheerpX 运行时…',
@@ -1477,6 +1480,8 @@ export const zh = {
   nanovmNetChecking: '测试中…',
   settingDialogAsideNanoVMOptionLabel: '虚拟机',
   changelogV273Title: 'v2.7.3 · 2026-11',
+  changelogV273Root:
+    'WebVM 新增 sudo 与 root：用户 shell 内 sudo <命令> 会提示镜像 root 密码 password，sudo -i 进入 root 登录 shell，工具栏 Root 按钮一键切换；root 只在浏览器虚拟机内有效',
   changelogV273Mobile:
     '修复手机端 NanoVM 面板被标签条撑高的问题：标签条外层新增固定高度的行容器，不再作为纵向 flex 子项占满剩余空间；切换器、标签、工具条与终端恢复紧凑排列',
   changelogV273WebVmScroll:
