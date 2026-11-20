@@ -673,6 +673,19 @@ export const en = {
   settingsContinueRefused: 'Continue refused replies',
   settingsContinueRefusedDescription:
     'Allows continuing a reply that safety review refused. Off hides the Continue button; forced on in unrestricted mode.',
+  settingsRefusalSection: 'Keyword refusal',
+  settingsRefusalEnabled: 'Enable keyword refusal',
+  settingsRefusalEnabledDescription:
+    'Checks only the user input: when any keyword below matches, a refusal reply is returned locally without calling the API.',
+  settingsRefusalCaseSensitive: 'Case-sensitive keywords',
+  settingsRefusalCaseSensitiveDescription: 'When off, English keywords match case-insensitively.',
+  settingsRefusalKeywords: 'Refusal keywords',
+  settingsRefusalKeywordsDescription:
+    'Separate keywords with newlines or commas; any match triggers a local refusal.',
+  settingsRefusalKeywordsPlaceholder: 'One keyword per line, or comma-separated…',
+  settingsRefusalMessage: 'Custom refusal message',
+  settingsRefusalMessageDescription:
+    'Shown when a keyword matches; leave empty to use the default “cannot answer” reply.',
   settingsUnrestricted: 'Unrestricted mode',
   settingsUnrestrictedDescription:
     'Replaces the system prompt with the unrestricted prompt, skips the safety check, and allows continuing refused replies. Off passes the official default prompt through unchanged.',
@@ -1527,6 +1540,8 @@ export const en = {
   webvmEsc: 'Esc',
   webvmTabKey: 'Tab',
   webvmPasteFailed: 'Paste failed: the browser denied clipboard access',
+  webvmScrollUp: 'Scroll up (older output)',
+  webvmScrollDown: 'Scroll down (latest output)',
   webvmPaste: 'Paste',
   webvmCtrlC: 'Ctrl+C',
   webvmPhaseRuntime: 'Loading the CheerpX runtime…',
@@ -1584,6 +1599,16 @@ export const en = {
   nanovmNetInvalid: 'The proxy URL must start with http:// or https://',
   nanovmNetChecking: 'Testing…',
   settingDialogAsideNanoVMOptionLabel: 'Virtual machines',
+  changelogV273Title: 'v2.7.3 · 2026-11',
+  changelogV273Mobile:
+    'Fixed the mobile NanoVM panel being stretched by the tab bar: the tabs now sit in a fixed-height row instead of growing as a vertical flex child, so the switcher, tabs, toolbar and terminal are compact again',
+  changelogV273WebVmScroll:
+    'WebVM now scrolls: xterm 6 draws its own scrollbar and has no native touch scrolling on mobile; vertical swipes scroll line by line and PgUp / PgDn buttons were added, while the desktop wheel is still handled by xterm',
+  changelogV273Refusal:
+    'Settings → Model gains keyword refusal: configure keywords (newline / comma separated), case sensitivity and a custom refusal message; a match is answered locally without calling the API, even without an API key',
+  changelogV273Docs:
+    'Docs cover keyword refusal, the mobile terminal layout fix and WebVM scrolling; version bumped to 2.7.3',
+  changelogV273Apk: 'Builds the 2.7.3 APK (versionCode 273), signed with xiaohuangbo.jks',
   changelogV272Title: 'v2.7.2 · 2026-11',
   changelogV272WebVM:
     'New WebVM / CheerpX terminal: a real x86 Debian in the browser with bash, coreutils, gcc / g++, Python 3, Node.js, Ruby, Lua, make, git and vim preinstalled; only disk blocks come from the network, all code runs locally',

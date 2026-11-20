@@ -8,7 +8,12 @@ import {
   IconSendOutline16,
   IconStopFill16,
 } from '../base/icons.js'
-import { setAutoJailbreak, setSearch, useSettings } from '../../services/settings.js'
+import {
+  matchesRefusalKeyword,
+  setAutoJailbreak,
+  setSearch,
+  useSettings,
+} from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -155,7 +160,8 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    if (!ensureApiKey() || !sendMessage(sessionId)) {
+    // 关键词拒答完全在本地生成回复，不需要 API Key；其余请求仍先校验 Key。
+    if ((!matchesRefusalKeyword(text) && !ensureApiKey()) || !sendMessage(sessionId)) {
       return
     }
     stopReadAloud()

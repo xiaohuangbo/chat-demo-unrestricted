@@ -56,6 +56,10 @@ import {
   setCustomCotEnabled,
   setInjectPromptEveryTurn,
   setContinueRefused,
+  setRefusalCaseSensitive,
+  setRefusalEnabled,
+  setRefusalKeywords,
+  setRefusalMessage,
   setDailyCostLimit,
   setDailyLimitEnabled,
   setDailyTokenLimit,
@@ -726,6 +730,16 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV273Title',
+      items: [
+        'changelogV273Mobile',
+        'changelogV273WebVmScroll',
+        'changelogV273Refusal',
+        'changelogV273Docs',
+        'changelogV273Apk',
+      ],
+    },
+    {
       title: 'changelogV272Title',
       items: [
         'changelogV272WebVM',
@@ -1067,6 +1081,10 @@ const ModelSettings = () => {
   const keepReplyContent = useSettings((state) => state.keepReplyContent)
   const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
   const continueRefused = useSettings((state) => state.continueRefused)
+  const refusalEnabled = useSettings((state) => state.refusalEnabled)
+  const refusalKeywords = useSettings((state) => state.refusalKeywords)
+  const refusalCaseSensitive = useSettings((state) => state.refusalCaseSensitive)
+  const refusalMessage = useSettings((state) => state.refusalMessage)
   // 越狱模式下两项限制强制执行，开关显示为已开启且不可单独关闭。
   const unrestricted = useSettings((state) => state.unrestricted)
   const autoCompress = useSettings((state) => state.autoCompress)
@@ -1189,6 +1207,66 @@ const ModelSettings = () => {
           />
         }
       />
+
+      <div className={styles.groupTitle}>{t('settingsRefusalSection')}</div>
+      <SettingCell
+        label={t('settingsRefusalEnabled')}
+        description={t('settingsRefusalEnabledDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={refusalEnabled}
+            onChange={setRefusalEnabled}
+            label={t('settingsRefusalEnabled')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsRefusalCaseSensitive')}
+        description={t('settingsRefusalCaseSensitiveDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={refusalCaseSensitive}
+            disabled={!refusalEnabled}
+            onChange={setRefusalCaseSensitive}
+            label={t('settingsRefusalCaseSensitive')}
+          />
+        }
+      />
+      <div className={styles.cell}>
+        <div className={styles.text}>
+          <div className={styles.label}>{t('settingsRefusalKeywords')}</div>
+          <div className={styles.description}>{t('settingsRefusalKeywordsDescription')}</div>
+          <textarea
+            className={styles.poisonTextarea}
+            rows={4}
+            value={refusalKeywords}
+            placeholder={t('settingsRefusalKeywordsPlaceholder')}
+            aria-label={t('settingsRefusalKeywords')}
+            maxLength={4000}
+            spellCheck={false}
+            disabled={!refusalEnabled}
+            onChange={(event) => setRefusalKeywords(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className={styles.cell}>
+        <div className={styles.text}>
+          <div className={styles.label}>{t('settingsRefusalMessage')}</div>
+          <div className={styles.description}>{t('settingsRefusalMessageDescription')}</div>
+          <textarea
+            className={styles.poisonTextarea}
+            rows={3}
+            value={refusalMessage}
+            placeholder={t('replyRefused')}
+            aria-label={t('settingsRefusalMessage')}
+            maxLength={2000}
+            spellCheck={false}
+            onChange={(event) => setRefusalMessage(event.target.value)}
+          />
+        </div>
+      </div>
     </>
   )
 }

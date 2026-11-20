@@ -423,6 +423,13 @@
   line-height: 14px;
 }
 
+/* 手机端标签条的外层行：抵消 tabsBarSheet 的 flex:1，避免它在纵向面板里长高 */
+.sheetTabRow {
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
 /* ---------- 标签条（两端共用） ---------- */
 
 .tabsBar {

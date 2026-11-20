@@ -2,7 +2,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.7.2**
+> Current version: **2.7.3**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -12,6 +12,7 @@ On top of that, this fork turns the hard-coded limits of the original into confi
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox-style commands, docked to the right on desktop and a bottom panel on phones; Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / coreutils / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim built in; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
 - **Chat modes**: a four-way switch in the composer — Chat only / Web agent / PTC / Creator — that decides which client tools are sent this turn and how many round trips are allowed; Creator lets the model install runtimes and turn scripts into new commands inside the VM;
+- **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match produces a local refusal reply without calling the API, even when no API key is set;
 - **Statistics and context**: usage ledger, trend / heatmap / hourly charts, an eight-way context breakdown (system prompt, tool definitions, messages, thinking, tool calls / results, attachments) and billing rates;
 - **Custom chain of thought**: write reasoning steps in advance and inject them into system, with an injected-steps card above replies when deep thinking is off; experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;

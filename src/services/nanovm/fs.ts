@@ -264,7 +264,7 @@ class NanoFs {
     this.writeDefault('/etc/hostname', 'nanovm\n', 0o644, now)
     this.writeDefault(
       '/etc/os-release',
-      'NAME="NanoVM Slim"\nID=nanovm\nVERSION_ID="2.7.2"\n',
+      'NAME="NanoVM Slim"\nID=nanovm\nVERSION_ID="2.7.3"\n',
       0o644,
       now
     )

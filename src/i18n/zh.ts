@@ -602,6 +602,18 @@ export const zh = {
   settingsContinueRefused: '拒绝后继续生成',
   settingsContinueRefusedDescription:
     '开启后被安全审核拒绝的回复也能继续生成；关闭时隐藏「继续生成」按钮，越狱模式下自动允许。',
+  settingsRefusalSection: '关键词拒答',
+  settingsRefusalEnabled: '启用关键词拒答',
+  settingsRefusalEnabledDescription:
+    '仅检查用户输入：命中下方关键词时直接在本地返回拒答话术，不请求接口。',
+  settingsRefusalCaseSensitive: '关键词区分大小写',
+  settingsRefusalCaseSensitiveDescription: '关闭时英文关键词按不区分大小写匹配。',
+  settingsRefusalKeywords: '拒答关键词',
+  settingsRefusalKeywordsDescription:
+    '支持换行或中英文逗号分隔；命中任意一个关键词即触发本地拒答。',
+  settingsRefusalKeywordsPlaceholder: '每行一个关键词，或用逗号分隔…',
+  settingsRefusalMessage: '自定义拒答话术',
+  settingsRefusalMessageDescription: '命中关键词时显示的文本；留空使用默认的「无法回答」话术。',
   settingsUnrestricted: '解除限制模式',
   settingsUnrestrictedDescription:
     '开启后，请求发出前把系统提示词换成破限提示词，并自动跳过安全审核、允许继续生成被拒绝的回复；关闭时原样放行官方默认提示词。',
@@ -1410,6 +1422,8 @@ export const zh = {
   webvmEsc: 'Esc',
   webvmTabKey: 'Tab',
   webvmPasteFailed: '粘贴失败：浏览器拒绝了剪贴板权限',
+  webvmScrollUp: '向上翻页（查看更早的输出）',
+  webvmScrollDown: '向下翻页（回到最新输出）',
   webvmPaste: '粘贴',
   webvmCtrlC: 'Ctrl+C',
   webvmPhaseRuntime: '正在加载 CheerpX 运行时…',
@@ -1462,6 +1476,15 @@ export const zh = {
   nanovmNetInvalid: '代理地址要以 http:// 或 https:// 开头',
   nanovmNetChecking: '测试中…',
   settingDialogAsideNanoVMOptionLabel: '虚拟机',
+  changelogV273Title: 'v2.7.3 · 2026-11',
+  changelogV273Mobile:
+    '修复手机端 NanoVM 面板被标签条撑高的问题：标签条外层新增固定高度的行容器，不再作为纵向 flex 子项占满剩余空间；切换器、标签、工具条与终端恢复紧凑排列',
+  changelogV273WebVmScroll:
+    'WebVM 终端支持滚动：xterm 6 的滚动条是自绘的，移动端没有原生触摸滚动；新增竖向滑动逐行滚动与 PgUp / PgDn 按钮，桌面滚轮继续由 xterm 处理',
+  changelogV273Refusal:
+    '设置 → 模型新增「关键词拒答」：可配置关键词（换行 / 逗号分隔）、区分大小写与自定义拒答话术；命中用户输入时直接在本地生成拒答回复，不请求接口，未配置 API Key 也能触发',
+  changelogV273Docs: '文档补充关键词拒答、移动端终端布局与 WebVM 滚动说明，版本号推进到 2.7.3',
+  changelogV273Apk: '同步构建 2.7.3 APK（versionCode 273），使用 xiaohuangbo.jks 签名',
   changelogV272Title: 'v2.7.2 · 2026-11',
   changelogV272WebVM:
     '新增 WebVM / CheerpX 终端：浏览器里跑真正的 x86 Debian，内置 bash、coreutils、gcc / g++、Python 3、Node.js、Ruby、Lua、make、git、vim 等编程环境；服务端只提供镜像块，代码全部在本机执行',

@@ -172,8 +172,48 @@ export const WebVmTerminal = ({
     termRef.current = terminal
     fitRef.current = fit
 
-    const write = subscribeWebVmOutput((chunk) => terminal.write(chunk))
+    const write = subscribeWebVmOutput((chunk) => {
+      terminal.write(chunk)
+      // 便于移动端排查滚动问题：记录当前 buffer 类型 / 行数 / 已滚动行数
+      host.dataset.buffer = `${terminal.buffer.active.type}:${terminal.buffer.active.length}:${terminal.buffer.active.baseY}:${terminal.buffer.active.viewportY}`
+    })
+    host.dataset.scrollback = String(terminal.options.scrollback)
     const data = terminal.onData((value) => sendWebVmText(value))
+    const scrollSync = terminal.onScroll(() => {
+      host.dataset.viewportY = String(terminal.buffer.active.viewportY)
+    })
+
+    /*
+     * xterm 6 的滚动条是自绘的，移动端没有原生 touch 滚动；这里按行把竖向滑动
+     * 转成 scrollLines。桌面端滚轮仍由 xterm 自己处理，不会重复。
+     */
+    let lastTouchY = 0
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        lastTouchY = event.touches[0].clientY
+      }
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        return
+      }
+      const currentY = event.touches[0].clientY
+      const delta = lastTouchY - currentY
+      const row = host.querySelector('.xterm-rows > div')
+      const cell = row ? row.getBoundingClientRect().height : 16
+      const lines = Math.trunc(delta / Math.max(8, cell))
+      if (lines !== 0) {
+        terminal.scrollLines(lines)
+        lastTouchY -= lines * Math.max(8, cell)
+      }
+      if (event.cancelable) {
+        event.preventDefault()
+      }
+      // xterm 自己的触摸处理可能 stopPropagation；在捕获阶段接管，避免双重滚动
+      event.stopPropagation()
+    }
+    host.addEventListener('touchstart', onTouchStart, { passive: true, capture: true })
+    host.addEventListener('touchmove', onTouchMove, { passive: false, capture: true })
     const resize = terminal.onResize(({ cols, rows }) => {
       window.clearTimeout(resizeTimer)
       resizeTimer = window.setTimeout(() => resizeWebVm(cols, rows), 150)
@@ -208,6 +248,9 @@ export const WebVmTerminal = ({
     fitNow()
 
     return () => {
+      host.removeEventListener('touchstart', onTouchStart, { capture: true })
+      host.removeEventListener('touchmove', onTouchMove, { capture: true })
+      scrollSync.dispose()
       data.dispose()
       resize.dispose()
       write()
@@ -415,6 +458,10 @@ export const WebVmTerminal = ({
     focusTerminal()
   }
 
+  const scrollPage = (direction: -1 | 1) => {
+    termRef.current?.scrollPages(direction)
+  }
+
   const paste = async () => {
     try {
       const text = await navigator.clipboard?.readText()
@@ -590,6 +637,22 @@ export const WebVmTerminal = ({
         </button>
         <button type="button" className={styles.tool} onClick={() => key('\x04')}>
           Ctrl+D
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          title={t('webvmScrollUp')}
+          onClick={() => scrollPage(-1)}
+        >
+          PgUp
+        </button>
+        <button
+          type="button"
+          className={styles.tool}
+          title={t('webvmScrollDown')}
+          onClick={() => scrollPage(1)}
+        >
+          PgDn
         </button>
         <button type="button" className={styles.tool} onClick={() => void paste()}>
           {t('webvmPaste')}

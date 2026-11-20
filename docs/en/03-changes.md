@@ -7,7 +7,7 @@ The settings dialog grows from two groups to sixteen:
 | Group                 | Contents                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | General               | Theme, language, TTS voice, location, daily usage and alerts                                                                                                                                   |
-| **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies                                               |
+| **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies, keyword refusal                              |
 | **Prompt**            | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                                                                        |
 | **Chain of thought**  | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off                                               |
 | **Advanced**          | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                                                                  |
@@ -504,6 +504,26 @@ The mode only decides **which client tools are sent to the model this turn** —
 - **Serialisation and timeouts:** model commands run one at a time; the tool timeout is 5 minutes (the first launch waits for image blocks), while a normal command gets 30–60 seconds. The timeout only guarantees the tool returns; a command that already started may still finish.
 - **Network:** no network is configured by default (CheerpX networking needs a Tailscale login), so there is no `apt install` inside WebVM; the image already includes common toolchains. Use NanoVM's virtual network when you need HTTP services, or provide a custom image.
 - **Licence:** CheerpX is proprietary software from Leaning Technologies; it is free for personal and open-source projects and needs a commercial licence otherwise. The settings card and docs keep the attribution and link.
+
+---
+
+
+### 3.30 Keyword refusal (ported from DeepChat)
+
+**Where:** Settings → **Model** → the “Keyword refusal” group.
+
+| Setting             | Behaviour                                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enable              | Checks the **user input only**; any matching keyword produces a completed refusal reply locally, without an API request                       |
+| Keywords            | Newline or comma separated, substring match; an empty list disables matching                                                                  |
+| Case sensitive      | When off, English keywords are compared in lowercase; Chinese is unaffected                                                                   |
+| Custom message      | Text shown on a match; leave empty for the default `replyRefused` (“Sorry, that's beyond my current scope…”)                                  |
+
+- **The local reply:** `status: 'done'`, `stopReason: 'refusal'`, with the text stored as a template block. There is no streaming caret, and it does not become context or a continuation prefix.
+- **No API key needed:** the composer skips `ensureApiKey()` when a keyword matches, so the local refusal is written even without a key; other messages still require one.
+- **Works with perturbation:** both the raw input and the transformed `content` are checked, so input perturbation cannot bypass a keyword.
+- **Not a security boundary:** it is a local substring match, not semantic moderation; attachments, model output and image text are not inspected.
+- Config lives in localStorage: `chat-demo:refusal-enabled` / `chat-demo:refusal-keywords` / `chat-demo:refusal-case-sensitive` / `chat-demo:refusal-message`.
 
 ---
 

@@ -6,7 +6,12 @@ import type { ChatModel, CreateMessageRequest, MessageParam } from '../api/types
 import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
-import { reasoningEffortValue, thinkingBudget, useSettings } from '../settings.js'
+import {
+  matchesRefusalKeyword,
+  reasoningEffortValue,
+  thinkingBudget,
+  useSettings,
+} from '../settings.js'
 import { attachmentPoisonSignature } from '../attachmentPoison.js'
 import {
   attachPoisonResults,
@@ -361,6 +366,24 @@ const createReply = (): AssistantMessage => {
     prefix: true,
     status: 'pending',
     blocks: [],
+  }
+}
+
+/** 命中本地关键词拒答时直接生成一条已完成的拒答回复，不发起 API 请求。 */
+const createRefusedReply = (): AssistantMessage => {
+  const { refusalMessage, model } = useSettings.getState()
+  const text = refusalMessage.trim() || translate('replyRefused')
+  return {
+    id: createId(),
+    role: 'assistant',
+    createdAt: Date.now(),
+    model,
+    thinking: false,
+    search: false,
+    prefix: false,
+    status: 'done',
+    stopReason: 'refusal',
+    blocks: [{ type: 'text', text, isTemplate: true }],
   }
 }
 
@@ -878,7 +901,10 @@ export const sendMessage = (targetSessionId: string | null) => {
     })),
     createdAt: now,
   }
-  const reply = createReply()
+  // 关键词拒答同时检查原始输入与扰动后的 content，避免开扰动后绕过关键词
+  const localRefused =
+    matchesRefusalKeyword(content) || (text !== content && matchesRefusalKeyword(text))
+  const reply = localRefused ? createRefusedReply() : createReply()
   updateSession(sessionId, (session) => ({
     ...appendBranch(session, history.at(-1)?.id ?? null, [question, reply]),
     updatedAt: now,
@@ -891,7 +917,9 @@ export const sendMessage = (targetSessionId: string | null) => {
   }
   persist(sessionId)
   clearSentDraft(targetSessionId)
-  void streamReply(sessionId, reply, { history, question })
+  if (!localRefused) {
+    void streamReply(sessionId, reply, { history, question })
+  }
   return true
 }
 

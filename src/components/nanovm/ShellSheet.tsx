@@ -170,7 +170,12 @@ export const ShellSheet = () => {
           />
         </span>
       </div>
-      {activeVm === 'nanovm' ? <ShellTabs variant="sheet" /> : null}
+      {/* 标签条单独占一行：它内部有 flex:1，直接放在纵向 sheet 里会被拉成几百像素高 */}
+      {activeVm === 'nanovm' ? (
+        <div className={styles.sheetTabRow}>
+          <ShellTabs variant="sheet" />
+        </div>
+      ) : null}
       {activeVm === 'nanovm' ? (
         <div className={styles.sheetTools}>
           <button

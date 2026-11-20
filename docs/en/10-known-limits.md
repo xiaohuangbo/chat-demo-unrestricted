@@ -66,6 +66,8 @@
 64. **CheerpX is proprietary software**: Leaning Technologies allows free use for personal and open-source projects; commercial use needs a commercial licence. The runtime and default image come from their CDN, and each deployment must decide whether that dependency is acceptable.
 65. **The two VMs do not share a file system**: NanoVM's zip image and WebVM's tar.gz are not interchangeable and must be unpacked and imported manually; `/home/user` is a separate directory in each, so the model must know which VM it is operating on.
 
+66. **Keyword refusal is a local substring match**: it only checks user text, not attachments, image text or model output, and performs no semantic moderation; Chinese is unaffected by case, while English is lower-cased when case sensitivity is off. A match skips the API, search and tools, but it cannot stop a user from rephrasing.
+
 ---
 
 ---

@@ -8,6 +8,10 @@
 | Model             | Anti-retraction                      | off                          | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
 | Model             | Skip safety check                    | off                          | `chat-demo:skip-safety-check`              | Forced on, disabled             |
 | Model             | Continue refused replies             | off                          | `chat-demo:continue-refused`               | Forced on, disabled             |
+| Model             | Keyword refusal                      | Off                          | `chat-demo:refusal-enabled`                | Unaffected                      |
+| Model             | Refusal keywords                     | Empty                        | `chat-demo:refusal-keywords`               | Unaffected                      |
+| Model             | Case-sensitive keywords             | Off                          | `chat-demo:refusal-case-sensitive`         | Unaffected                      |
+| Model             | Custom refusal message               | Empty (default)              | `chat-demo:refusal-message`                | Unaffected                      |
 | Prompt            | Unrestricted mode                    | off                          | `chat-demo:unrestricted`                   | —                               |
 | Prompt            | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
 | Chain of thought  | Enable custom chain of thought       | off                          | `chat-demo:custom-cot-enabled`             | Unaffected                      |

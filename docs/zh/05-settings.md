@@ -8,6 +8,10 @@
 | 模型       | 防撤回             | 关                        | `chat-demo:keep-reply-content`             | 不受影响（独立开关） |
 | 模型       | 跳过安全审核       | 关                        | `chat-demo:skip-safety-check`              | 强制开启、置灰       |
 | 模型       | 拒绝后继续生成     | 关                        | `chat-demo:continue-refused`               | 强制开启、置灰       |
+| 模型       | 关键词拒答         | 关                        | `chat-demo:refusal-enabled`                 | 不受影响             |
+| 模型       | 拒答关键词         | 空                        | `chat-demo:refusal-keywords`                | 不受影响             |
+| 模型       | 区分大小写         | 关                        | `chat-demo:refusal-case-sensitive`          | 不受影响             |
+| 模型       | 自定义拒答话术     | 空（默认话术）            | `chat-demo:refusal-message`                 | 不受影响             |
 | 提示词     | 解除限制模式       | 关                        | `chat-demo:unrestricted`                   | ——                   |
 | 提示词     | 自定义系统提示词   | 空（自动组装）            | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
 | 思维链     | 启用自定义思维链   | 关                        | `chat-demo:custom-cot-enabled`             | 不受影响             |

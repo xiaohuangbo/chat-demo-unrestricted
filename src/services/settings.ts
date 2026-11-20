@@ -99,6 +99,14 @@ type Settings = {
   skipSafetyCheck: boolean
   /** 拒绝后继续生成：被安全审核拒绝的回复仍可继续生成（越狱模式下强制执行） */
   continueRefused: boolean
+  /** 关键词拒答：命中用户输入时本地直接返回拒答话术，不请求接口 */
+  refusalEnabled: boolean
+  /** 拒答关键词，换行或中英文逗号分隔 */
+  refusalKeywords: string
+  /** 关键词是否区分大小写 */
+  refusalCaseSensitive: boolean
+  /** 命中时展示的话术；空字符串使用默认 replyRefused */
+  refusalMessage: string
   /** 自定义系统提示词：null 表示使用自动组装结果（Persona，或 Persona + 破限规则分块） */
   systemPrompt: string | null
   /** 提示词预设：deepseek 用仓库里的 v4.1 文档，godmode 用移植的 GODMODE 提示词 */
@@ -169,6 +177,10 @@ const KEYS = {
   keepReplyContent: 'chat-demo:keep-reply-content',
   skipSafetyCheck: 'chat-demo:skip-safety-check',
   continueRefused: 'chat-demo:continue-refused',
+  refusalEnabled: 'chat-demo:refusal-enabled',
+  refusalKeywords: 'chat-demo:refusal-keywords',
+  refusalCaseSensitive: 'chat-demo:refusal-case-sensitive',
+  refusalMessage: 'chat-demo:refusal-message',
   systemPrompt: 'chat-demo:system-prompt',
   promptPreset: 'chat-demo:prompt-preset',
   parseltongue: 'chat-demo:parseltongue',
@@ -255,6 +267,10 @@ export const EFFORT_LEVELS = 4
 
 /** 自定义思维链最长字符数；每轮都注入 system，过长会明显增加输入 token */
 export const CUSTOM_COT_MAX_CHARS = 4000
+
+/** 拒答关键词与自定义话术的长度上限，避免 localStorage 无限膨胀 */
+export const REFUSAL_KEYWORDS_MAX_CHARS = 4000
+export const REFUSAL_MESSAGE_MAX_CHARS = 2000
 
 /** 1-4 档对应的协议字段值，0 档不下发 */
 const REASONING_EFFORT = ['low', 'medium', 'high', 'max'] as const
@@ -439,6 +455,10 @@ export const useSettings = create<Settings>(() => ({
   keepReplyContent: read(KEYS.keepReplyContent) === 'true',
   skipSafetyCheck: read(KEYS.skipSafetyCheck) === 'true',
   continueRefused: read(KEYS.continueRefused) === 'true',
+  refusalEnabled: read(KEYS.refusalEnabled) === 'true',
+  refusalKeywords: (read(KEYS.refusalKeywords) ?? '').slice(0, REFUSAL_KEYWORDS_MAX_CHARS),
+  refusalCaseSensitive: read(KEYS.refusalCaseSensitive) === 'true',
+  refusalMessage: (read(KEYS.refusalMessage) ?? '').slice(0, REFUSAL_MESSAGE_MAX_CHARS),
   systemPrompt: initialSystemPrompt(),
   promptPreset: initialEnum(KEYS.promptPreset, PROMPT_PRESETS, 'deepseek'),
   parseltongue: read(KEYS.parseltongue) === 'true',
@@ -577,6 +597,52 @@ export const setSkipSafetyCheck = (skipSafetyCheck: boolean) => {
 export const setContinueRefused = (continueRefused: boolean) => {
   write(KEYS.continueRefused, String(continueRefused))
   useSettings.setState({ continueRefused })
+}
+
+export const setRefusalEnabled = (refusalEnabled: boolean) => {
+  write(KEYS.refusalEnabled, String(refusalEnabled))
+  useSettings.setState({ refusalEnabled })
+}
+
+export const setRefusalKeywords = (refusalKeywords: string) => {
+  const value = refusalKeywords.slice(0, REFUSAL_KEYWORDS_MAX_CHARS)
+  write(KEYS.refusalKeywords, value)
+  useSettings.setState({ refusalKeywords: value })
+}
+
+export const setRefusalCaseSensitive = (refusalCaseSensitive: boolean) => {
+  write(KEYS.refusalCaseSensitive, String(refusalCaseSensitive))
+  useSettings.setState({ refusalCaseSensitive })
+}
+
+export const setRefusalMessage = (refusalMessage: string) => {
+  const value = refusalMessage.slice(0, REFUSAL_MESSAGE_MAX_CHARS)
+  write(KEYS.refusalMessage, value)
+  useSettings.setState({ refusalMessage: value })
+}
+
+/** 按换行或中英文逗号拆分关键词，检查用户输入是否命中任一拒答关键词 */
+export const matchesRefusalKeyword = (
+  input: string,
+  config: Pick<
+    Settings,
+    'refusalEnabled' | 'refusalKeywords' | 'refusalCaseSensitive'
+  > = useSettings.getState()
+): boolean => {
+  if (!config.refusalEnabled || !input) {
+    return false
+  }
+  const keywords = config.refusalKeywords
+    .split(/[\n,，]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  if (keywords.length === 0) {
+    return false
+  }
+  const target = config.refusalCaseSensitive ? input : input.toLowerCase()
+  return keywords.some((keyword) =>
+    target.includes(config.refusalCaseSensitive ? keyword : keyword.toLowerCase())
+  )
 }
 
 /** 传 null 或空白字符串表示恢复自动组装 */
@@ -821,6 +887,10 @@ export const resetSettings = () => {
     keepReplyContent: false,
     skipSafetyCheck: false,
     continueRefused: false,
+    refusalEnabled: false,
+    refusalKeywords: '',
+    refusalCaseSensitive: false,
+    refusalMessage: '',
     systemPrompt: null,
     promptPreset: 'deepseek',
     parseltongue: false,
