@@ -159,7 +159,14 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
           </span>
           <span className={styles.settingsLabel}>{t('labEntry')}</span>
         </button>
-        <button type="button" className={styles.settings} onClick={() => openSettings('general')}>
+        <button
+          type="button"
+          className={styles.settings}
+          onClick={() => {
+            closeMobileSider()
+            openSettings('general')
+          }}
+        >
           <span className={styles.settingsIcon}>
             <IconSettingsOutline16 />
           </span>
@@ -210,15 +217,10 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
 /** 移动端抽屉：浮在页面上方，点空白区域关闭。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
-  if (!open) {
-    return null
-  }
+  // 抽屉常驻 DOM，用 transform / opacity 过渡滑入滑出；关闭时不可点击也不进焦点顺序
   return (
-    <>
-      <div className={styles.drawerMask} onClick={closeMobileSider} />
-      <div className={styles.drawer}>
-        <Sider mobile />
-      </div>
-    </>
+    <div className={clsx(styles.drawer, open && styles.drawerOpen)} aria-hidden={!open}>
+      <Sider mobile />
+    </div>
   )
 }

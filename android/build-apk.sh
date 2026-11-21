@@ -24,8 +24,8 @@ KEYSTORE="${KEYSTORE:-$HOME/桌面/xiaohuangbo.jks}"
 KEY_ALIAS="${KEY_ALIAS:-xiaohuangbo}"
 : "${KS_PASS:?set KS_PASS (keystore password)}"
 KEY_PASS="${KEY_PASS:-$KS_PASS}"
-VERSION_CODE="${VERSION_CODE:-276}"
-VERSION_NAME="${VERSION_NAME:-2.7.6}"
+VERSION_CODE="${VERSION_CODE:-277}"
+VERSION_NAME="${VERSION_NAME:-2.7.7}"
 OUT="${OUT:-$HERE/deepseek-unrestricted-$VERSION_NAME.apk}"
 
 for tool in aapt2 d8 zipalign apksigner; do
@@ -67,7 +67,8 @@ javac -encoding UTF-8 -source 8 -target 8 \
   -d "$HERE/build/classes" \
   "$HERE/build/gen/com/xiaohuangbo/deepseekunrestricted/R.java" \
   "$HERE/src/com/xiaohuangbo/deepseekunrestricted/MainActivity.java" \
-  "$HERE/src/com/xiaohuangbo/deepseekunrestricted/LocalServer.java"
+  "$HERE/src/com/xiaohuangbo/deepseekunrestricted/LocalServer.java" \
+  "$HERE/src/com/xiaohuangbo/deepseekunrestricted/PhotoProvider.java"
 
 find "$HERE/build/classes" -name '*.class' -print > "$HERE/build/classes.list"
 "$BUILD_TOOLS/d8" --lib "$PLATFORM" --min-api 24 --output "$HERE/build/dex" @"$HERE/build/classes.list"

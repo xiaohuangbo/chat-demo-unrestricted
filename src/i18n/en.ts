@@ -130,7 +130,7 @@ export const en = {
   poisonSearchResults: 'Injected {count} custom results',
   settingDialogAsideGeneralOptionLabel: 'General',
   settingDialogAsideModelOptionLabel: 'Model',
-  settingDialogAsidePromptOptionLabel: 'Prompt',
+  settingDialogAsidePromptOptionLabel: 'Jailbreak',
   settingDialogAsideCotOptionLabel: 'Chain of thought',
   settingDialogAsideAboutOptionLabel: 'About',
   settingDialogAsideChangelogOptionLabel: 'Changelog',
@@ -578,6 +578,9 @@ export const en = {
   memoryAutoExtractLabel: 'Auto-extract long-term memory',
   memoryAutoExtractDesc:
     'Runs one extra model call after each turn to extract stable facts. By default it follows the current model: cloud chats use the Flash API and local chats use the local engine; this costs a little (local models incur no API fee).',
+  memoryUpdateNoticeLabel: 'Show a toast when memory updates',
+  memoryUpdateNoticeDesc:
+    'When enabled, writing, replacing or forgetting a memory shows a toast; turn it off to save silently without interrupting the conversation.',
   memoryExtractEngineLabel: 'Extraction model',
   memoryExtractEngineDesc:
     'Choose which model auto-extract uses; “Local model” uses the last local model you selected, even during cloud chats.',
@@ -592,7 +595,7 @@ export const en = {
   memoryEditTooltip: 'Edit',
   memoryDeleteTooltip: 'Delete',
   memoryClearAll: 'Clear all memories',
-  memoryUpdatedToast: 'Long-term memory updated',
+  memoryUpdatedToast: 'Saved to memory: {summary}',
   memoryBankSection: 'Memory graph',
   memoryBankEnabledLabel: 'Enable memory-graph retrieval',
   memoryBankEnabledDesc:
@@ -672,6 +675,12 @@ export const en = {
   settingsMaxTokensDescription:
     'Cap for each reply, including thinking. Leave empty to use the server default.',
   settingsParamDefault: 'Default',
+  settingsJailbreakCore: 'Jailbreak & prompt',
+  settingsJailbreakBypass: 'Bypass & retention',
+  settingsJailbreakObfuscation: 'Input obfuscation',
+  settingsJailbreakAutoTune: 'Auto tuning',
+  settingsJailbreakStm: 'Output shaping',
+  settingsJailbreakPrompt: 'System prompt',
   settingsKeepReply: 'Anti-retraction',
   settingsKeepReplyDescription:
     'Keep the streamed text and thinking when the model retracts a reply. Off discards them per protocol and shows the template answer instead.',
@@ -785,6 +794,10 @@ export const en = {
   uploadFileStatusFailed: 'Upload failed',
   uploadRetry: '{message}. Click to retry',
   chatInputPlaceholderChat: 'Enter a message',
+  chatInputMoreActions: 'More input options',
+  chatInputTakePhoto: 'Camera',
+  chatInputPhotoLibrary: 'Photos',
+  chatInputPickFiles: 'Files',
   deactivatedThinkTooltip: 'Think before responding to solve reasoning problems',
   thinkingSwitch: 'DeepThink',
   deactivatedSearchTooltip: 'Search the web when necessary',
@@ -1874,6 +1887,12 @@ export const en = {
   profileAvatarError: 'Choose a PNG, JPEG or WebP image within 5 MB.',
   profileSaved: 'Name saved',
   profileAvatarSaved: 'Avatar updated',
+  avatarCropTitle: 'Crop avatar',
+  avatarCropHint:
+    'Drag to reposition and use the slider to zoom; the circular area becomes the avatar',
+  avatarCropZoom: 'Zoom',
+  avatarCropConfirm: 'Use this crop',
+  avatarCropLoadFailed: 'Could not load the image. Choose another file.',
   settingsCompressThreshold: 'Compression threshold',
   settingsCompressThresholdDescription:
     'With auto-compress on, earlier rounds are summarized once the context reaches this token count; “Follow context pressure” keeps the 80% window rule. A low threshold adds summarization API cost.',
@@ -1956,13 +1975,15 @@ export const en = {
   changelogV275Presets:
     'System prompts and chain-of-thought support multiple presets: create, clone, rename, delete and switch in one click, so different situations no longer require deleting and re-pasting; edits sync to the active preset',
   nanovmFileImport: 'Import a single file',
-  nanovmFileImportHint: 'Write one file from this device or the workspace straight into the VM, including zip and images; the virtual disk grows automatically when needed.',
+  nanovmFileImportHint:
+    'Write one file from this device or the workspace straight into the VM, including zip and images; the virtual disk grows automatically when needed.',
   nanovmImportLocal: 'From this device',
   nanovmImportWorkspace: 'From workspace',
   nanovmImportTarget: 'Target directory',
   nanovmImportTargetHint: 'Defaults to /home/user; /tmp and other VM directories work too',
   nanovmImportOverwrite: 'Overwrite same name',
-  nanovmFileLimit: 'Current per-file limit: {limit} MB; larger files grow the disk automatically, up to 256 MB',
+  nanovmFileLimit:
+    'Current per-file limit: {limit} MB; larger files grow the disk automatically, up to 256 MB',
   nanovmFileImportDone: 'Imported {path} ({size})',
   nanovmFileImportGrown: 'Imported {path} ({size}); virtual disk grew to {disk} MB',
   nanovmFileImportFailed: 'Import failed: {reason}',
@@ -1970,13 +1991,30 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV277Title: 'v2.7.7 · 2026-11',
+  changelogV277Settings:
+    'Settings regrouped: the new Jailbreak page collects unrestricted mode, prompt presets, auto-jailbreak, obfuscation and auto tuning, plus anti-retraction / skip safety check / continue after refusal; attachment poisoning now lives under Attachments',
+  changelogV277Memory:
+    'Ported DeepChat memory-update notices: when auto-extraction adds, replaces or forgets a long-term memory, a toast shows what changed; switch it off under Settings → Memory',
+  changelogV277Avatar:
+    'Avatar upload now opens a circular crop dialog with drag-to-pan and zoom; everything outside the circle is dimmed and the result is saved as 384×384 for both My profile and characters',
+  changelogV277Android:
+    'On Android the paperclip becomes a + button that expands to camera / photos / files; inside the APK the camera opens the system camera and returns the photo to the page, while desktop web stays unchanged',
+  changelogV277Motion:
+    'Ported DeepChat sidebar motion: on mobile the main view slides right to reveal the drawer, with edge dragging and velocity checks; on desktop the expanded sidebar and collapse button fade and slide in',
+  changelogV277Apk: 'Builds the 2.7.7 APK (versionCode 277), signed with xiaohuangbo.jks',
   changelogV276Title: 'v2.7.6 · 2026-11',
-  changelogV276Import: 'NanoVM can import single files: Settings → Virtual machines writes from this device or the workspace directly, so zip / images / binaries no longer need base64 shell commands; the virtual disk grows automatically when needed',
-  changelogV276Agent: 'New nanovm_import agent tool: the model can write a workspace file or generated content straight into the VM, with text / base64, target path and overwrite options',
-  changelogV276Ui: 'The import card sets a target directory and overwrite mode; same names are renamed by default, and the toast shows path, size and any disk growth — visible in the terminal immediately',
-  changelogV276Docs: 'Docs cover single-file import, the agent tool and capacity limits; version bumped to 2.7.6',
+  changelogV276Import:
+    'NanoVM can import single files: Settings → Virtual machines writes from this device or the workspace directly, so zip / images / binaries no longer need base64 shell commands; the virtual disk grows automatically when needed',
+  changelogV276Agent:
+    'New nanovm_import agent tool: the model can write a workspace file or generated content straight into the VM, with text / base64, target path and overwrite options',
+  changelogV276Ui:
+    'The import card sets a target directory and overwrite mode; same names are renamed by default, and the toast shows path, size and any disk growth — visible in the terminal immediately',
+  changelogV276Docs:
+    'Docs cover single-file import, the agent tool and capacity limits; version bumped to 2.7.6',
   changelogV276Apk: 'Builds the 2.7.6 APK (versionCode 276), signed with xiaohuangbo.jks',
-  changelogV276Pybot: 'NanoVM gains a PyBot toolchain: a pure-Python rule-based chatbot (~640k lines, no weights). After installing the bundled snapshot, pybot -i chats continuously, while pybot -p and piped input answer one-shot; the interactive session supports /reset and /exit, with ~6–8 s startup and 2–5 s per turn',
+  changelogV276Pybot:
+    'NanoVM gains a PyBot toolchain: a pure-Python rule-based chatbot (~640k lines, no weights). After installing the bundled snapshot, pybot -i chats continuously, while pybot -p and piped input answer one-shot; the interactive session supports /reset and /exit, with ~6–8 s startup and 2–5 s per turn',
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',

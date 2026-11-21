@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import clsx from 'clsx'
+import { useEffect, useRef, type TouchEvent } from 'react'
 import { useTranslate } from '../i18n/index.js'
 import { useSettings } from '../services/settings.js'
 import { useIsMobile, useMobileViewport, usePreventPageScroll } from './viewport.js'
@@ -27,7 +28,11 @@ import { onUploadNotice } from '../services/attachments.js'
 import { Button } from '../components/base/Button.js'
 import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
-import { closeMobileSider } from '../components/sider/mobileSiderState.js'
+import {
+  closeMobileSider,
+  openMobileSider,
+  useMobileSider,
+} from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
 import { NanoVMHost } from '../components/nanovm/NanoVMHost.js'
 import { isLocalModel, isWebllmModel, webllmModelId } from '../services/local/catalog.js'
@@ -59,6 +64,115 @@ export const App = () => {
   )
   const activeId = useChatStore((state) => state.activeId)
   const labOpen = useLab((state) => state.open)
+  const mobileSiderOpen = useMobileSider((state) => state.open) && isMobile
+  const mainRef = useRef<HTMLElement>(null)
+  const gestureRef = useRef<{
+    startX: number
+    startY: number
+    startTime: number
+    initialOpen: boolean
+    drawerWidth: number
+    offset: number
+    axis: 'pending' | 'x' | 'y'
+  } | null>(null)
+
+  /** 抽屉边缘手势：避免和聊天区 / 代码块里的横向滚动抢事件 */
+  const hasHorizontalScroll = (target: EventTarget | null) => {
+    let node = target as HTMLElement | null
+    while (node && node !== mainRef.current) {
+      if (node.scrollWidth > node.clientWidth + 2) {
+        const overflowX = getComputedStyle(node).overflowX
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          return true
+        }
+      }
+      node = node.parentElement
+    }
+    return false
+  }
+
+  const onTouchStart = (event: TouchEvent<HTMLElement>) => {
+    if (!isMobile || event.touches.length !== 1) {
+      return
+    }
+    const touch = event.touches[0]
+    const initialOpen = useMobileSider.getState().open
+    if (!initialOpen && hasHorizontalScroll(event.target)) {
+      return
+    }
+    const drawerWidth = Math.min(300, window.innerWidth - 56)
+    gestureRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startTime: Date.now(),
+      initialOpen,
+      drawerWidth,
+      offset: initialOpen ? drawerWidth : 0,
+      axis: 'pending',
+    }
+  }
+
+  const onTouchMove = (event: TouchEvent<HTMLElement>) => {
+    const gesture = gestureRef.current
+    const main = mainRef.current
+    if (!gesture || !main || event.touches.length !== 1) {
+      return
+    }
+    const touch = event.touches[0]
+    const dx = touch.clientX - gesture.startX
+    const dy = touch.clientY - gesture.startY
+    if (gesture.axis === 'pending') {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+        return
+      }
+      if (Math.abs(dy) >= Math.abs(dx) || (!gesture.initialOpen && dx <= 0)) {
+        gesture.axis = 'y'
+        return
+      }
+      gesture.axis = 'x'
+    }
+    if (gesture.axis !== 'x') {
+      return
+    }
+    const offset = gesture.initialOpen
+      ? Math.max(0, Math.min(gesture.drawerWidth, gesture.drawerWidth + dx))
+      : Math.max(0, Math.min(gesture.drawerWidth, dx))
+    gesture.offset = offset
+    const radius = Math.min(20, (offset / gesture.drawerWidth) * 20)
+    main.style.transition = 'none'
+    main.style.transform = `translate3d(${offset}px, 0, 0)`
+    main.style.borderRadius = `${radius}px`
+  }
+
+  const finishTouch = () => {
+    const gesture = gestureRef.current
+    const main = mainRef.current
+    gestureRef.current = null
+    if (!gesture || !main || gesture.axis !== 'x') {
+      return
+    }
+    main.style.transition = ''
+    main.style.transform = ''
+    main.style.borderRadius = ''
+    const elapsed = Math.max(1, Date.now() - gesture.startTime)
+    const startOffset = gesture.initialOpen ? gesture.drawerWidth : 0
+    const velocity = (gesture.offset - startOffset) / elapsed
+    let nextOpen: boolean
+    if (velocity > 0.35) {
+      nextOpen = true
+    } else if (velocity < -0.35) {
+      nextOpen = false
+    } else {
+      nextOpen = gesture.initialOpen
+        ? gesture.offset > gesture.drawerWidth * 0.7
+        : gesture.offset > gesture.drawerWidth * 0.28
+    }
+    if (nextOpen) {
+      openMobileSider()
+    } else {
+      closeMobileSider()
+    }
+  }
 
   usePreventPageScroll(isMobile)
 
@@ -106,7 +220,18 @@ export const App = () => {
     <>
       <div ref={frameRef} className={styles.frame}>
         {isMobile ? <MobileSider /> : siderCollapsed ? null : <Sider />}
-        <main className={styles.main}>
+        <main
+          ref={mainRef}
+          className={clsx(
+            styles.main,
+            isMobile && styles.mobileMain,
+            mobileSiderOpen && styles.mobileMainOpen
+          )}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={finishTouch}
+          onTouchCancel={finishTouch}
+        >
           {saveError ? (
             <div className={styles.saveError} role="alert">
               <span>{t('sessionSaveFailed')}</span>
@@ -175,6 +300,9 @@ export const App = () => {
             </div>
             <NanoVMHost />
           </div>
+          {mobileSiderOpen ? (
+            <div className={styles.mobileBackdrop} onClick={closeMobileSider} aria-hidden />
+          ) : null}
         </main>
         <SearchPanel />
       </div>

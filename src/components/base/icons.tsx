@@ -227,6 +227,63 @@ export const IconPanelLeftOutline16 = () => (
   </svg>
 )
 
+export const IconPlusOutline18 = () => (
+  <svg width={18} height={18} viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M9 3.75V14.25M3.75 9H14.25"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+export const IconCameraOutline22 = () => (
+  <svg width={22} height={22} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M7.3 4.8L8.4 3.4C8.72 3 9.2 2.75 9.72 2.75H12.28C12.8 2.75 13.28 3 13.6 3.4L14.7 4.8H17.2C18.61 4.8 19.75 5.94 19.75 7.35V16.2C19.75 17.61 18.61 18.75 17.2 18.75H4.8C3.39 18.75 2.25 17.61 2.25 16.2V7.35C2.25 5.94 3.39 4.8 4.8 4.8H7.3Z"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinejoin="round"
+    />
+    <circle cx="11" cy="11.6" r="3.2" stroke="currentColor" strokeWidth="1.55" />
+  </svg>
+)
+
+export const IconGalleryOutline22 = () => (
+  <svg width={22} height={22} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="2.75"
+      y="3.5"
+      width="16.5"
+      height="15"
+      rx="3"
+      stroke="currentColor"
+      strokeWidth="1.55"
+    />
+    <circle cx="7.4" cy="8.2" r="1.4" fill="currentColor" />
+    <path
+      d="M4.2 15.6L8.7 11.2L11.7 14L14.4 11.5L17.8 15.6"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+export const IconAttachmentOutline22 = () => (
+  <svg width={22} height={22} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M15.8 9.2L9.75 15.25C8.23 16.77 5.77 16.77 4.25 15.25C2.73 13.73 2.73 11.27 4.25 9.75L11.15 2.85C12.16 1.84 13.8 1.84 14.81 2.85C15.82 3.86 15.82 5.5 14.81 6.51L7.95 13.37C7.44 13.88 6.62 13.88 6.11 13.37C5.6 12.86 5.6 12.04 6.11 11.53L12.15 5.5"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 export const IconPaperclipOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

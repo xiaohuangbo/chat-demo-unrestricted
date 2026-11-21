@@ -2,21 +2,19 @@
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to nineteen:
+The settings dialog grows from two groups to seventeen:
 
 | Group                 | Contents                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | General               | Theme, language, TTS voice, location, daily usage and alerts                                                                                                                                   |
-| **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies, keyword refusal                              |
+| **Model**             | Current model, stream output, temperature, Top P, max output tokens, auto-compress, keyword refusal                                                                                             |
 | **Characters**        | Role cards: name, gender, persona prompt, avatar, auto memory; sessions pick a character in the composer and the persona is injected into the system prompt                                     |
 | **Local models**      | WebGPU probe, in-browser catalog (download / load / switch / delete / export), MLC-LLM API address and model list, bundle import, cache backend, context window and local sampling parameters  |
-| **Prompt**            | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                                                                        |
+| **Jailbreak**         | Unrestricted mode, prompt presets, auto jailbreak, Chinese jailbreak prompts, per-round prompt injection, thinking-as-body, anti-retraction, skip safety check, continue refused replies, input obfuscation, AutoTune, output shaping, custom system prompt and full preview |
 | **Chain of thought**  | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off                                               |
-| **Advanced**          | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                                                                  |
 | **Search poison**     | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist                                                                |
-| **Memory**            | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                                                              |
-| **Attachments**       | Limit switch, max size per file, max files per session, extension whitelist                                                                                                                    |
-| **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment                                                              |
+| **Memory**            | Long-term memory, auto-extraction, memory-update toast, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                                          |
+| **Attachments**       | Limit switch, max size per file, max files per session, extension whitelist; attachment poisoning: rewrite before upload (text body / image text / DOCX / metadata / file trailer / filename / companion text attachment) |
 | **Browser tools**     | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
 | **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
 | **Virtual machines**  | Two terminals: NanoVM Slim (WASM shell, quotas, toolchains, virtual network) and WebVM (CheerpX x86 Debian, cross-origin isolation, images, import/export, environment check); both run at once and switch freely |
@@ -29,7 +27,7 @@ No existing style rules were modified. New controls only use newly added classes
 
 ### 3.2 Unrestricted mode
 
-**Where:** Settings → Prompt.
+**Where:** Settings → Jailbreak.
 
 **How it works:** the system prompt becomes an assembly pipeline:
 
@@ -209,9 +207,9 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 
 | Feature                                  | Where                                           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inject the system prompt every round     | Settings → Prompt                               | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                                                                                                     |
-| Chinese jailbreak prompts (experimental) | Settings → Advanced                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                                                                                                      |
-| Disguise historical thinking             | Settings → Prompt                               | Folds the **previous** reply’s thinking into the historical assistant text so the server does not drop it; only the last historical round is converted and token usage rises slightly.                                                                                                                                                                                                                                       |
+| Inject the system prompt every round     | Settings → Jailbreak                            | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                                                                                                     |
+| Chinese jailbreak prompts (experimental) | Settings → Jailbreak                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                                                                                                      |
+| Disguise historical thinking             | Settings → Jailbreak                            | Folds the **previous** reply’s thinking into the historical assistant text so the server does not drop it; only the last historical round is converted and token usage rises slightly.                                                                                                                                                                                                                                       |
 | Long-chat compression                    | Settings → Model (auto) + stats dialog (manual) | Auto: once context pressure reaches 80% of the window (after the 64k headroom and output reserve) with at least 2 new rounds since the last compression, older content is summarised in the background. Manual: "Compress older messages" in the stats dialog, always keeping the last 2 rounds verbatim. The summary is injected as a `latest_reminder`; local history is untouched and the summary can be cleared anytime. |
 
 ---
@@ -321,7 +319,7 @@ Settings → Search poisoning. This group exposes every search input the client 
 
 ### 3.21 Attachment poisoning
 
-Settings → Attachment poisoning. Off by default; when enabled, attachments are rewritten locally before upload so the model sees your text when it reads them.
+Settings → Attachments → Attachment poisoning. Off by default; when enabled, attachments are rewritten locally before upload so the model sees your text when it reads them.
 
 | Method                        | File types                                     | Behaviour                                                                              |
 | ----------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -615,7 +613,7 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 
 ### 3.34 Multiple system-prompt and chain-of-thought presets (2.7.5)
 
-**Where:** Settings → Prompt (system prompt presets) and Settings → Chain of thought (CoT presets).
+**Where:** Settings → Jailbreak (system prompt presets) and Settings → Chain of thought (CoT presets).
 
 - **Save several variants**: each preset has a name and body, up to 30; New saves the current editor content, Clone duplicates the active preset and names it "copy";
 - **One-click switch**: clicking a preset chip writes its content back to `settings.systemPrompt` / `settings.customCot`, taking effect on the next request; system prompts also offer "Auto-composed" to disable the custom prompt;
@@ -644,5 +642,16 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 - **One-shot mode**: `pybot -p "question"` for one reply, `echo "question" | pybot` for line-by-line piping, `-v` for the module and timing, `--version` for the snapshot commit;
 - **How it runs**: normal `python3` sync is capped at 16 MB, while PyBot raises the cap to 64 MB, syncs `/opt/pybot` into Pyodide and runs `pybot.py`; installation grows the virtual disk to about 83 MB automatically;
 - **Measured**: Python install ~23 s (12 MB Pyodide), PyBot unpack ~3 s; interactive startup is about **6–8 s** and each turn takes 2–5 s. After “my name is Sam”, asking “what is my name?” answers “You're Sam.”; `/reset` then answers “I don't know it yet”. One-shot and piped modes work as well.
+
+### 3.37 Settings regroup, memory notice, avatar crop and Android composer (2.7.7)
+
+**Reference:** the memory-update notice, composer "+" tray, avatar crop dialog and sidebar motion of [DeepChat](https://github.com/xiaohuangbo/DeepChat).
+
+- **Settings regrouped**: the old Prompt and Advanced pages become one Jailbreak page — unrestricted mode, prompt presets, auto jailbreak, Chinese jailbreak prompts, per-round injection, thinking-as-body, anti-retraction, skip safety check, continue refused replies, input obfuscation, AutoTune, output shaping, the custom system prompt and its full preview now live together; attachment poisoning moves into Attachments and no longer has its own nav entry;
+- **Memory-update notice**: when auto-extraction adds, replaces or forgets a long-term memory, a toast shows what changed (trimmed to 60 characters); Settings → Memory gains "Show a toast when memory updates", on by default, off means silent saving;
+- **Circular avatar crop**: My profile and character avatars share a new crop dialog — drag to pan, slider to zoom (1–4×), everything outside a circular hole is dimmed, and the result is a 384×384 JPEG; square originals are no longer stuffed into a round avatar slot;
+- **Android composer**: inside the APK the paperclip becomes "+", expanding a camera / photos / files tray below the composer with expand and icon-rotation animations; desktop web and mobile browsers keep the paperclip. The APK camera uses the system `ACTION_IMAGE_CAPTURE` into an app-cache content:// URI and returns it to WebView, so no storage permission is needed;
+- **Sidebar motion**: the mobile drawer is ported from DeepChat — the sidebar sits under the main view, which slides right to reveal it, with horizontal dragging from the middle or edge and velocity/distance thresholds; the corner radius and shadow follow the drag. On desktop the expanded sidebar slides in slightly and the collapsed button group fades down;
+- **Version**: `2.7.7` / versionCode 277, the APK is signed with `xiaohuangbo.jks`.
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

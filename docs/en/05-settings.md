@@ -5,9 +5,9 @@
 | Model             | Temperature                          | `1`                          | `chat-demo:temperature`                    | Unaffected                      |
 | Model             | Top P                                | `1`                          | `chat-demo:top-p`                          | Unaffected                      |
 | Model             | Max output tokens                    | empty (not sent)             | `chat-demo:max-tokens`                     | Unaffected                      |
-| Model             | Anti-retraction                      | off                          | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
-| Model             | Skip safety check                    | off                          | `chat-demo:skip-safety-check`              | Forced on, disabled             |
-| Model             | Continue refused replies             | off                          | `chat-demo:continue-refused`               | Forced on, disabled             |
+| Jailbreak         | Anti-retraction                      | off                          | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
+| Jailbreak         | Skip safety check                    | off                          | `chat-demo:skip-safety-check`              | Forced on, disabled             |
+| Jailbreak         | Continue refused replies             | off                          | `chat-demo:continue-refused`               | Forced on, disabled             |
 | Model             | Keyword refusal                      | Off                          | `chat-demo:refusal-enabled`                | Unaffected                      |
 | Model             | Refusal keywords                     | Empty                        | `chat-demo:refusal-keywords`               | Unaffected                      |
 | Model             | Case-sensitive keywords             | Off                          | `chat-demo:refusal-case-sensitive`         | Unaffected                      |
@@ -29,21 +29,21 @@
 | Local models | Qwen3 thinking     | Off                      | `chat-demo:local-enable-thinking`  | Unaffected |
 | Local models | Auto-load on open  | Off                      | `chat-demo:local-auto-load`        | Unaffected |
 | Local models | MLC-LLM endpoint   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`     | Unaffected |
-| Prompt | System prompt presets | 1 (if custom text exists) | `chat-demo:system-prompt-presets` | Unaffected |
-| Prompt | Active system preset  | Empty (auto)              | `chat-demo:system-prompt-active`  | Unaffected |
+| Jailbreak         | System prompt presets | 1 (if custom text exists) | `chat-demo:system-prompt-presets` | Unaffected |
+| Jailbreak         | Active system preset  | Empty (auto)              | `chat-demo:system-prompt-active`  | Unaffected |
 | CoT    | CoT presets           | 1 (current text)          | `chat-demo:cot-presets`           | Unaffected |
 | CoT    | Active CoT preset     | Default preset            | `chat-demo:cot-active`            | Unaffected |
-| Prompt            | Unrestricted mode                    | off                          | `chat-demo:unrestricted`                   | —                               |
-| Prompt            | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
+| Jailbreak         | Unrestricted mode                    | off                          | `chat-demo:unrestricted`                   | —                               |
+| Jailbreak         | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
 | Chain of thought  | Enable custom chain of thought       | off                          | `chat-demo:custom-cot-enabled`             | Unaffected                      |
 | Chain of thought  | Chain text                           | empty                        | `chat-demo:custom-cot`                     | Unaffected                      |
-| Advanced          | System prompt preset                 | `deepseek`                   | `chat-demo:prompt-preset`                  | Unaffected                      |
-| Advanced          | Input perturbation                   | off                          | `chat-demo:parseltongue`                   | Unaffected                      |
-| Advanced          | Perturbation technique               | `leetspeak`                  | `chat-demo:parseltongue-technique`         | Unaffected                      |
-| Advanced          | Perturbation intensity               | `medium`                     | `chat-demo:parseltongue-intensity`         | Unaffected                      |
-| Advanced          | AutoTune                             | off                          | `chat-demo:autotune`                       | Unaffected                      |
-| Advanced          | AutoTune strategy                    | `adaptive`                   | `chat-demo:autotune-strategy`              | Unaffected                      |
-| Advanced          | Output shaping                       | empty (off)                  | `chat-demo:stm-modules`                    | Unaffected                      |
+| Jailbreak         | System prompt preset                 | `deepseek`                   | `chat-demo:prompt-preset`                  | Unaffected                      |
+| Jailbreak         | Input perturbation                   | off                          | `chat-demo:parseltongue`                   | Unaffected                      |
+| Jailbreak         | Perturbation technique               | `leetspeak`                  | `chat-demo:parseltongue-technique`         | Unaffected                      |
+| Jailbreak         | Perturbation intensity               | `medium`                     | `chat-demo:parseltongue-intensity`         | Unaffected                      |
+| Jailbreak         | AutoTune                             | off                          | `chat-demo:autotune`                       | Unaffected                      |
+| Jailbreak         | AutoTune strategy                    | `adaptive`                   | `chat-demo:autotune-strategy`              | Unaffected                      |
+| Jailbreak         | Output shaping                       | empty (off)                  | `chat-demo:stm-modules`                    | Unaffected                      |
 | Attachments       | Enforce attachment limits            | on                           | `chat-demo:attachment-limits`              | Unaffected                      |
 | Attachments       | Max size per file                    | 64 MB                        | `chat-demo:attachment-max-mb`              | Unaffected                      |
 | Attachments       | Max files per session                | 50                           | `chat-demo:attachment-max-count`           | Unaffected                      |
@@ -53,18 +53,19 @@
 | Input bar         | Auto jailbreak                       | off                          | `chat-demo:auto-jailbreak`                 | Unaffected                      |
 | Lab               | Variant race budget                  | 1 yuan                       | `chat-demo:variant-race-budget`            | Unaffected                      |
 | Lab               | Variant race confirm dismissed       | off                          | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
-| Prompt            | Inject the system prompt every round | off                          | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
-| Prompt            | Disguise historical thinking         | off                          | `chat-demo:thinking-as-body`               | Unaffected                      |
+| Jailbreak         | Inject the system prompt every round | off                          | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
+| Jailbreak         | Disguise historical thinking         | off                          | `chat-demo:thinking-as-body`               | Unaffected                      |
 | Model             | Stream output                        | on                           | `chat-demo:stream-output`                  | Unaffected                      |
 | Model             | Auto-compress long chats             | off                          | `chat-demo:auto-compress`                  | Unaffected                      |
 | Search poison     | Enable search poisoning              | off                          | `chat-demo:search-poison`                  | Unaffected                      |
-| Attachment poison | Enable attachment poisoning          | off                          | `chat-demo:attachment-poison`              | Unaffected                      |
-| Advanced          | Chinese jailbreak prompts            | off                          | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
+| Attachments       | Enable attachment poisoning          | off                          | `chat-demo:attachment-poison`              | Unaffected                      |
+| Jailbreak         | Chinese jailbreak prompts            | off                          | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
 | General           | Daily limit alerts                   | off                          | `chat-demo:daily-limit-enabled`            | Unaffected                      |
 | General           | Daily token limit                    | 1000000                      | `chat-demo:daily-token-limit`              | Unaffected                      |
 | General           | Daily cost limit (yuan)              | 10                           | `chat-demo:daily-cost-limit`               | Unaffected                      |
 | Memory            | Long-term memory                     | on                           | `chat-demo:saved-memory-enabled`           | Unaffected                      |
 | Memory            | Auto-extract memory                  | off                          | `chat-demo:auto-extract-memory`            | Unaffected                      |
+| Memory            | Memory-update toast                  | on                           | `chat-demo:memory-update-notice`           | Unaffected                      |
 | Memory            | Memory-graph retrieval               | on                           | `chat-demo:memory-bank-enabled`            | Unaffected                      |
 | Memory            | Results to inject                    | 4                            | `chat-demo:memory-bank-limit`              | Unaffected                      |
 | Memory            | Vector dimension                     | 256                          | `chat-demo:memory-bank-dimension`          | Unaffected                      |

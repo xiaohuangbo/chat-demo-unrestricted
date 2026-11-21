@@ -124,7 +124,7 @@ export const zh = {
   poisonSearchResults: '已注入 {count} 条自定义结果',
   settingDialogAsideGeneralOptionLabel: '通用设置',
   settingDialogAsideModelOptionLabel: '模型',
-  settingDialogAsidePromptOptionLabel: '提示词',
+  settingDialogAsidePromptOptionLabel: '破甲',
   settingDialogAsideCotOptionLabel: '思维链',
   settingDialogAsideAboutOptionLabel: '关于',
   settingDialogAsideChangelogOptionLabel: '更新日志',
@@ -511,6 +511,9 @@ export const zh = {
   memoryAutoExtractLabel: '自动提炼长期记忆',
   memoryAutoExtractDesc:
     '每轮结束后额外调用一次模型提炼稳定事实：默认跟随当前模型——云端对话用 Flash API，本地模型对话用本地引擎；会产生少量费用（本地模型不产生 API 费用）。',
+  memoryUpdateNoticeLabel: '记忆更新时显示提示',
+  memoryUpdateNoticeDesc:
+    '开启后，自动提炼写入、替换或忘记记忆时在右下角弹出提示气泡；关闭后静默保存，不打断对话。',
   memoryExtractEngineLabel: '提炼模型',
   memoryExtractEngineDesc:
     '选择自动提炼使用的模型；「本地模型」在云端对话时会使用最近一次选中的本地模型。',
@@ -525,7 +528,7 @@ export const zh = {
   memoryEditTooltip: '编辑',
   memoryDeleteTooltip: '删除',
   memoryClearAll: '清空长期记忆',
-  memoryUpdatedToast: '已更新长期记忆',
+  memoryUpdatedToast: '已更新长期记忆：{summary}',
   memoryBankSection: '网状记忆库',
   memoryBankEnabledLabel: '启用网状记忆检索',
   memoryBankEnabledDesc:
@@ -602,6 +605,12 @@ export const zh = {
   settingsMaxTokens: '最大输出 Token',
   settingsMaxTokensDescription: '每次回复的输出上限（含思考内容），留空使用服务端默认值。',
   settingsParamDefault: '默认',
+  settingsJailbreakCore: '破甲与提示词',
+  settingsJailbreakBypass: '绕过与保留',
+  settingsJailbreakObfuscation: '输入扰动',
+  settingsJailbreakAutoTune: '自动调优',
+  settingsJailbreakStm: '输出整形',
+  settingsJailbreakPrompt: '系统提示词',
   settingsKeepReply: '防撤回',
   settingsKeepReplyDescription:
     '模型撤回已输出内容时，保留已经下发的正文与思维链；关闭时按协议丢弃，只显示模板答复。',
@@ -710,6 +719,10 @@ export const zh = {
   uploadFileStatusFailed: '上传失败',
   uploadRetry: '{message}，点击重试',
   chatInputPlaceholderChat: '请输入消息',
+  chatInputMoreActions: '更多输入功能',
+  chatInputTakePhoto: '拍照',
+  chatInputPhotoLibrary: '相册',
+  chatInputPickFiles: '文件',
   deactivatedThinkTooltip: '先思考后回答，解决推理问题',
   thinkingSwitch: '深度思考',
   deactivatedSearchTooltip: '按需搜索网页',
@@ -1739,6 +1752,11 @@ export const zh = {
   profileAvatarError: '请选择 5 MB 以内的 PNG、JPEG 或 WebP 图片。',
   profileSaved: '昵称已保存',
   profileAvatarSaved: '头像已更新',
+  avatarCropTitle: '裁剪头像区域',
+  avatarCropHint: '拖动图片调整位置，滑块缩放选区；圆形范围内就是最终头像',
+  avatarCropZoom: '缩放',
+  avatarCropConfirm: '确认使用',
+  avatarCropLoadFailed: '图片加载失败，请重新选择图片',
   settingsCompressThreshold: '压缩触发阈值',
   settingsCompressThresholdDescription:
     '开启自动压缩后，上下文达到该 token 数就压缩较早轮次；「跟随上下文压力」沿用窗口 80% 的规则。阈值较低时需要注意摘要请求本身的费用。',
@@ -1816,7 +1834,8 @@ export const zh = {
   changelogV275Presets:
     '系统提示词与思维链支持多套预设：新建、克隆、重命名、删除与一键切换，不同情景不用再删掉重贴；编辑会同步保存到当前预设',
   nanovmFileImport: '导入单个文件',
-  nanovmFileImportHint: '把本机或工作区里的单个文件直接写入虚拟机，支持 zip / 图片等二进制；空间不足会自动扩容虚拟磁盘。',
+  nanovmFileImportHint:
+    '把本机或工作区里的单个文件直接写入虚拟机，支持 zip / 图片等二进制；空间不足会自动扩容虚拟磁盘。',
   nanovmImportLocal: '从本机导入',
   nanovmImportWorkspace: '从工作区导入',
   nanovmImportTarget: '目标目录',
@@ -1830,13 +1849,29 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV277Title: 'v2.7.7 · 2026-11',
+  changelogV277Settings:
+    '设置重新分组：「破甲」页集中解除限制模式、提示词预设、自动越狱、扰动、自动调优，以及防撤回 / 跳过安全审核 / 拒绝后继续生成；「附件投毒」并入「附件」页，不再单独占一个导航入口',
+  changelogV277Memory:
+    '移植 DeepChat 的记忆更新提示：自动提炼写入、替换或忘记长期记忆时弹出气泡并显示具体内容；设置 → 记忆可关闭',
+  changelogV277Avatar:
+    '头像上传改为圆形取景框裁剪：拖动平移、滑块缩放，圆形范围外变暗，确认后保存 384×384 头像；我的资料与角色头像共用',
+  changelogV277Android:
+    '安卓端输入栏的回形针改为「+」：点开展开拍照 / 相册 / 文件；APK 内拍照直接调用系统相机并把照片交回网页，桌面网页保持原样',
+  changelogV277Motion:
+    '移植 DeepChat 的侧边栏动效：移动端主界面右滑露出抽屉，支持边缘拖动与速度判定；桌面端展开侧边栏、收起按钮带淡入滑动',
+  changelogV277Apk: '同步构建 2.7.7 APK（versionCode 277），使用 xiaohuangbo.jks 签名',
   changelogV276Title: 'v2.7.6 · 2026-11',
-  changelogV276Import: 'NanoVM 支持导入单个文件：设置 → 虚拟机可从本机或工作区直接写入，zip / 图片 / 二进制不再需要 base64 命令行；空间不足会自动扩容虚拟磁盘',
-  changelogV276Agent: '新增 nanovm_import Agent 工具：模型可以把工作区文件或生成的内容直接写入虚拟机，支持 text / base64、目标路径与同名覆盖',
-  changelogV276Ui: '导入卡片可设目标目录与同名覆盖；同名默认自动改名，导入完成会显示路径、大小与扩容结果，终端立即可见',
+  changelogV276Import:
+    'NanoVM 支持导入单个文件：设置 → 虚拟机可从本机或工作区直接写入，zip / 图片 / 二进制不再需要 base64 命令行；空间不足会自动扩容虚拟磁盘',
+  changelogV276Agent:
+    '新增 nanovm_import Agent 工具：模型可以把工作区文件或生成的内容直接写入虚拟机，支持 text / base64、目标路径与同名覆盖',
+  changelogV276Ui:
+    '导入卡片可设目标目录与同名覆盖；同名默认自动改名，导入完成会显示路径、大小与扩容结果，终端立即可见',
   changelogV276Docs: '文档补充单文件导入、Agent 工具与容量限制，版本号推进到 2.7.6',
   changelogV276Apk: '同步构建 2.7.6 APK（versionCode 276），使用 xiaohuangbo.jks 签名',
-  changelogV276Pybot: 'NanoVM 工具链新增 PyBot 超级专家系统：纯 Python 规则聊天机器人（约 64 万行，无模型权重），安装内置快照后可用 pybot -i 连续对话、pybot -p 单次提问或管道输入；交互模式支持 /reset 与 /exit，实测加载约 6–8 秒、每轮 2–5 秒',
+  changelogV276Pybot:
+    'NanoVM 工具链新增 PyBot 超级专家系统：纯 Python 规则聊天机器人（约 64 万行，无模型权重），安装内置快照后可用 pybot -i 连续对话、pybot -p 单次提问或管道输入；交互模式支持 /reset 与 /exit，实测加载约 6–8 秒、每轮 2–5 秒',
   latestReminderLanguage: '中文',
   settingsLocaleZhCN: '简体中文',
   settingsLocaleEnUS: 'English',

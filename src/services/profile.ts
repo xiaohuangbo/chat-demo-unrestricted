@@ -42,12 +42,13 @@ export const setProfileAvatar = (avatar: string) => {
   useProfile.setState({ avatar })
 }
 
+/** 头像文件是否可用：PNG / JPEG / WebP，且不超过 5 MB */
+export const avatarFileAllowed = (file: File): boolean =>
+  ['image/png', 'image/jpeg', 'image/webp'].includes(file.type) && file.size <= 5 * 1024 * 1024
+
 /** 把图片裁成 384×384 的 JPEG data URL；非图片或超过 5MB 时抛错 */
 export const readAvatar = async (file: File): Promise<string> => {
-  if (
-    !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
-    file.size > 5 * 1024 * 1024
-  ) {
+  if (!avatarFileAllowed(file)) {
     throw new Error('IMAGE_REQUIRED')
   }
   const bitmap = await createImageBitmap(file)

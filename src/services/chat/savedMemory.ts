@@ -235,7 +235,7 @@ const parseOperations = (raw: string): MemoryOperation[] => {
   }
 }
 
-/** 静默提炼长期记忆；返回是否有变更 */
+/** 静默提炼长期记忆；返回本次写入/替换/忘记的内容摘要，没有变更时为 null */
 export const extractMemoriesFromTurn = async ({
   apiKey,
   userText,
@@ -244,10 +244,10 @@ export const extractMemoriesFromTurn = async ({
   apiKey: string
   userText: string
   assistantText: string
-}): Promise<boolean> => {
+}): Promise<string | null> => {
   const question = userText.trim()
   if (!question) {
-    return false
+    return null
   }
   const settings = useSettings.getState()
   const currentModel = settings.model
@@ -260,7 +260,7 @@ export const extractMemoriesFromTurn = async ({
         ? isLocalModel(currentModel)
         : false
   if (!local && !apiKey) {
-    return false
+    return null
   }
   const existing = useSavedMemories.getState().items
   const locale = useSettings.getState().locale
@@ -312,23 +312,31 @@ export const extractMemoriesFromTurn = async ({
     }
     const ops = parseOperations(output)
     if (ops.length === 0) {
-      return false
+      return null
     }
-    let changed = false
+    let summary: string | null = null
     for (const op of ops) {
       if (op.action === 'add') {
-        changed = addSavedMemory(op.content) !== null || changed
+        const added = addSavedMemory(op.content)
+        if (added) {
+          summary = added.content
+        }
       } else if (op.action === 'update') {
-        changed = updateSavedMemory(op.id, op.content) || changed
+        if (updateSavedMemory(op.id, op.content)) {
+          summary = op.content
+        }
       } else {
+        const removed = useSavedMemories.getState().items.find((item) => item.id === op.id)
         deleteSavedMemory(op.id)
-        changed = true
+        if (removed) {
+          summary = removed.content
+        }
       }
     }
-    return changed
+    return summary
   } catch {
     // 提炼失败静默忽略，不影响正常对话
-    return false
+    return null
   } finally {
     clearTimeout(timer)
   }

@@ -56,6 +56,8 @@ type Settings = {
   savedMemoryEnabled: boolean
   /** 每轮结束后自动提炼长期记忆（额外一次模型调用） */
   autoExtractMemory: boolean
+  /** 记忆更新时弹出提示气泡（默认开启，关闭后静默保存） */
+  memoryUpdateNotice: boolean
   /** 自动提炼使用的模型：auto 跟随当前聊天模型，flash 固定 DeepSeek Flash，local 固定本地模型 */
   memoryExtractEngine: 'auto' | 'flash' | 'local'
   /** 网状记忆库是否参与检索 */
@@ -158,6 +160,7 @@ const KEYS = {
   compressThreshold: 'chat-demo:compress-threshold',
   savedMemoryEnabled: 'chat-demo:saved-memory-enabled',
   autoExtractMemory: 'chat-demo:auto-extract-memory',
+  memoryUpdateNotice: 'chat-demo:memory-update-notice',
   memoryExtractEngine: 'chat-demo:memory-extract-engine',
   memoryBankEnabled: 'chat-demo:memory-bank-enabled',
   memoryBankLimit: 'chat-demo:memory-bank-limit',
@@ -437,6 +440,7 @@ export const useSettings = create<Settings>(() => ({
   compressThreshold: Math.round(initialNumber(KEYS.compressThreshold, 0, 0, 800_000)),
   savedMemoryEnabled: read(KEYS.savedMemoryEnabled) !== 'false',
   autoExtractMemory: read(KEYS.autoExtractMemory) === 'true',
+  memoryUpdateNotice: read(KEYS.memoryUpdateNotice) !== 'false',
   memoryExtractEngine: initialEnum(
     KEYS.memoryExtractEngine,
     ['auto', 'flash', 'local'] as const,
@@ -781,6 +785,11 @@ export const setAutoExtractMemory = (autoExtractMemory: boolean) => {
   useSettings.setState({ autoExtractMemory })
 }
 
+export const setMemoryUpdateNotice = (memoryUpdateNotice: boolean) => {
+  write(KEYS.memoryUpdateNotice, String(memoryUpdateNotice))
+  useSettings.setState({ memoryUpdateNotice })
+}
+
 /** 自动提炼引擎：跟随当前模型 / 固定 Flash / 固定本地模型 */
 export const setMemoryExtractEngine = (engine: 'auto' | 'flash' | 'local') => {
   write(KEYS.memoryExtractEngine, engine)
@@ -889,6 +898,7 @@ export const resetSettings = () => {
     compressThreshold: 0,
     savedMemoryEnabled: true,
     autoExtractMemory: false,
+    memoryUpdateNotice: true,
     memoryExtractEngine: 'auto',
     memoryBankEnabled: true,
     memoryBankLimit: 4,

@@ -5,7 +5,7 @@ import { Modal } from '../base/Modal.js'
 import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import { RoleAvatar } from '../companion/RolePicker.js'
-import { readAvatar } from '../../services/profile.js'
+import { avatarFileAllowed } from '../../services/profile.js'
 import {
   BASIC_ROLE_ID,
   addRole,
@@ -14,6 +14,7 @@ import {
   useRoles,
   type Role,
 } from '../../services/companion.js'
+import { AvatarCropModal } from './AvatarCropModal.js'
 import styles from './RolesSettings.module.css'
 
 /**
@@ -28,6 +29,7 @@ export const RolesSettings = () => {
   const [editing, setEditing] = useState<Role | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [avatarError, setAvatarError] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const isDefault = editing?.id === BASIC_ROLE_ID
 
@@ -59,16 +61,6 @@ export const RolesSettings = () => {
     }
     setEditing(null)
     showToast({ key: 'roleSaved' })
-  }
-
-  const pickAvatar = async (file: File) => {
-    try {
-      const avatar = await readAvatar(file)
-      setEditing((current) => (current ? { ...current, avatar } : current))
-      setAvatarError(false)
-    } catch {
-      setAvatarError(true)
-    }
   }
 
   return (
@@ -189,9 +181,15 @@ export const RolesSettings = () => {
                 onChange={(event) => {
                   const file = event.target.files?.[0]
                   event.target.value = ''
-                  if (file) {
-                    void pickAvatar(file)
+                  if (!file) {
+                    return
                   }
+                  if (!avatarFileAllowed(file)) {
+                    setAvatarError(true)
+                    return
+                  }
+                  setAvatarError(false)
+                  setCropFile(file)
                 }}
               />
             </div>
@@ -247,6 +245,16 @@ export const RolesSettings = () => {
             </div>
           </div>
         </Modal>
+      ) : null}
+      {cropFile ? (
+        <AvatarCropModal
+          file={cropFile}
+          onClose={() => setCropFile(null)}
+          onConfirm={(dataUrl) => {
+            setEditing((current) => (current ? { ...current, avatar: dataUrl } : current))
+            setCropFile(null)
+          }}
+        />
       ) : null}
     </div>
   )

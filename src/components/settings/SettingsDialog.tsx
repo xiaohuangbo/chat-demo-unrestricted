@@ -162,11 +162,6 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
   { value: 'cot', label: 'settingDialogAsideCotOptionLabel', icon: <IconCustomCotOutline16 /> },
   {
-    value: 'advanced',
-    label: 'settingDialogAsideAdvancedOptionLabel',
-    icon: <IconBrowseOutline16 />,
-  },
-  {
     value: 'poison',
     label: 'settingDialogAsidePoisonOptionLabel',
     icon: <IconSearchWarningOutline16 />,
@@ -179,11 +174,6 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   {
     value: 'attachments',
     label: 'settingDialogAsideAttachmentsOptionLabel',
-    icon: <IconPaperclipOutline16 />,
-  },
-  {
-    value: 'attachmentPoison',
-    label: 'settingDialogAsideAttachmentPoisonOptionLabel',
     icon: <IconPaperclipOutline16 />,
   },
   {
@@ -287,16 +277,12 @@ const SettingsContent = () => {
             <UnrestrictedSetting />
           ) : section === 'cot' ? (
             <CustomCotSetting />
-          ) : section === 'advanced' ? (
-            <AdvancedSettings />
           ) : section === 'poison' ? (
             <SearchPoisonSettings />
           ) : section === 'memory' ? (
             <MemorySettings />
           ) : section === 'attachments' ? (
             <AttachmentsSetting />
-          ) : section === 'attachmentPoison' ? (
-            <AttachmentPoisonSettings />
           ) : section === 'agentTools' ? (
             <AgentToolsSetting />
           ) : section === 'workspace' ? (
@@ -784,6 +770,17 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV277Title',
+      items: [
+        'changelogV277Settings',
+        'changelogV277Memory',
+        'changelogV277Avatar',
+        'changelogV277Android',
+        'changelogV277Motion',
+        'changelogV277Apk',
+      ],
+    },
+    {
       title: 'changelogV276Title',
       items: [
         'changelogV276Import',
@@ -1161,8 +1158,8 @@ const ChangelogSetting = () => {
 }
 
 /**
- * 模型参数与回复开关：采样温度、Top P、每次回复的输出上限，
- * 以及防撤回、跳过安全审核、拒绝后继续生成。越狱模式下后两个强制执行。
+ * 模型参数与回复开关：采样温度、Top P、每次回复的输出上限、流式输出与自动压缩。
+ * 防撤回、跳过安全审核、拒绝后继续生成等绕过项集中在「破甲」页。
  */
 const ModelSettings = () => {
   const t = useTranslate()
@@ -1171,15 +1168,10 @@ const ModelSettings = () => {
   const maxTokens = useSettings((state) => state.maxTokens)
   const model = useSettings((state) => state.model)
   const streamOutput = useSettings((state) => state.streamOutput)
-  const keepReplyContent = useSettings((state) => state.keepReplyContent)
-  const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
-  const continueRefused = useSettings((state) => state.continueRefused)
   const refusalEnabled = useSettings((state) => state.refusalEnabled)
   const refusalKeywords = useSettings((state) => state.refusalKeywords)
   const refusalCaseSensitive = useSettings((state) => state.refusalCaseSensitive)
   const refusalMessage = useSettings((state) => state.refusalMessage)
-  // 越狱模式下两项限制强制执行，开关显示为已开启且不可单独关闭。
-  const unrestricted = useSettings((state) => state.unrestricted)
   const autoCompress = useSettings((state) => state.autoCompress)
   const compressThreshold = useSettings((state) => state.compressThreshold)
   return (
@@ -1252,31 +1244,6 @@ const ModelSettings = () => {
         }
       />
       <SettingCell
-        label={t('settingsKeepReply')}
-        description={t('settingsKeepReplyDescription')}
-        status={null}
-        action={
-          <Switch
-            checked={keepReplyContent}
-            onChange={setKeepReplyContent}
-            label={t('settingsKeepReply')}
-          />
-        }
-      />
-      <SettingCell
-        label={t('settingsSkipSafetyCheck')}
-        description={t('settingsSkipSafetyCheckDescription')}
-        status={null}
-        action={
-          <Switch
-            checked={skipSafetyCheck || unrestricted}
-            disabled={unrestricted}
-            onChange={setSkipSafetyCheck}
-            label={t('settingsSkipSafetyCheck')}
-          />
-        }
-      />
-      <SettingCell
         label={t('settingsAutoCompress')}
         description={t('settingsAutoCompressDescription')}
         status={null}
@@ -1306,19 +1273,6 @@ const ModelSettings = () => {
               { value: '800000', label: '800K' },
             ]}
             onChange={(value) => setCompressThreshold(Number(value))}
-          />
-        }
-      />
-      <SettingCell
-        label={t('settingsContinueRefused')}
-        description={t('settingsContinueRefusedDescription')}
-        status={null}
-        action={
-          <Switch
-            checked={continueRefused || unrestricted}
-            disabled={unrestricted}
-            onChange={setContinueRefused}
-            label={t('settingsContinueRefused')}
           />
         }
       />
@@ -1387,9 +1341,10 @@ const ModelSettings = () => {
 }
 
 /**
- * 系统提示词组装流水线：打开「解除限制模式」后，请求发出前把 Persona 与破限规则分块拼在一起，
- * 同时跳过安全审核、允许继续生成被拒绝的回复；关闭时原样放行官方默认提示词。
- * 下方可预览实际下发的全文。
+ * 破甲：解除限制模式、提示词预设、绕过与保留、输入扰动、自动调参与输出整形。
+ *
+ * 从「提示词」「模型」「高级」三页收拢到这里：越狱相关的开关不再分散，
+ * 关闭时保持官方默认行为，所有改动只写入本机 localStorage。
  */
 const UnrestrictedSetting = () => {
   const t = useTranslate()
@@ -1399,8 +1354,53 @@ const UnrestrictedSetting = () => {
   const injectPrompt = useSettings((state) => state.injectPromptEveryTurn)
   const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
   const thinkingAsBody = useSettings((state) => state.thinkingAsBody)
+  const keepReplyContent = useSettings((state) => state.keepReplyContent)
+  const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
+  const continueRefused = useSettings((state) => state.continueRefused)
+  const autoJailbreak = useSettings((state) => state.autoJailbreak)
+  const parseltongue = useSettings((state) => state.parseltongue)
+  const technique = useSettings((state) => state.parseltongueTechnique)
+  const intensity = useSettings((state) => state.parseltongueIntensity)
+  const autoTune = useSettings((state) => state.autoTune)
+  const strategy = useSettings((state) => state.autoTuneStrategy)
+  const stmModules = useSettings((state) => state.stmModules)
+  const feedbackSamples = useFeedback((state) => state.state.history.length)
+
+  const presets: { value: PromptPreset; label: string }[] = [
+    { value: 'deepseek', label: t('settingsPromptPresetDeepseek') },
+    { value: 'godmode', label: t('settingsPromptPresetGodmode') },
+  ]
+  const techniques: { value: ObfuscationTechnique; label: string }[] = [
+    { value: 'leetspeak', label: t('settingsTechniqueLeetspeak') },
+    { value: 'unicode', label: t('settingsTechniqueUnicode') },
+    { value: 'zwj', label: t('settingsTechniqueZwj') },
+    { value: 'mixedcase', label: t('settingsTechniqueMixedcase') },
+    { value: 'phonetic', label: t('settingsTechniquePhonetic') },
+    { value: 'fullwidth', label: t('settingsTechniqueFullwidth') },
+    { value: 'spacing', label: t('settingsTechniqueSpacing') },
+    { value: 'random', label: t('settingsTechniqueRandom') },
+  ]
+  const intensities: { value: 'light' | 'medium' | 'heavy'; label: string }[] = [
+    { value: 'light', label: t('settingsIntensityLight') },
+    { value: 'medium', label: t('settingsIntensityMedium') },
+    { value: 'heavy', label: t('settingsIntensityHeavy') },
+  ]
+  const strategies: { value: AutoTuneStrategy; label: string }[] = [
+    { value: 'adaptive', label: t('settingsAutoTuneAdaptive') },
+    { value: 'precise', label: t('settingsAutoTunePrecise') },
+    { value: 'balanced', label: t('settingsAutoTuneBalanced') },
+    { value: 'creative', label: t('settingsAutoTuneCreative') },
+    { value: 'chaotic', label: t('settingsAutoTuneChaotic') },
+  ]
+  const stmRows: { id: string; label: string }[] = [
+    { id: 'hedge_reducer', label: t('settingsStmHedge') },
+    { id: 'direct_mode', label: t('settingsStmDirect') },
+    { id: 'casual_mode', label: t('settingsStmCasual') },
+  ]
+
   return (
     <>
+      <div className={styles.groupTitle}>{t('settingsJailbreakCore')}</div>
       <SettingCell
         label={t('settingsUnrestricted')}
         description={t('settingsUnrestrictedDescription')}
@@ -1410,6 +1410,39 @@ const UnrestrictedSetting = () => {
             checked={unrestricted}
             onChange={setUnrestricted}
             label={t('settingsUnrestricted')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsPromptPreset')}
+        description={t('settingsPromptPresetDescription')}
+        status={null}
+        action={
+          <Select
+            value={promptPreset}
+            options={presets}
+            onChange={setPromptPreset}
+            ariaLabel={t('settingsPromptPreset')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('autoJailbreak')}
+        description={t('autoJailbreakDescription')}
+        status={null}
+        action={
+          <Switch checked={autoJailbreak} onChange={setAutoJailbreak} label={t('autoJailbreak')} />
+        }
+      />
+      <SettingCell
+        label={t('settingsTranslateJailbreak')}
+        description={t('settingsTranslateJailbreakDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={translateJailbreak}
+            onChange={setTranslateJailbreakZh}
+            label={t('settingsTranslateJailbreak')}
           />
         }
       />
@@ -1437,6 +1470,136 @@ const UnrestrictedSetting = () => {
           />
         }
       />
+
+      <div className={styles.groupTitle}>{t('settingsJailbreakBypass')}</div>
+      <SettingCell
+        label={t('settingsKeepReply')}
+        description={t('settingsKeepReplyDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={keepReplyContent}
+            onChange={setKeepReplyContent}
+            label={t('settingsKeepReply')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsSkipSafetyCheck')}
+        description={t('settingsSkipSafetyCheckDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={skipSafetyCheck || unrestricted}
+            disabled={unrestricted}
+            onChange={setSkipSafetyCheck}
+            label={t('settingsSkipSafetyCheck')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsContinueRefused')}
+        description={t('settingsContinueRefusedDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={continueRefused || unrestricted}
+            disabled={unrestricted}
+            onChange={setContinueRefused}
+            label={t('settingsContinueRefused')}
+          />
+        }
+      />
+
+      <div className={styles.groupTitle}>{t('settingsJailbreakObfuscation')}</div>
+      <SettingCell
+        label={t('settingsParseltongue')}
+        description={t('settingsParseltongueDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={parseltongue}
+            onChange={setParseltongue}
+            label={t('settingsParseltongue')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsParseltongueTechnique')}
+        description={t('settingsParseltongueTechniqueDescription')}
+        status={null}
+        action={
+          <Select
+            value={technique}
+            options={techniques}
+            onChange={setParseltongueTechnique}
+            ariaLabel={t('settingsParseltongueTechnique')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsParseltongueIntensity')}
+        description={t('settingsParseltongueIntensityDescription')}
+        status={null}
+        action={
+          <Select
+            value={intensity}
+            options={intensities}
+            onChange={setParseltongueIntensity}
+            ariaLabel={t('settingsParseltongueIntensity')}
+          />
+        }
+      />
+      <div className={styles.pipeline}>{t('settingsParseltongueHint')}</div>
+
+      <div className={styles.groupTitle}>{t('settingsJailbreakAutoTune')}</div>
+      <SettingCell
+        label={t('settingsAutoTune')}
+        description={t('settingsAutoTuneDescription')}
+        status={null}
+        action={<Switch checked={autoTune} onChange={setAutoTune} label={t('settingsAutoTune')} />}
+      />
+      <SettingCell
+        label={t('settingsAutoTuneStrategy')}
+        description={t('settingsAutoTuneStrategyDescription')}
+        status={null}
+        action={
+          <Select
+            value={strategy}
+            options={strategies}
+            onChange={setAutoTuneStrategy}
+            ariaLabel={t('settingsAutoTuneStrategy')}
+          />
+        }
+      />
+      <div className={styles.pipeline}>{t('settingsAutoTuneHint')}</div>
+
+      <div className={styles.groupTitle}>{t('settingsJailbreakStm')}</div>
+      {stmRows.map((row, index) => (
+        <SettingCell
+          key={row.id}
+          label={row.label}
+          description={index === 0 ? t('settingsStmDescription') : undefined}
+          status={null}
+          action={
+            <Switch
+              checked={stmModules.includes(row.id)}
+              onChange={(enabled) =>
+                setStmModules(
+                  enabled ? [...stmModules, row.id] : stmModules.filter((id) => id !== row.id)
+                )
+              }
+              label={row.label}
+            />
+          }
+        />
+      ))}
+      <div className={styles.pipeline}>{t('settingsStmHint')}</div>
+      <div className={styles.pipeline}>
+        {t('settingsFeedbackStats', { count: feedbackSamples })}
+      </div>
+
+      <div className={styles.groupTitle}>{t('settingsJailbreakPrompt')}</div>
       <SystemPromptSetting />
       <div className={styles.pipeline}>
         {t(
@@ -1640,176 +1803,6 @@ const CustomCotSetting = () => {
 }
 
 /**
- * 高级设置：提示词预设、输入扰动、自动调参与输出整形。
- * 这几项默认关闭，保持开箱行为与旧版本一致；改动只写入本机 localStorage。
- */
-const AdvancedSettings = () => {
-  const t = useTranslate()
-  const promptPreset = useSettings((state) => state.promptPreset)
-  const autoJailbreak = useSettings((state) => state.autoJailbreak)
-  const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
-  const parseltongue = useSettings((state) => state.parseltongue)
-  const technique = useSettings((state) => state.parseltongueTechnique)
-  const intensity = useSettings((state) => state.parseltongueIntensity)
-  const autoTune = useSettings((state) => state.autoTune)
-  const strategy = useSettings((state) => state.autoTuneStrategy)
-  const stmModules = useSettings((state) => state.stmModules)
-  const feedbackSamples = useFeedback((state) => state.state.history.length)
-
-  const presets: { value: PromptPreset; label: string }[] = [
-    { value: 'deepseek', label: t('settingsPromptPresetDeepseek') },
-    { value: 'godmode', label: t('settingsPromptPresetGodmode') },
-  ]
-  const techniques: { value: ObfuscationTechnique; label: string }[] = [
-    { value: 'leetspeak', label: t('settingsTechniqueLeetspeak') },
-    { value: 'unicode', label: t('settingsTechniqueUnicode') },
-    { value: 'zwj', label: t('settingsTechniqueZwj') },
-    { value: 'mixedcase', label: t('settingsTechniqueMixedcase') },
-    { value: 'phonetic', label: t('settingsTechniquePhonetic') },
-    { value: 'fullwidth', label: t('settingsTechniqueFullwidth') },
-    { value: 'spacing', label: t('settingsTechniqueSpacing') },
-    { value: 'random', label: t('settingsTechniqueRandom') },
-  ]
-  const intensities: { value: 'light' | 'medium' | 'heavy'; label: string }[] = [
-    { value: 'light', label: t('settingsIntensityLight') },
-    { value: 'medium', label: t('settingsIntensityMedium') },
-    { value: 'heavy', label: t('settingsIntensityHeavy') },
-  ]
-  const strategies: { value: AutoTuneStrategy; label: string }[] = [
-    { value: 'adaptive', label: t('settingsAutoTuneAdaptive') },
-    { value: 'precise', label: t('settingsAutoTunePrecise') },
-    { value: 'balanced', label: t('settingsAutoTuneBalanced') },
-    { value: 'creative', label: t('settingsAutoTuneCreative') },
-    { value: 'chaotic', label: t('settingsAutoTuneChaotic') },
-  ]
-  const stmRows: { id: string; label: string }[] = [
-    { id: 'hedge_reducer', label: t('settingsStmHedge') },
-    { id: 'direct_mode', label: t('settingsStmDirect') },
-    { id: 'casual_mode', label: t('settingsStmCasual') },
-  ]
-
-  return (
-    <>
-      <SettingCell
-        label={t('settingsPromptPreset')}
-        description={t('settingsPromptPresetDescription')}
-        status={null}
-        action={
-          <Select
-            value={promptPreset}
-            options={presets}
-            onChange={setPromptPreset}
-            ariaLabel={t('settingsPromptPreset')}
-          />
-        }
-      />
-      <SettingCell
-        label={t('autoJailbreak')}
-        description={t('autoJailbreakDescription')}
-        status={null}
-        action={
-          <Switch checked={autoJailbreak} onChange={setAutoJailbreak} label={t('autoJailbreak')} />
-        }
-      />
-      <SettingCell
-        label={t('settingsTranslateJailbreak')}
-        description={t('settingsTranslateJailbreakDescription')}
-        status={null}
-        action={
-          <Switch
-            checked={translateJailbreak}
-            onChange={setTranslateJailbreakZh}
-            label={t('settingsTranslateJailbreak')}
-          />
-        }
-      />
-      <SettingCell
-        label={t('settingsParseltongue')}
-        description={t('settingsParseltongueDescription')}
-        status={null}
-        action={
-          <Switch
-            checked={parseltongue}
-            onChange={setParseltongue}
-            label={t('settingsParseltongue')}
-          />
-        }
-      />
-      <SettingCell
-        label={t('settingsParseltongueTechnique')}
-        description={t('settingsParseltongueTechniqueDescription')}
-        status={null}
-        action={
-          <Select
-            value={technique}
-            options={techniques}
-            onChange={setParseltongueTechnique}
-            ariaLabel={t('settingsParseltongueTechnique')}
-          />
-        }
-      />
-      <SettingCell
-        label={t('settingsParseltongueIntensity')}
-        description={t('settingsParseltongueIntensityDescription')}
-        status={null}
-        action={
-          <Select
-            value={intensity}
-            options={intensities}
-            onChange={setParseltongueIntensity}
-            ariaLabel={t('settingsParseltongueIntensity')}
-          />
-        }
-      />
-      <div className={styles.pipeline}>{t('settingsParseltongueHint')}</div>
-      <SettingCell
-        label={t('settingsAutoTune')}
-        description={t('settingsAutoTuneDescription')}
-        status={null}
-        action={<Switch checked={autoTune} onChange={setAutoTune} label={t('settingsAutoTune')} />}
-      />
-      <SettingCell
-        label={t('settingsAutoTuneStrategy')}
-        description={t('settingsAutoTuneStrategyDescription')}
-        status={null}
-        action={
-          <Select
-            value={strategy}
-            options={strategies}
-            onChange={setAutoTuneStrategy}
-            ariaLabel={t('settingsAutoTuneStrategy')}
-          />
-        }
-      />
-      <div className={styles.pipeline}>{t('settingsAutoTuneHint')}</div>
-      {stmRows.map((row, index) => (
-        <SettingCell
-          key={row.id}
-          label={row.label}
-          description={index === 0 ? t('settingsStmDescription') : undefined}
-          status={null}
-          action={
-            <Switch
-              checked={stmModules.includes(row.id)}
-              onChange={(enabled) =>
-                setStmModules(
-                  enabled ? [...stmModules, row.id] : stmModules.filter((id) => id !== row.id)
-                )
-              }
-              label={row.label}
-            />
-          }
-        />
-      ))}
-      <div className={styles.pipeline}>{t('settingsStmHint')}</div>
-      <div className={styles.pipeline}>
-        {t('settingsFeedbackStats', { count: feedbackSamples })}
-      </div>
-    </>
-  )
-}
-
-/**
  * 附件限制：默认按内置规则校验（单文件 64 MB、单会话 50 个、扩展名白名单），
  * 也可以关掉校验或改成自己的数值与白名单；改动立即对下一次选择和上传生效。
  */
@@ -1912,6 +1905,9 @@ const AttachmentsSetting = () => {
           </Button>
         </div>
       </div>
+
+      <div className={styles.groupTitle}>{t('settingDialogAsideAttachmentPoisonOptionLabel')}</div>
+      <AttachmentPoisonSettings />
     </>
   )
 }

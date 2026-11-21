@@ -1,0 +1,80 @@
+/* 头像裁剪弹窗：圆形取景框、拖拽平移与缩放滑块 */
+.cropContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cropStage {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #111;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.cropImage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* 圆形孔：圆心以外用径向渐变压暗，只留中间的圆形取景区。
+   注意遮罩本身不能加 border-radius，否则背景会被裁成圆形、圆外就不会变暗。 */
+.cropMask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 120px at 50% 50%,
+    transparent 0,
+    transparent 117px,
+    rgba(0, 0, 0, 0.45) 120px
+  );
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  }
+}
+
+.cropControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.cropHint {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.cropSliderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 240px;
+  font-size: 13px;
+
+  input {
+    flex: 1;
+    accent-color: var(--dsw-alias-brand-primary);
+  }
+}

@@ -1938,9 +1938,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         apiKey: memoryKey,
         userText,
         assistantText: getReplyAnswerText(reply),
-      }).then((changed) => {
-        if (changed) {
-          showToast({ key: 'memoryUpdatedToast' })
+      }).then((summary) => {
+        // 记忆提炼在后台静默进行：只有真正写入/替换/忘记，且用户没有关闭提示时才弹气泡
+        if (summary && useSettings.getState().memoryUpdateNotice) {
+          showToast({
+            key: 'memoryUpdatedToast',
+            params: { summary: summary.replace(/\s+/g, ' ').trim().slice(0, 60) },
+          })
         }
       })
     }

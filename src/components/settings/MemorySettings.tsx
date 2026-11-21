@@ -30,6 +30,7 @@ import {
 import {
   setAutoExtractMemory,
   setMemoryExtractEngine,
+  setMemoryUpdateNotice,
   setMemoryBankDimension,
   setMemoryBankEnabled,
   setMemoryBankLimit,
@@ -337,6 +338,18 @@ export const MemorySettings = () => {
           checked={settings.autoExtractMemory}
           onChange={setAutoExtractMemory}
           label={t('memoryAutoExtractLabel')}
+        />
+      </div>
+
+      <div className={styles.toggleRow}>
+        <div className={styles.text}>
+          <div className={styles.label}>{t('memoryUpdateNoticeLabel')}</div>
+          <div className={styles.desc}>{t('memoryUpdateNoticeDesc')}</div>
+        </div>
+        <Switch
+          checked={settings.memoryUpdateNotice}
+          onChange={setMemoryUpdateNotice}
+          label={t('memoryUpdateNoticeLabel')}
         />
       </div>
 

@@ -2,11 +2,11 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.7.6**
+> Current version: **2.7.7**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
-- **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
+- **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, the experimental Chinese translation, plus anti-retraction, skip safety check, continue-after-refusal, obfuscation and AutoTune gathered on the Jailbreak page;
 - **Browser tools**: date & time, location, weather, notifications, clipboard, webpage fetch, file generation, open link and visualization widgets ported from DeepSeek-Agent, each with its own switch;
 - **Virtual workspace**: a long-lived file store in browser localStorage with create / edit / delete, per-file download, archive import / export, plus five workspace tools;
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox-style commands and single-file import from this device or the workspace (zip / binaries included), with a `nanovm_import` tool for the model, docked to the right on desktop and a bottom panel on phones; Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git / PyBot install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;

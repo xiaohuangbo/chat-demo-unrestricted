@@ -1,9 +1,13 @@
 import clsx from 'clsx'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
+  IconAttachmentOutline22,
+  IconCameraOutline22,
   IconDataOutline16,
+  IconGalleryOutline22,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
+  IconPlusOutline18,
   IconRefreshOutline16,
   IconSendOutline16,
   IconStopFill16,
@@ -33,6 +37,7 @@ import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
 import { isLocalModel } from '../../services/local/catalog.js'
+import { isAndroidApp } from '../../services/update.js'
 import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
@@ -81,7 +86,15 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const sidecarMode = `${attachmentPoisonEnabled ? 1 : 0}:${attachmentPoisonSidecar ? 1 : 0}`
   const lastSidecarMode = useRef(sidecarMode)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // 只有安卓壳里才把回形针换成「+」拍照 / 相册 / 文件面板，桌面网页保持原样
+  const androidApp = isAndroidApp()
+  const [plusOpen, setPlusOpen] = useState(false)
+
+  /** 选附件前先确认可用的 API Key；本地模型不需要 */
+  const canPickFiles = () => isLocalModel(useSettings.getState().model) || ensureApiKey()
 
   const acceptFiles = (files: File[]) => {
     // 本地模型不需要 API Key：文本附件在发送时由页面直接读取
@@ -342,17 +355,59 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               }
             }}
           />
-          <IconButton
-            size="m"
-            tone="primary"
-            icon={<IconPaperclipOutline16 />}
-            tooltip={t('uploadFile')}
-            disabled={importingHistory}
-            onClick={() =>
-              (isLocalModel(useSettings.getState().model) || ensureApiKey()) &&
-              fileInputRef.current?.click()
-            }
-          />
+          {androidApp ? (
+            <Tooltip content={t('chatInputMoreActions')}>
+              <button
+                type="button"
+                className={clsx(styles.plusButton, plusOpen && styles.plusOpen)}
+                aria-label={t('chatInputMoreActions')}
+                aria-expanded={plusOpen}
+                disabled={importingHistory}
+                onClick={() => setPlusOpen((value) => !value)}
+              >
+                <span className={styles.plusIcon}>
+                  <IconPlusOutline18 />
+                </span>
+              </button>
+            </Tooltip>
+          ) : (
+            <IconButton
+              size="m"
+              tone="primary"
+              icon={<IconPaperclipOutline16 />}
+              tooltip={t('uploadFile')}
+              disabled={importingHistory}
+              onClick={() => canPickFiles() && fileInputRef.current?.click()}
+            />
+          )}
+          {androidApp ? (
+            <>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(event) => {
+                  acceptFiles(Array.from(event.target.files ?? []))
+                  event.target.value = ''
+                  setPlusOpen(false)
+                }}
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(event) => {
+                  acceptFiles(Array.from(event.target.files ?? []))
+                  event.target.value = ''
+                  setPlusOpen(false)
+                }}
+              />
+            </>
+          ) : null}
           <input
             ref={fileInputRef}
             type="file"
@@ -362,6 +417,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             onChange={(event) => {
               acceptFiles(Array.from(event.target.files ?? []))
               event.target.value = ''
+              setPlusOpen(false)
             }}
           />
           {streaming && sessionId ? (
@@ -389,6 +445,47 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           )}
         </div>
       </div>
+      {androidApp ? (
+        <div
+          className={clsx(styles.moreTray, plusOpen && styles.moreTrayOpen)}
+          aria-hidden={!plusOpen}
+        >
+          <div className={styles.moreTrayInner}>
+            <div className={styles.moreGrid}>
+              <button
+                type="button"
+                className={styles.moreCard}
+                tabIndex={plusOpen ? 0 : -1}
+                disabled={importingHistory}
+                onClick={() => canPickFiles() && cameraInputRef.current?.click()}
+              >
+                <IconCameraOutline22 />
+                <span>{t('chatInputTakePhoto')}</span>
+              </button>
+              <button
+                type="button"
+                className={styles.moreCard}
+                tabIndex={plusOpen ? 0 : -1}
+                disabled={importingHistory}
+                onClick={() => canPickFiles() && galleryInputRef.current?.click()}
+              >
+                <IconGalleryOutline22 />
+                <span>{t('chatInputPhotoLibrary')}</span>
+              </button>
+              <button
+                type="button"
+                className={styles.moreCard}
+                tabIndex={plusOpen ? 0 : -1}
+                disabled={importingHistory}
+                onClick={() => canPickFiles() && fileInputRef.current?.click()}
+              >
+                <IconAttachmentOutline22 />
+                <span>{t('chatInputPickFiles')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {dragging ? <DragMask /> : null}
     </div>
   )

@@ -35,10 +35,12 @@ public final class MainActivity extends Activity {
     private static final int PORT = 18765;
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private static final int MIC_REQUEST = 1002;
+    private static final int CAPTURE_REQUEST = 1003;
 
     private WebView webView;
     private LocalServer server;
     private ValueCallback<Uri[]> filePathCallback;
+    private Uri captureOutputUri;
     private PermissionRequest pendingPermission;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -123,6 +125,11 @@ public final class MainActivity extends Activity {
                     filePathCallback.onReceiveValue(null);
                 }
                 filePathCallback = callback;
+                // <input type="file" accept="image/*" capture>：直接调系统相机，
+                // 结果通过 PhotoProvider 的 content:// URI 交回 WebView。
+                if (params.isCaptureEnabled() && acceptsImages(params) && startPhotoCapture()) {
+                    return true;
+                }
                 Intent intent;
                 try {
                     intent = params.createIntent();
@@ -144,6 +151,42 @@ public final class MainActivity extends Activity {
                     return false;
                 }
                 return true;
+            }
+
+            private boolean acceptsImages(FileChooserParams params) {
+                String[] types = params.getAcceptTypes();
+                if (types == null || types.length == 0) {
+                    return true;
+                }
+                for (String type : types) {
+                    if (type != null && type.trim().toLowerCase().startsWith("image/")) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            private boolean startPhotoCapture() {
+                try {
+                    File dir = PhotoProvider.captureDir(MainActivity.this);
+                    File photo = new File(dir, "photo-" + System.currentTimeMillis() + ".jpg");
+                    Uri output = PhotoProvider.uriFor(photo.getName());
+                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, output);
+                    intent.addFlags(
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            | Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
+                    if (intent.resolveActivity(getPackageManager()) == null) {
+                        return false;
+                    }
+                    captureOutputUri = output;
+                    startActivityForResult(intent, CAPTURE_REQUEST);
+                    return true;
+                } catch (RuntimeException error) {
+                    captureOutputUri = null;
+                    return false;
+                }
             }
 
             @Override
@@ -394,6 +437,18 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == CAPTURE_REQUEST) {
+            if (filePathCallback != null) {
+                Uri[] result = null;
+                if (resultCode == RESULT_OK && captureOutputUri != null) {
+                    result = new Uri[] { captureOutputUri };
+                }
+                filePathCallback.onReceiveValue(result);
+                filePathCallback = null;
+            }
+            captureOutputUri = null;
+            return;
+        }
         if (requestCode == FILE_CHOOSER_REQUEST) {
             if (filePathCallback == null) {
                 return;
