@@ -121,6 +121,11 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 </picture>
 <!-- star-history:end -->
 
+## Acknowledgements
+
+- **Linux DO community**: <https://linux.do/> — thanks for the discussion, feedback and testing support.
+- Upstream projects, reference implementations and licensing details are listed in [11. License and credits](docs/en/11-license.md).
+
 ## License
 
 MIT — see [11. License and credits](docs/en/11-license.md).

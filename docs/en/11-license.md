@@ -3,6 +3,7 @@
 - Code based on [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo), under the [MIT](../../LICENSE) license. The build copies the license to `dist/LICENSE`; keep it when redistributing.
 - `brand.png` and `brand_2.jpg` are artwork provided by the repository author and remain theirs; this project is not affiliated with DeepSeek.
 - This is a personal fork, not an official DeepSeek project. Check the terms and costs of whichever API service you point it at.
+- Thanks to the [Linux DO community](https://linux.do/) for discussion, feedback and testing support.
 - Thanks to the [EasyJailbreak project](https://github.com/EasyJailbreak/EasyJailbreak) for the theoretical foundation.
 - Thanks to [DeepSeek-Agent](https://github.com/Aoan2011/DeepSeek-Agent) for the reference implementation of the thinking slider, context ring and session statistics.
 - Thanks to [dsh-unrestricted](https://github.com/yexi-by/dsh-unrestricted) for the reference jailbreak prompts and experiment settings.

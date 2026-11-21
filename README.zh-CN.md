@@ -115,6 +115,11 @@ SHA-256 `37f4e0233ad4ce43516ccda7f5f280a9c46ea4e2ddcc96c40cd171ab44d25c03`），
 </picture>
 <!-- star-history:end -->
 
+## 鸣谢
+
+- **Linux DO 社区**：<https://linux.do/> —— 感谢社区提供的交流、反馈与测试支持。
+- 上游项目、参考实现与许可信息见 [11. 许可与致谢](docs/zh/11-license.md)。
+
 ## 许可
 
 MIT，见 [11. 许可与致谢](docs/zh/11-license.md)。
