@@ -54,7 +54,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 80 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 81 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -68,13 +68,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：`deepseek-unrestricted-2.7.7.apk`（24 MB，versionCode 277，
-SHA-256 `37f4e0233ad4ce43516ccda7f5f280a9c46ea4e2ddcc96c40cd171ab44d25c03`），详情见 [android/README.md](android/README.md)。
+预构建产物：`deepseek-unrestricted-2.7.8.apk`（24 MB，versionCode 278，
+SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`），详情见 [android/README.md](android/README.md)。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.7，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.8，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -93,6 +93,7 @@ SHA-256 `37f4e0233ad4ce43516ccda7f5f280a9c46ea4e2ddcc96c40cd171ab44d25c03`），
 
 ## 最近版本
 
+- **2.7.8**：修复 DeepSeek V4 Pro 调用报错——请求不再下发服务端联网工具与联网标题，`latest_reminder` 折进 system，智能搜索提示改用 Flash，新会话用首问自动生成标题；README 鸣谢新增 Linux DO 社区。
 - **2.7.7**：设置重组成「破甲」与「附件」两页——越狱相关的解除限制、提示词预设、自动越狱、扰动、自动调参、防撤回、跳过安全审核、拒绝后继续生成集中到「破甲」，附件投毒并入「附件」；移植 DeepChat 的记忆更新提示（气泡显示本次写入内容，可在设置 → 记忆关闭）；头像上传改为圆形取景框裁剪（拖动 / 缩放、圆外变暗、输出 384×384）；APK 输入栏的回形针换成「+」展开拍照 / 相册 / 文件，拍照直接调用系统相机；移动端侧边栏改为 DeepChat 式右滑抽屉，桌面展开带滑入动画；
 - **2.7.6**：NanoVM 支持用户与 Agent 导入单个文件——本机或工作区的任意文件直接写入虚拟机，不再需要 base64 命令行，空间不足自动扩容；新增 `nanovm_import` 工具与 PyBot 工具链（内置离线快照，支持 `pybot -i` 连续对话与 `/reset`、`/exit`）；已知限制补到 80 条。
 - **2.7.5**：合并上游 0.1.3（复用 Files API 图片前按 4096 长边缩放）；本地模型支持自动提炼长期记忆（可选提炼模型）、借用服务端预检索联网、读取文本附件，并限定仅聊天模式；本地「思考模式」并入输入栏「深度思考」；移植 Remember 的角色、我的资料、压缩触发阈值与账户用量概览；本地模型设置图标换成芯片；手机端自动越狱与扰动保留文字标签、不再折叠成圆；系统提示词与思维链支持多套命名预设，可新建 / 克隆 / 重命名 / 删除并一键切换；已知限制补到 78 条。

@@ -301,6 +301,16 @@
   }
 }
 
+/* V4 Pro 不支持服务端联网：开关仍可点出解释，但不再高亮 */
+.toggle.unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+
+  &:hover {
+    background-color: transparent;
+  }
+}
+
 .toolbarDivider {
   flex-shrink: 0;
   width: 1px;

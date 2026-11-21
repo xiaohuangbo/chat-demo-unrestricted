@@ -661,7 +661,7 @@ export const en = {
   dailyCostLimitToast: 'Today’s cost {used} / {limit} reached',
   settingsModel: 'Current model',
   settingsModelDescription:
-    'Switch from the leftmost control in the input toolbar; DeepSeek Flash / V4 Pro are built in, and the list can be fetched from the cloud.',
+    'Switch from the leftmost control in the input toolbar; DeepSeek Flash / V4 Pro are built in, and the list can be fetched from the cloud. V4 Pro does not support server-side web search, link reading, cloud titles or image input — use Flash for those.',
   settingsStreamOutput: 'Stream output',
   settingsStreamOutputDescription:
     'Streams the reply as it arrives; turn off to render it after completion. Anti-retraction still preserves the final content.',
@@ -802,6 +802,8 @@ export const en = {
   thinkingSwitch: 'DeepThink',
   deactivatedSearchTooltip: 'Search the web when necessary',
   search: 'Search',
+  serverToolsUnsupported:
+    'DeepSeek V4 Pro does not support server-side web search, link reading or cloud-generated titles; switch to DeepSeek Flash for web access.',
   uploadFile: 'Upload files',
   chatInputStopButtonTooltip: 'Stop',
   uploadMaxMBSize: 'File exceeds the size limit ({size} MB). Please adjust and try again.',
@@ -1991,6 +1993,12 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV278Title: 'v2.7.8 · 2026-11',
+  changelogV278V4Pro:
+    'Fixed DeepSeek V4 Pro requests: server-side web tools and cloud titles are no longer sent, latest_reminder is folded into system, and the search toggle points users to Flash; new sessions take their title from the first question, while memory extraction and usage accounting keep working',
+  changelogV278Credit:
+    'README acknowledgements now include the Linux DO community (https://linux.do/)',
+  changelogV278Apk: 'Builds the 2.7.8 APK (versionCode 278), signed with xiaohuangbo.jks',
   changelogV277Title: 'v2.7.7 · 2026-11',
   changelogV277Settings:
     'Settings regrouped: the new Jailbreak page collects unrestricted mode, prompt presets, auto-jailbreak, obfuscation and auto tuning, plus anti-retraction / skip safety check / continue after refusal; attachment poisoning now lives under Attachments',

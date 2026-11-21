@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
+import { supportsServerTitle, supportsServerTools } from '../api/models.js'
 import { isLocalModel } from '../local/catalog.js'
 import { activeRole, getRole, roleSystemPrompt } from '../companion.js'
 import { useProfile } from '../profile.js'
@@ -136,8 +137,13 @@ const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
  * 本轮下发的工具列表：服务端工具 + 已开启的浏览器工具。
  * 浏览器工具由设置里的主开关与逐项开关过滤，关闭时模型完全看不到它。
  */
-const requestTools = (search: boolean, allowAgentTools: boolean): CreateMessageRequest['tools'] => {
-  const tools = serverTools(search)
+const requestTools = (
+  search: boolean,
+  allowAgentTools: boolean,
+  model: string
+): CreateMessageRequest['tools'] => {
+  // V4 Pro 不支持服务端联网工具；带任一服务端工具会被 API 直接拒绝
+  const tools = supportsServerTools(model) ? serverTools(search) : []
   if (!allowAgentTools) {
     return tools
   }
@@ -1474,8 +1480,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   const controller = new AbortController()
   /** 本地模型（WebLLM / MLC-LLM API）没有附件上传、服务端工具与标题生成，走简化分支 */
   const localModel = isLocalModel(initial.model ?? MODEL)
-  // 本地模型不向服务端要标题，也不该被当成「标题请求」跳过用量记账
-  if (!localModel && !getSession(sessionId)?.title) {
+  // 本地模型 / V4 Pro 不向服务端要标题，也不该被当成「标题请求」跳过用量记账
+  const serverTitle = !localModel && supportsServerTitle(initial.model ?? MODEL)
+  if (serverTitle && !getSession(sessionId)?.title) {
     titleRequests.add(controller)
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
@@ -1601,15 +1608,32 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         const requestReminder = injectPromptEveryTurn
           ? `${latestReminder}\n\n${baseSystemText}`
           : latestReminder
+        // V4 Pro 不接受 latest_reminder 角色：把本轮提醒、压缩摘要折进 leading system
+        const reminderRoleSupported = !localModel && supportsServerTools(initial.model ?? MODEL)
+        const compression = getSession(sessionId)?.compression
+        // system 本来每轮都会完整下发，因此这里只补日期/位置快照，不再重复 baseSystemText；
+        // 压缩摘要原本也是 latest_reminder，一并折进 system。
+        const foldedReminder = reminderRoleSupported
+          ? ''
+          : [
+              latestReminder,
+              compression
+                ? `${translate('compressSummaryHeader', { rounds: compression.rounds })}\n${compression.summary}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join('\n\n')
+        const requestSystemText = foldedReminder ? `${systemText}\n\n${foldedReminder}` : systemText
         const messages = [
           ...toRequestMessages(
             prepared.history,
             prepared.question,
             prepared.prefix,
             initial.thinking ?? false,
-            requestReminder,
-            getSession(sessionId)?.compression,
-            thinkingAsBody
+            reminderRoleSupported ? requestReminder : undefined,
+            reminderRoleSupported ? compression : undefined,
+            thinkingAsBody,
+            !reminderRoleSupported
           ),
           ...toolMessages,
         ]
@@ -1633,7 +1657,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
         const tools = localModel
           ? []
-          : requestTools((initial.search ?? false) && !shouldTakeoverSearch(poisonConfig), true)
+          : requestTools(
+              (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
+              true,
+              initial.model ?? MODEL
+            )
         noteContextBreakdown(
           sessionId,
           buildContextBreakdown({ system: systemText, tools, messages })
@@ -1670,7 +1698,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               apiKey ?? '',
               {
                 model: initial.model ?? MODEL,
-                system: systemText,
+                system: requestSystemText,
                 messages,
                 thinking: initial.thinking
                   ? fallbackNoReasoning
@@ -1743,8 +1771,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settle(reply, 'done', Date.now())
-        // 本地模型不请求服务端标题：首轮用提问开头几个字作为会话标题
-        if (localModel && !getSession(sessionId)?.title) {
+        // 本地模型与 V4 Pro 没有服务端标题：首轮用提问开头几个字作为会话标题
+        if (!serverTitle && !getSession(sessionId)?.title) {
           const title = request.question.content.replace(/\s+/g, ' ').trim().slice(0, 24)
           if (title) {
             updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))

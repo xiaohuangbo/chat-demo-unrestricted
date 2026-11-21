@@ -24,7 +24,7 @@
 const DATA_OFFSET = 16
 
 /** 数据段里的标识，堆从它后面开始 */
-const BANNER = 'NanoVM Slim · WASM core · 2.7.7'
+const BANNER = 'NanoVM Slim · WASM core · 2.7.8'
 
 const I32 = 0x7f
 const EMPTY_BLOCK = 0x40

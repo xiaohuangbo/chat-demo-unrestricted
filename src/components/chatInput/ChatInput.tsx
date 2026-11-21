@@ -37,6 +37,7 @@ import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
 import { isLocalModel } from '../../services/local/catalog.js'
+import { supportsServerTools } from '../../services/api/models.js'
 import { isAndroidApp } from '../../services/update.js'
 import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
@@ -77,6 +78,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const model = useSettings((state) => state.model)
+  // V4 Pro 没有服务端联网工具：联网开关置灰并提示改用 Flash
+  const searchAvailable = supportsServerTools(model)
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
   const attachmentPoisonEnabled = useSettings((state) => state.attachmentPoison.enabled)
   const attachmentPoisonSidecar = useSettings((state) =>
@@ -235,13 +239,26 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         selectedClassName={styles.selected}
         labelClassName={styles.toggleLabel}
       />
-      <Tooltip content={t('deactivatedSearchTooltip')}>
+      <Tooltip
+        content={searchAvailable ? t('deactivatedSearchTooltip') : t('serverToolsUnsupported')}
+      >
         <button
           type="button"
-          className={clsx(styles.toggle, search && styles.selected)}
+          className={clsx(
+            styles.toggle,
+            search && searchAvailable && styles.selected,
+            !searchAvailable && styles.unavailable
+          )}
           aria-label={t('search')}
-          aria-pressed={search}
-          onClick={() => setSearch(!search)}
+          aria-pressed={search && searchAvailable}
+          data-unavailable={!searchAvailable || undefined}
+          onClick={() => {
+            if (!searchAvailable) {
+              showToast({ key: 'serverToolsUnsupported' })
+              return
+            }
+            setSearch(!search)
+          }}
         >
           <IconGlobeLanguageOutline14 />
           <span className={styles.toggleLabel}>{t('search')}</span>

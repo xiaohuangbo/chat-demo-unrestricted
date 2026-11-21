@@ -654,4 +654,27 @@ Based on [luomiluomi/Remember](https://github.com/luomiluomi/Remember) (MIT), re
 - **Sidebar motion**: the mobile drawer is ported from DeepChat — the sidebar sits under the main view, which slides right to reveal it, with horizontal dragging from the middle or edge and velocity/distance thresholds; the corner radius and shadow follow the drag. On desktop the expanded sidebar slides in slightly and the collapsed button group fades down;
 - **Version**: `2.7.7` / versionCode 277, the APK is signed with `xiaohuangbo.jks`.
 
+### 3.38 DeepSeek V4 Pro request fix (2.7.8)
+
+**Problem:** after selecting `deepseek-v4-pro`, sending a message returned:
+
+```text
+The server-side tool calls (deepseek_web_search, deepseek_read_url) and the title generation feature are unavailable for model deepseek-v4-pro. Please use deepseek-flash instead.
+```
+
+While fixing it we found that V4 Pro also rejects the `latest_reminder` role with `The latest_reminder message is unavailable for model deepseek-v4-pro`.
+
+**Cause:** the request builder attached the server-side read-link / web-search tools, `title: { enabled: true }` and `latest_reminder` messages to every cloud model, but V4 Pro does not implement those Anthropic extensions.
+
+**Fix:**
+
+- **Capability checks**: `supportsServerTools()` / `supportsServerTitle()` mark V4 Pro so `deepseek_web_search`, `deepseek_read_url` and `title` are never sent to it;
+- **Reminder folding**: for V4 Pro the date / location snapshot and compression summary are folded into the leading `system` prompt, and historical `latest_reminder` messages are omitted from the request; Flash behaviour is unchanged;
+- **Title fallback**: V4 Pro no longer registers as a title request, so usage accounting and long-term memory extraction are not skipped; new sessions take the first 24 characters of the first question as their title;
+- **Search toggle**: under V4 Pro the "Search" toggle is dimmed and explains that Flash is required; Settings → Model now spells out that V4 Pro lacks server-side search, link reading, cloud titles and image input;
+- **Verified**: with a real API key, normal replies, two consecutive turns and long-term memory extraction all complete without errors; request bodies contain no server tools, `title` or `latest_reminder`, while client tools remain available;
+- **Version**: `2.7.8` / versionCode 278.
+
+> V4 Pro's `input_modalities` is `text` only: the API accepts image blocks but the model cannot see them. Switch to DeepSeek Flash for images, web search or cloud titles.
+
 [← 返回 README](../../README.md) · [全部文档](README.md)

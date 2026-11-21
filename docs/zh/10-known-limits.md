@@ -94,6 +94,7 @@
 
 79. **NanoVM 单文件导入有上限**：单文件硬上限 256MB，磁盘配额最高 2048MB；导入会先扩容再写入，超大文件在 OPFS 上落盘要按 base64 序列化整个文件系统，可能需要几秒到几十秒，期间不要关闭页面。
 80. **PyBot 启动不是即时的**：每次提问都要把约 39MB 源码同步进 Pyodide 并导入 528 个模块，实测约 8 秒；安装需要 Python 工具链（约 12MB），离线快照固定为提交 24cbc04，更新需重新打 `public/pybot.zip`；交互会话期间终端输入按聊天消息处理，要执行 shell 命令先 `/exit`。
+81. **V4 Pro 缺少联网与图片能力**：服务端明确拒绝 `deepseek_web_search` / `deepseek_read_url` / `title` / `latest_reminder`。本项目为 V4 Pro 去掉这些字段、把日期提醒与压缩摘要折进 system、用首问生成标题并停用智能搜索；图片输入不会报错，但模型看不到图片内容。需要联网、联网标题或看图时请切回 DeepSeek Flash。
 ---
 
 [← 返回 README](../../README.md) · [全部文档](README.md)

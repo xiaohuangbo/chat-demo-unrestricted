@@ -426,11 +426,16 @@ export const toRequestMessages = (
   thinking = prefix?.thinking ?? false,
   latestReminder?: string,
   compression?: SessionCompression,
-  disguiseThinking = false
+  disguiseThinking = false,
+  omitReminders = false
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
   const appendReminder = (reminder: string | undefined) => {
+    // V4 Pro 不接受 latest_reminder 角色，提醒由调用方折进 system
+    if (omitReminders) {
+      return
+    }
     // 仅在当前分支首次出现或内容变化时插入快照；缺少快照的消息保持原有内容。
     if (reminder && reminder !== previousReminder) {
       messages.push({ role: 'latest_reminder', content: reminder })
@@ -438,7 +443,7 @@ export const toRequestMessages = (
     }
   }
   let rounds = getContextRounds(history)
-  if (compression) {
+  if (compression && !omitReminders) {
     const cutoff = history.findIndex((message) => message.id === compression.upToMessageId)
     if (cutoff >= 0) {
       const kept = new Set(history.slice(cutoff + 1).map((message) => message.id))

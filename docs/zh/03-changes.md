@@ -654,4 +654,27 @@ Persona（官方身份分块）
 - **侧边栏动效**：移植 DeepChat 的移动端抽屉——侧边栏常驻在主界面下层，主界面整体右移露出抽屉，支持从中部或边缘横向拖动、按速度与位移判断开合，圆角与阴影随拖动距离变化；桌面端展开侧边栏时轻微滑入，收起后的按钮组淡入下滑；
 - **版本**：`2.7.7` / versionCode 277，APK 使用 `xiaohuangbo.jks` 签名。
 
+### 3.38 修复 DeepSeek V4 Pro 请求（2.7.8）
+
+**问题：** 选择 `deepseek-v4-pro` 后发送消息会返回：
+
+```text
+The server-side tool calls (deepseek_web_search, deepseek_read_url) and the title generation feature are unavailable for model deepseek-v4-pro. Please use deepseek-flash instead.
+```
+
+修复过程中还发现 V4 Pro 同样不接受 `latest_reminder` 角色，会返回 `The latest_reminder message is unavailable for model deepseek-v4-pro`。
+
+**原因：** 请求组装默认对所有云端模型都带上了服务端阅读链接 / 联网搜索工具、`title: { enabled: true }` 与 `latest_reminder` 消息；V4 Pro 不支持这些 Anthropic 扩展字段。
+
+**修复：**
+
+- **能力判断**：`supportsServerTools()` / `supportsServerTitle()` 统一标记 V4 Pro，不再向它下发 `deepseek_web_search`、`deepseek_read_url` 与 `title`；
+- **提醒折叠**：V4 Pro 的日期 / 位置快照与压缩摘要折进 leading `system`，并把历史 `latest_reminder` 消息从请求中省略；普通 Flash 行为不变；
+- **标题兜底**：V4 Pro 不是标题请求，不再被 `titleRequests` 跳过用量记账与长期记忆提炼；新会话用第一条提问前 24 字作为标题；
+- **联网开关**：V4 Pro 下「智能搜索」置灰，点击提示改用 Flash；设置 → 模型的说明也写明 V4 Pro 不支持联网搜索、链接阅读、联网标题与图片输入；
+- **实测**：用真实 API Key 验证普通回复、连续两轮、长期记忆提炼均无报错；请求体确认不含服务端工具、`title`、`latest_reminder`，`tools` 仍保留客户端工具；
+- **版本**：`2.7.8` / versionCode 278。
+
+> V4 Pro 的 `input_modalities` 只有 `text`：API 不会报错，但模型看不到图片内容。需要看图、联网搜索或联网标题时请切回 DeepSeek Flash。
+
 [← 返回 README](../../README.md) · [全部文档](README.md)

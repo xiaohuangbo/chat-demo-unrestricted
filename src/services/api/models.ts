@@ -30,6 +30,19 @@ export const BUILTIN_MODELS: ModelOption[] = [
   { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', source: 'builtin' },
 ]
 
+/**
+ * V4 Pro 不提供服务端联网工具（deepseek_web_search / deepseek_read_url）与标题生成，
+ * 请求里带任一项会直接返回 invalid_request_error；客户端工具与普通聊天不受影响。
+ * 需要联网搜索或服务端标题时请使用 deepseek-flash。
+ */
+const MODELS_WITHOUT_SERVER_FEATURES = new Set(['deepseek-v4-pro'])
+
+export const supportsServerTools = (model: string): boolean =>
+  !MODELS_WITHOUT_SERVER_FEATURES.has(model)
+
+export const supportsServerTitle = (model: string): boolean =>
+  !MODELS_WITHOUT_SERVER_FEATURES.has(model)
+
 const CACHE_KEY = 'chat-demo:models-cache'
 /** 缓存一小时；「从云端获取」会强制刷新 */
 const CACHE_TTL = 60 * 60 * 1000

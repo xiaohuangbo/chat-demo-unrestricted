@@ -56,7 +56,7 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 80 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 81 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -70,13 +70,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: `deepseek-unrestricted-2.7.7.apk` (24 MB, versionCode 277,
-SHA-256 `37f4e0233ad4ce43516ccda7f5f280a9c46ea4e2ddcc96c40cd171ab44d25c03`) — see [android/README.md](android/README.md).
+Prebuilt artifact: `deepseek-unrestricted-2.7.8.apk` (24 MB, versionCode 278,
+SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.7, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.8, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -99,6 +99,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 ## Recent versions
 
+- **2.7.8**: fixes DeepSeek V4 Pro requests — server-side web tools and cloud titles are no longer sent, `latest_reminder` is folded into system, the search toggle points users to Flash and new sessions take their title from the first question; the README acknowledgements now include the Linux DO community.
 - **2.7.7**: settings are regrouped into Jailbreak and Attachments — unrestricted mode, prompt presets, auto jailbreak, obfuscation, AutoTune, anti-retraction, skip safety check and continue-after-refusal now live on Jailbreak, and attachment poisoning moves under Attachments; DeepChat memory-update notices are ported (a toast shows what was written, switchable under Settings → Memory); avatar upload opens a circular crop dialog (drag / zoom, dimmed outside the circle, 384×384 output); inside the APK the composer paperclip becomes a + tray for camera / photos / files, and the camera opens the system camera app; the mobile sidebar becomes a DeepChat-style swipe drawer, with a slide-in animation on desktop;
 - **2.7.6**: NanoVM gains single-file import for users and the agent — write any file from this device or the workspace straight into the VM without base64 shell commands, with automatic disk growth; new `nanovm_import` tool; PyBot toolchain (pure-Python rule chatbot) installs offline from a bundled snapshot and supports an interactive `pybot -i` chat with `/reset` and `/exit`; known limits now 80.
 - **2.7.5**: merges upstream 0.1.3 (resize oversized Files API images before reuse); local models can extract long-term memories (with a selectable extraction model), borrow a server-side search pre-pass, read text attachments and are restricted to Chat mode; local thinking merges into the composer’s Deep thinking control; ports Remember’s characters, My profile, compression threshold and account/usage overview; the local model settings icon becomes a chip; on mobile, auto-jailbreak and input perturbation keep their text labels instead of collapsing into circles; system prompts and chain-of-thought gain multiple named presets with create / clone / rename / delete and one-click switching; known limits now 78.

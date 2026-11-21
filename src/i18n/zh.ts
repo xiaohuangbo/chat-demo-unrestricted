@@ -594,7 +594,7 @@ export const zh = {
   dailyCostLimitToast: '今日费用 {used} / {limit}，已达上限',
   settingsModel: '当前模型',
   settingsModelDescription:
-    '在输入框工具行最左侧切换；内置 DeepSeek Flash / V4 Pro，也可从云端获取模型列表。',
+    '在输入框工具行最左侧切换；内置 DeepSeek Flash / V4 Pro，也可从云端获取模型列表。V4 Pro 不支持服务端联网搜索、链接阅读、联网标题与图片输入，需要这些能力请使用 Flash。',
   settingsStreamOutput: '流式输出',
   settingsStreamOutputDescription:
     '开启后逐字显示回复；关闭后等完整回复生成完再一次性显示。关闭不影响防撤回对最终内容的保留。',
@@ -727,6 +727,8 @@ export const zh = {
   thinkingSwitch: '深度思考',
   deactivatedSearchTooltip: '按需搜索网页',
   search: '智能搜索',
+  serverToolsUnsupported:
+    'DeepSeek V4 Pro 不支持服务端联网搜索、链接阅读与联网标题生成；需要联网请切换到 DeepSeek Flash。',
   uploadFile: '上传文件',
   chatInputStopButtonTooltip: '停止生成',
   uploadMaxMBSize: '单个文件大小超过限制（{size}MB），请调整后重试',
@@ -1849,6 +1851,11 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV278Title: 'v2.7.8 · 2026-11',
+  changelogV278V4Pro:
+    '修复 DeepSeek V4 Pro 请求：不再下发服务端联网工具与联网标题，latest_reminder 折进 system，智能搜索开关提示改用 Flash；新会话用首问自动生成标题，长期记忆与用量统计照常工作',
+  changelogV278Credit: 'README 鸣谢新增 Linux DO 社区（https://linux.do/）',
+  changelogV278Apk: '同步构建 2.7.8 APK（versionCode 278），使用 xiaohuangbo.jks 签名',
   changelogV277Title: 'v2.7.7 · 2026-11',
   changelogV277Settings:
     '设置重新分组：「破甲」页集中解除限制模式、提示词预设、自动越狱、扰动、自动调优，以及防撤回 / 跳过安全审核 / 拒绝后继续生成；「附件投毒」并入「附件」页，不再单独占一个导航入口',
