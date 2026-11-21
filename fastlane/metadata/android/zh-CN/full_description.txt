@@ -1,0 +1,25 @@
+DeepSeek Unrestricted Chat Harness 是官方 DeepSeek 聊天 Demo 的非官方分支，与 DeepSeek 官方无隶属或背书关系。
+
+越狱与提示词
+内置解除限制模式、系统提示词预设、每轮注入、可编辑回复，以及采样、思维链和上下文参数。关键词拒答规则可以在本地直接拒绝，不发出 API 请求。提示词实验台把多种实验性提示词引擎、变体竞速和 EasyJailbreak 桥接集中在一起。
+
+工具与工作区
+本地工作区支持任意格式导入导出，文件保存在浏览器或 OPFS 中；模型可以使用文件、网页抓取、剪贴板、通知、天气和可视化工具。四种聊天模式决定可用工具和 Agent 轮数上限。
+
+NanoVM Slim
+内置 WASM Shell，提供 BusyBox 风格命令、让本地 Node / Python 服务互通的虚拟网络，以及按需安装的 Python、Node、Lua、SQLite、esbuild、TypeScript、Sass、Terser、Prettier、make 和 Git 工具链。PyBot 是约 64 万行纯 Python 规则聊天机器人，不带模型权重，从随包快照离线安装。
+
+WebVM（可选）
+第二个终端通过 CheerpX 运行真正的 x86 Debian 10，包含 bash、gcc、g++、Python 3、Node.js、Ruby、Lua、make、git 和 vim。运行时和磁盘镜像来自厂商服务器，只在打开 WebVM 时加载；其专有运行时也是本应用带有 NonFreeNet 标记的原因。WebVM 需要跨源隔离，适合桌面浏览器或 Chrome，Android WebView 壳内不可用。
+
+本地模型、角色与统计
+在支持 WebGPU 的浏览器里运行 WebLLM 模型，或连接自建的 MLC-LLM 接口。应用还包含角色卡、长期记忆、压缩阈值、API 余额查询、用量账本和上下文占比。
+
+Android
+APK 是一个原生 WebView 壳：本地回环 HTTP 源、系统文件选择器、拍照、麦克风权限、应用内更新检查，以及 NanoVM 的本地代理。支持 Android 7.0 及以上。由于 WebView 不提供跨源隔离，WebVM 在 APK 内不可用。
+
+隐私
+API Key、对话和工作区都留在设备上；没有中转服务器、分析或遥测。请求只发往你配置的 API 地址，默认是 DeepSeek API。需要自备 API Key。
+
+许可证
+根项目为 MIT；越狱提示词引擎为 AGPL-3.0-only；随包附带的 EasyJailbreak 为 GPL-3.0；PyBot 快照为 Apache-2.0。合并后的 APK 以 AGPL-3.0-only 分发。源码和问题跟踪器见本页链接。

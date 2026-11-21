@@ -1,0 +1,1 @@
+2.7.8 fixes DeepSeek V4 Pro by omitting Anthropic server-tool, title and latest_reminder fields it does not support; server search is disabled for V4 Pro and future models without server features, with a local title fallback.

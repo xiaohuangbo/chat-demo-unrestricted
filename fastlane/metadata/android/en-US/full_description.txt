@@ -1,0 +1,25 @@
+DeepSeek Unrestricted Chat Harness is an unofficial fork of the official DeepSeek chat demo. It is not affiliated with or endorsed by DeepSeek.
+
+UNRESTRICTED CHAT
+Switch on unrestricted mode, choose a system-prompt preset, inject instructions per round, edit any reply, and adjust sampling, chain-of-thought and context settings. A local keyword rule can refuse a prompt without sending it to the API. The prompt lab keeps the experimental prompt engines, variant races and an EasyJailbreak bridge in one place.
+
+TOOLS AND WORKSPACE
+A local workspace imports and exports any file, stores it in the browser or OPFS, and gives the model file, page-fetch, clipboard, notification, weather and visualization tools. Chat modes control which tools and how many agent rounds are available.
+
+NANOVM SLIM
+A WASM shell with BusyBox-style commands, a virtual network for local Node and Python services, and on-demand Python, Node, Lua, SQLite, esbuild, TypeScript, Sass, Terser, Prettier, make and Git toolchains. PyBot, a pure-Python rule chatbot with no model weights, installs offline from a bundled snapshot.
+
+WEBVM (OPTIONAL)
+A second terminal runs a real x86 Debian 10 with bash, gcc, g++, Python 3, Node.js, Ruby, Lua, make, git and vim through CheerpX. The runtime and disk image come from the vendor's servers and are loaded only when WebVM is opened. Its proprietary runtime is why this app carries the NonFreeNet label. WebVM needs cross-origin isolation, so it works in a desktop browser or Chrome but not inside the Android WebView shell.
+
+LOCAL MODELS, CHARACTERS AND STATS
+Run WebLLM models in a WebGPU browser, or connect to a self-hosted MLC-LLM endpoint. Character cards, long-term memory, a compression threshold, an API balance check, a usage ledger and a context breakdown are included.
+
+ANDROID
+The APK is a small native WebView shell with a loopback HTTP origin, the system file picker, camera capture, microphone permission, an in-app update check and a local proxy for NanoVM. It requires Android 7.0 or newer. WebVM is browser-only on Android because WebView does not provide cross-origin isolation.
+
+PRIVACY
+Your API key, conversations and workspace stay on the device. There is no relay, analytics or telemetry. Requests go to the API origin you configure, by default the DeepSeek API. You need your own API key.
+
+LICENSE
+The root project is MIT. The unrestricted prompt engines are AGPL-3.0-only, the bundled EasyJailbreak sources are GPL-3.0, and the PyBot snapshot is Apache-2.0. The combined APK is distributed under AGPL-3.0-only. Source code and issue tracker are linked from this listing.

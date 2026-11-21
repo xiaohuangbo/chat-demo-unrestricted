@@ -1,0 +1,1 @@
+2.7.8 修复 DeepSeek V4 Pro：不再发送其不支持的 Anthropic 服务端工具、标题和 latest_reminder 字段；V4 Pro 下禁用服务端联网搜索，标题改用本地回退。
