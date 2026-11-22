@@ -70,7 +70,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：`deepseek-unrestricted-2.7.9.apk`（36 MB，versionCode 279，
-SHA-256 `30cb9cc47d10ac7e88c04ce09f69801c3935f6c3048287f46fe7b8c0c120624d`），详情见 [android/README.md](android/README.md)。
+SHA-256 `05a7dabee9f6861098145896a5cda726152ece7f0c2bf69f71d85190dd9abad8`），详情见 [android/README.md](android/README.md)。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性

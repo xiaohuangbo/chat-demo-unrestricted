@@ -72,7 +72,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.9.apk` (36 MB, versionCode 279,
-SHA-256 `30cb9cc47d10ac7e88c04ce09f69801c3935f6c3048287f46fe7b8c0c120624d`) — see [android/README.md](android/README.md).
+SHA-256 `05a7dabee9f6861098145896a5cda726152ece7f0c2bf69f71d85190dd9abad8`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
