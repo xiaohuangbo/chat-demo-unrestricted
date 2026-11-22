@@ -15,7 +15,7 @@
 `android/deepseek-unrestricted-2.7.9.apk`（本地构建产物，已加入 `.gitignore`，作为 Release 资产上传），versionCode 279，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`2ab40b356be4888fbf7b3a5f84a8ed8d5b1617370f06ca90ab190bde9ddaa201`（112 MB）。
+SHA-256：`3690ce386ac26c7483b1a27d65039d07f7025c386fe9a07208d0ef12b38023c4`（112 MB）。
 
 ## 上传 Release
 
