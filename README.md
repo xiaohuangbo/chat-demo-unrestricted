@@ -72,7 +72,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.9.apk` (105 MB, versionCode 279,
-SHA-256 `356910c613db67e0b053d4dd56118b067db11df942de83545e18a009742dab58`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+SHA-256 `fa88eb0de8efa5fdcd0cbce7d87f751157e132380aa8b6f40c118c231bca6b78`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility

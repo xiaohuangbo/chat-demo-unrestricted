@@ -48,16 +48,16 @@ Unkernel 默认在主线程运行，不需要跨源隔离；多 CPU 需要跨源
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、拍照（系统相机 + content:// 回传）、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.9 / 279），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 35.0.1+（34.0.0 的 d8 在 JDK 21 下可能崩溃）与 JDK 21/17。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.9 / 279），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
-  也可以手动执行：
+  也可以直接运行 `android/build-apk.sh`（默认交互式，询问版本、签名文件、输出路径、是否构建 Web / 安装）：
   ```sh
   export ANDROID_HOME=$HOME/android-sdk
-  export JAVA_HOME=/path/to/jdk-17
-  pnpm build
-  KS_PASS=... KEY_PASS=... ./android/build-apk.sh
+  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+  ./android/build-apk.sh
+  # 非交互：KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
 - APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 279；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。

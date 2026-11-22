@@ -15,7 +15,7 @@
 `android/deepseek-unrestricted-2.7.9.apk`（本地构建产物，已加入 `.gitignore`，作为 Release 资产上传），versionCode 279，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`356910c613db67e0b053d4dd56118b067db11df942de83545e18a009742dab58`（105 MB）。
+SHA-256：`fa88eb0de8efa5fdcd0cbce7d87f751157e132380aa8b6f40c118c231bca6b78`（105 MB）。
 
 ## 上传 Release
 
@@ -37,18 +37,21 @@ KS_PASS=<keystore-password> ./构建APK.sh
 
 手动构建需要：
 
-- Android SDK platform 34、build-tools 34.0.0；
-- JDK 17（JDK 27 下 d8 8.2 会内部崩溃）；
-- 已执行 `pnpm build` 生成 `../dist`。
+- Android SDK platform 34、build-tools **35.0.1 或更新**（34.0.0 的 d8 在 JDK 21 下可能因匿名类的空 MethodParameters 崩溃）；
+- JDK 21（或 17；脚本会自动选 21，JDK 27 下 `-source 8` 也可能被拒绝）；
+- 已执行 `pnpm build` 生成 `../dist`，或让脚本构建。
+
+`android/build-apk.sh` 默认交互式：会依次询问版本名、版本号、签名文件、别名、口令、输出路径，以及是否先构建 Web、是否安装到设备。非交互环境用 `--yes`：
 
 ```sh
 export ANDROID_HOME=$HOME/android-sdk
-export JAVA_HOME=/path/to/jdk-17
-pnpm build
-KS_PASS=<keystore-password> KEY_PASS=<key-password> ./android/build-apk.sh
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+
+./android/build-apk.sh                  # 交互式
+KS_PASS=<keystore-password> ./android/build-apk.sh --yes
 ```
 
-签名口令通过环境变量传入，密钥库不进入仓库。脚本会执行 aapt2、javac、d8、zipalign 和 apksigner，并打印签名证书。
+常用参数：`--build-web` / `--no-build-web`、`--install`、`--version`、`--version-code`、`--keystore`、`--alias`、`--out`、`--sdk`。签名口令通过 `KS_PASS` / `KEY_PASS` 或交互输入传入，脚本用 `apksigner` 的 `env:` 方式读取，不会出现在进程命令行里。
 
 ## 后端
 

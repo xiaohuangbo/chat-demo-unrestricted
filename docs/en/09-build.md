@@ -48,16 +48,16 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, camera capture (system camera plus a content:// hand-off), microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.7.9 / 279), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 35.0.1+ (build-tools 34.0.0's d8 can crash on JDK 21 bytecode) and JDK 21/17. A one-click script at the repo root reads the `package.json` version (currently 2.7.9 / 279), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
-  The manual path still works:
+  Or run `android/build-apk.sh` directly (interactive by default: version, keystore, output, whether to build the web app or install):
   ```sh
   export ANDROID_HOME=$HOME/android-sdk
-  export JAVA_HOME=/path/to/jdk-17
-  pnpm build
-  KS_PASS=... KEY_PASS=... ./android/build-apk.sh
+  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+  ./android/build-apk.sh
+  # non-interactive: KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
 - The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 279;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.

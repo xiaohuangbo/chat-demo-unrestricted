@@ -22,6 +22,8 @@ export type UnkernelConfig = {
   allowAgent: boolean
   /** 内核内存（MiB） */
   memoryMiB: number
+  /** 数据盘大小（MiB），稀疏磁盘；扩大后重启，页面会自动扩容 ext4 */
+  dataDiskMiB: number
   /** 发行版镜像 */
   distro: UnkernelDistro
   /** 给 guest 一张网卡（Wisp 代理） */
@@ -47,6 +49,7 @@ const defaults: UnkernelConfig = {
   allowAgent: false,
   distro: 'alpine',
   memoryMiB: 256,
+  dataDiskMiB: 8192,
   network: true,
   sound: true,
   display: true,
@@ -76,6 +79,7 @@ const read = (): UnkernelConfig => {
       allowAgent: typeof source.allowAgent === 'boolean' ? source.allowAgent : defaults.allowAgent,
       distro: source.distro === 'debian' ? 'debian' : 'alpine',
       memoryMiB: clamp(source.memoryMiB ?? defaults.memoryMiB, 64, 2048),
+      dataDiskMiB: clamp(source.dataDiskMiB ?? defaults.dataDiskMiB, 4096, 32768),
       network: typeof source.network === 'boolean' ? source.network : defaults.network,
       sound: typeof source.sound === 'boolean' ? source.sound : defaults.sound,
       display: typeof source.display === 'boolean' ? source.display : defaults.display,
@@ -107,6 +111,7 @@ export const setUnkernelConfig = (patch: Partial<UnkernelConfig>) => {
   const next = { ...useUnkernelConfig.getState(), ...patch }
   next.distro = next.distro === 'debian' ? 'debian' : 'alpine'
   next.memoryMiB = clamp(next.memoryMiB, 64, 2048)
+  next.dataDiskMiB = clamp(next.dataDiskMiB, 4096, 32768)
   next.cpus = clamp(next.cpus, 1, 4)
   next.timeoutMs = clamp(next.timeoutMs, 5_000, 120_000)
   next.wispUrl = next.wispUrl.trim().slice(0, 300)
@@ -115,8 +120,12 @@ export const setUnkernelConfig = (patch: Partial<UnkernelConfig>) => {
 }
 
 export const resetUnkernelConfig = () => {
-  write({ ...defaults })
-  useUnkernelConfig.setState({ ...defaults })
+  // The data disk only grows: a reset to the 8 GiB default would make the page
+  // refuse a disk already grown past it, so keep the larger size.
+  const keepDisk = useUnkernelConfig.getState().dataDiskMiB
+  const next = { ...defaults, dataDiskMiB: Math.max(defaults.dataDiskMiB, keepDisk) }
+  write(next)
+  useUnkernelConfig.setState(next)
 }
 
 export const unkernelAgentAvailable = (): boolean => {
@@ -132,6 +141,7 @@ export const unkernelUrl = (config = unkernelConfig()): string => {
   const params = new URLSearchParams()
   params.set('distro', config.distro)
   params.set('mem', String(config.memoryMiB))
+  params.set('disk', String(config.dataDiskMiB))
   params.set('net', config.network ? '1' : '0')
   params.set('sound', config.sound ? '1' : '0')
   params.set('display', config.display ? '1' : '0')

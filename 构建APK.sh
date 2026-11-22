@@ -5,7 +5,7 @@
 #   KS_PASS=你的签名口令 ./构建APK.sh
 #
 # 可选环境变量：
-#   JDK17_HOME   JDK 17 根目录（默认自动探测 /tmp/jdk17、~/.jdks、/usr/lib/jvm）
+#   JDK_HOME     JDK 21/17 根目录（默认自动探测 /tmp/jdk21、/tmp/jdk17、~/.jdks、/usr/lib/jvm）
 #   ANDROID_HOME Android SDK（默认 ~/android-sdk）
 #   KEYSTORE     签名文件（默认 ~/桌面/xiaohuangbo.jks）
 #   KEY_ALIAS    签名别名（默认 xiaohuangbo）
@@ -30,17 +30,18 @@ ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 KEYSTORE="${KEYSTORE:-$HOME/桌面/xiaohuangbo.jks}"
 KEY_ALIAS="${KEY_ALIAS:-xiaohuangbo}"
 
-find_jdk17() {
+find_jdk() {
   local candidates=()
+  [ -n "${JDK_HOME:-}" ] && candidates+=("$JDK_HOME")
   [ -n "${JDK17_HOME:-}" ] && candidates+=("$JDK17_HOME")
   [ -n "${JAVA_HOME:-}" ] && candidates+=("$JAVA_HOME")
-  candidates+=("/tmp/jdk17")
+  candidates+=("/tmp/jdk21" "/tmp/jdk17")
   for dir in "$HOME/.jdks"/* "$HOME/.sdkman/candidates/java"/* /usr/lib/jvm/*; do
     [ -d "$dir" ] && candidates+=("$dir")
   done
   for dir in "${candidates[@]}"; do
-    [ -x "$dir/bin/java" ] || continue
-    if "$dir/bin/java" -version 2>&1 | head -n 1 | grep -q '"17\.'; then
+    [ -x "$dir/bin/javac" ] || continue
+    if "$dir/bin/javac" -version 2>&1 | head -n 1 | grep -Eq 'javac (17|21)\.'; then
       printf '%s\n' "$dir"
       return 0
     fi
@@ -48,18 +49,22 @@ find_jdk17() {
   return 1
 }
 
-JAVA_HOME_FOUND="$(find_jdk17 || true)"
+JAVA_HOME_FOUND="$(find_jdk || true)"
 if [ -z "$JAVA_HOME_FOUND" ]; then
-  echo "未找到 JDK 17。请安装 JDK 17 并设置 JDK17_HOME=/path/to/jdk-17。" >&2
-  echo "示例：JDK17_HOME=/tmp/jdk17 KS_PASS=... ./构建APK.sh" >&2
+  echo "未找到 JDK 21/17。请安装 JDK 21 或 17，并设置 JDK_HOME=/path/to/jdk。" >&2
+  echo "示例：JDK_HOME=/usr/lib/jvm/java-21-openjdk KS_PASS=... ./构建APK.sh" >&2
   exit 1
 fi
 export JAVA_HOME="$JAVA_HOME_FOUND"
 export PATH="$JAVA_HOME/bin:$PATH"
 export ANDROID_HOME
 
-if [ ! -d "$ANDROID_HOME/platforms/android-34" ] || [ ! -d "$ANDROID_HOME/build-tools/34.0.0" ]; then
-  echo "Android SDK 34 / build-tools 34.0.0 不完整：$ANDROID_HOME" >&2
+if [ ! -d "$ANDROID_HOME/platforms/android-34" ]; then
+  echo "Android SDK platform 34 不完整：$ANDROID_HOME" >&2
+  exit 1
+fi
+if [ ! -d "$ANDROID_HOME/build-tools" ]; then
+  echo "Android build-tools 不完整：$ANDROID_HOME/build-tools" >&2
   exit 1
 fi
 if [ ! -f "$KEYSTORE" ]; then
@@ -95,7 +100,7 @@ echo "==> 构建 Web 资源"
 pnpm build
 
 echo "==> 构建并签名 APK"
-VERSION_NAME="$VERSION_NAME" VERSION_CODE="$VERSION_CODE" ./android/build-apk.sh
+VERSION_NAME="$VERSION_NAME" VERSION_CODE="$VERSION_CODE" ./android/build-apk.sh --yes --no-build-web
 
 OUT="android/deepseek-unrestricted-$VERSION_NAME.apk"
 if [ ! -f "$OUT" ]; then

@@ -325,6 +325,26 @@ export const UnkernelConsole = () => {
         </div>
         <div className={nanoStyles.switchRow}>
           <div className={nanoStyles.switchText}>
+            <div className={nanoStyles.switchLabel}>{t('unkernelDisk')}</div>
+            <div className={nanoStyles.hint}>{t('unkernelDiskHint')}</div>
+          </div>
+          <select
+            className={styles.number}
+            value={config.dataDiskMiB}
+            aria-label={t('unkernelDisk')}
+            onChange={(event) => setUnkernelConfig({ dataDiskMiB: Number(event.target.value) })}
+          >
+            <option value={8192} disabled={config.dataDiskMiB > 8192}>
+              {t('unkernelDisk8')}
+            </option>
+            <option value={16384} disabled={config.dataDiskMiB > 16384}>
+              {t('unkernelDisk16')}
+            </option>
+            <option value={32768}>{t('unkernelDisk32')}</option>
+          </select>
+        </div>
+        <div className={nanoStyles.switchRow}>
+          <div className={nanoStyles.switchText}>
             <div className={nanoStyles.switchLabel}>{t('unkernelTimeout')}</div>
             <div className={nanoStyles.hint}>{t('unkernelTimeoutHint')}</div>
           </div>
