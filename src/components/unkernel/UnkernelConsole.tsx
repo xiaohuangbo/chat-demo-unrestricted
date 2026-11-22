@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
+import { Modal } from '../base/Modal.js'
 import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import {
@@ -11,9 +12,11 @@ import {
 import {
   openUnkernel,
   restartUnkernel,
+  unloadUnkernel,
   useUnkernel,
   waitForUnkernelVm,
 } from '../../services/unkernel/session.js'
+import { resetUnkernelDataDisk } from '../../services/unkernel/dataDisk.js'
 import {
   downloadGuestExport,
   exportGuestPath,
@@ -26,10 +29,7 @@ import {
   type GuestImportOutcome,
 } from '../../services/unkernel/files.js'
 import { isWorkspaceEnabled } from '../../services/workspace/store.js'
-import {
-  enableCrossOriginIsolationForUnkernel,
-  readCoiState,
-} from '../../services/webvm/coi.js'
+import { enableCrossOriginIsolationForUnkernel, readCoiState } from '../../services/webvm/coi.js'
 import { UNKERNEL_TOOLS } from '../../services/agent/unkernelTools.js'
 import nanoStyles from '../nanovm/NanoVM.module.css'
 import styles from './UnkernelConsole.module.css'
@@ -78,6 +78,8 @@ export const UnkernelConsole = () => {
   const [importResults, setImportResults] = useState<GuestImportOutcome[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [coiState] = useState(() => readCoiState())
+  const [resetDiskOpen, setResetDiskOpen] = useState(false)
+  const [resetDiskBusy, setResetDiskBusy] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -96,6 +98,30 @@ export const UnkernelConsole = () => {
     }
     setWispInvalid(false)
     setUnkernelConfig({ wispUrl: value })
+  }
+
+  const resetDisk = async () => {
+    if (resetDiskBusy) {
+      return
+    }
+    setResetDiskBusy(true)
+    try {
+      // 先卸载 iframe，让页面释放 IndexedDB 连接和 Web Lock；再删数据库。
+      unloadUnkernel()
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      await resetUnkernelDataDisk()
+      restartUnkernel()
+      setResetDiskOpen(false)
+      showToast({ key: 'unkernelDiskResetDone' })
+    } catch (reason) {
+      showToast({
+        key: 'unkernelDiskResetFailed',
+        type: 'error',
+        params: { reason: reason instanceof Error ? reason.message : String(reason) },
+      })
+    } finally {
+      setResetDiskBusy(false)
+    }
   }
 
   const chooseCpus = (next: number) => {
@@ -160,7 +186,9 @@ export const UnkernelConsole = () => {
       const outcomes = await importGuestFiles(files, target, {
         overwrite,
         onProgress: (name, _index, done, total) =>
-          setImportProgress(total > 0 ? `${name} · ${Math.min(100, Math.round((done / total) * 100))}%` : name),
+          setImportProgress(
+            total > 0 ? `${name} · ${Math.min(100, Math.round((done / total) * 100))}%` : name
+          ),
       })
       setImportResults(outcomes)
       const done = outcomes.filter((item) => item.ok)
@@ -318,9 +346,7 @@ export const UnkernelConsole = () => {
             onChange={(event) => chooseCpus(Number(event.target.value))}
           />
           <div className={nanoStyles.hint}>
-            {coiState.state === 'isolated'
-              ? t('unkernelCpuHint')
-              : t('unkernelCpuRequiresCoi')}
+            {coiState.state === 'isolated' ? t('unkernelCpuHint') : t('unkernelCpuRequiresCoi')}
           </div>
         </div>
         <div className={nanoStyles.switchRow}>
@@ -342,6 +368,15 @@ export const UnkernelConsole = () => {
             </option>
             <option value={32768}>{t('unkernelDisk32')}</option>
           </select>
+        </div>
+        <div className={nanoStyles.switchRow}>
+          <div className={nanoStyles.switchText}>
+            <div className={nanoStyles.switchLabel}>{t('unkernelDiskReset')}</div>
+            <div className={nanoStyles.hint}>{t('unkernelDiskResetHint')}</div>
+          </div>
+          <Button variant="dangerOutlined" size="m" onClick={() => setResetDiskOpen(true)}>
+            {t('unkernelDiskResetAction')}
+          </Button>
         </div>
         <div className={nanoStyles.switchRow}>
           <div className={nanoStyles.switchText}>
@@ -627,7 +662,42 @@ export const UnkernelConsole = () => {
           </Button>
         </div>
         <div className={styles.note}>{t('unkernelRuntimeNote')}</div>
+        <div className={styles.note}>{t('unkernelDshGoHint')}</div>
       </div>
+
+      {resetDiskOpen ? (
+        <Modal
+          title={t('unkernelDiskResetTitle')}
+          closable={!resetDiskBusy}
+          onClose={() => {
+            if (!resetDiskBusy) {
+              setResetDiskOpen(false)
+            }
+          }}
+          footer={
+            <>
+              <Button
+                variant="outlined"
+                size="m"
+                disabled={resetDiskBusy}
+                onClick={() => setResetDiskOpen(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                size="m"
+                disabled={resetDiskBusy}
+                onClick={() => void resetDisk()}
+              >
+                {t(resetDiskBusy ? 'unkernelDiskResetting' : 'unkernelDiskResetConfirm')}
+              </Button>
+            </>
+          }
+        >
+          {t('unkernelDiskResetBody')}
+        </Modal>
+      ) : null}
     </div>
   )
 }

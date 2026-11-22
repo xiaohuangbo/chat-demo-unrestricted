@@ -1376,10 +1376,12 @@ export const zh = {
   unkernelEnable: '启用 Unkernel Linux',
   unkernelEnableHint: '关闭后侧栏入口隐藏，模型也看不到 unkernel 工具。',
   unkernelAllowAgent: '允许模型操作 Unkernel',
-  unkernelAllowAgentHint: '开启后模型才能使用 unkernel_shell、读写文件、工作区互传等 unkernel_* 工具；写操作仍会先确认。',
+  unkernelAllowAgentHint:
+    '开启后模型才能使用 unkernel_shell、读写文件、工作区互传等 unkernel_* 工具；写操作仍会先确认。',
   unkernelResources: '资源',
   unkernelMemory: '内核内存',
-  unkernelMemoryHint: '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian 默认 2 GiB（DSH 运行时解压需要），改完会重启虚拟机。',
+  unkernelMemoryHint:
+    '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian 默认 2 GiB（apt / Node 等程序更吃内存），改完会重启虚拟机。',
   unkernelTimeout: '命令超时',
   unkernelTimeoutHint: 'Agent 单条命令最长执行时间（秒）。',
   unkernelDevices: '设备',
@@ -1395,7 +1397,8 @@ export const zh = {
   unkernelWorker: '在 Worker 中运行',
   unkernelWorkerHint: '需要 crossOriginIsolated；不满足时会自动回退到主线程。',
   unkernelWisp: 'Wisp 地址',
-  unkernelWispHint: '留空使用公共 Wisp（anura.pro / mercurywork.shop）；想走自己的代理时填 wss:// 地址。',
+  unkernelWispHint:
+    '留空使用公共 Wisp（anura.pro / mercurywork.shop）；想走自己的代理时填 wss:// 地址。',
   unkernelWispInvalid: 'Wisp 地址必须以 ws:// 或 wss:// 开头',
   unkernelAgentTools: 'Agent 工具',
   unkernelAgentToolsHint: '工具是否可用由上面的「允许模型操作 Unkernel」控制；每条命令仍会先确认。',
@@ -1412,17 +1415,33 @@ export const zh = {
   unkernelRuntimeNote:
     '需要支持 JSPI 的浏览器（Chrome / Edge 137+、Firefox 153+、Safari 27+）。Android WebView 若不支持 JSPI 会显示启动错误。当前打包镜像：Alpine 3.24。',
   unkernelDistro: '发行版',
-  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序（DSH 便携包需要 2 GiB 内存）。切换后重启虚拟机生效。',
+  unkernelDistroHint:
+    'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node 等程序。切换后重启虚拟机生效。',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPU 数量',
   unkernelCpuHint: '多 CPU 会启动 SMP 内核，每个 CPU 在独立 Web Worker 中，重启虚拟机生效。',
-  unkernelCpuRequiresCoi: '多 CPU 需要跨源隔离；拖动滑块会按提示开启并刷新页面。Android WebView 不支持跨源隔离，只能用 1 个 CPU。',
+  unkernelCpuRequiresCoi:
+    '多 CPU 需要跨源隔离；拖动滑块会按提示开启并刷新页面。Android WebView 不支持跨源隔离，只能用 1 个 CPU。',
   unkernelDisk: '数据盘',
-  unkernelDiskHint: '稀疏磁盘，选大不会立即占用；扩大后重启虚拟机，页面会自动安装 resize2fs 并扩容文件系统（首次约 30 秒，需要网络，只增不减）。',
+  unkernelDiskHint:
+    '稀疏磁盘，选大不会立即占用；扩大后重启虚拟机，页面会自动安装 resize2fs 并扩容文件系统（首次约 30 秒，需要网络，只增不减）。',
   unkernelDisk8: '8 GiB（默认）',
   unkernelDisk16: '16 GiB',
   unkernelDisk32: '32 GiB',
+  unkernelDiskReset: '重置数据盘',
+  unkernelDiskResetHint:
+    '清空 /data 和保存的虚拟机快照，下次启动从模板重新创建；磁盘大小设置保留。',
+  unkernelDiskResetAction: '重置…',
+  unkernelDiskResetTitle: '重置数据盘？',
+  unkernelDiskResetBody:
+    '/data 里的所有文件、已安装的软件和保存的会话快照都会被删除，无法恢复。下次启动会从模板创建一个空磁盘。',
+  unkernelDiskResetConfirm: '确认重置',
+  unkernelDiskResetting: '正在重置…',
+  unkernelDiskResetDone: '数据盘已重置，正在启动一台干净的虚拟机',
+  unkernelDiskResetFailed: '重置数据盘失败：{reason}',
+  unkernelDshGoHint:
+    '虚拟机里的「演示」→ DSH go 可以启动轻量的 DeepSeek Harness（24 MiB 静态二进制、中文 REPL）；首次运行在终端输入 API Key，会保存在 guest 的 ~/.dsh-go/api-key。',
   unkernelCoiEnabling: '正在开启跨源隔离，页面会刷新一次…',
   unkernelCoiUnsupported: '当前环境不支持跨源隔离（Android WebView 不支持），多 CPU 不可用',
   unkernelCoiFailed: '开启跨源隔离失败：{reason}',
@@ -1441,7 +1460,8 @@ export const zh = {
   unkernelImportOverwrite: '覆盖同名文件',
   unkernelImportOverwriteHint: '关闭时遇到同名文件会跳过并提示，不会覆盖。',
   unkernelFileLimit: '单次导入上限 {import}，单次导出上限 {export}。',
-  unkernelImportLargeHint: '导入 600 MB 的 DSH 包等大文件时，目标目录请选 /home/user；/mnt/workspace 受工作区容量限制。',
+  unkernelImportLargeHint:
+    '导入 600 MB 的 DSH 包等大文件时，目标目录请选 /home/user；/mnt/workspace 受工作区容量限制。',
   unkernelImportDone: '已导入 {count} 个文件（{size}）',
   unkernelImportFailed: '导入失败：{reason}',
   unkernelExportPath: '从 guest 导出',
@@ -1951,7 +1971,7 @@ export const zh = {
   changelogV279Webvm:
     '修复手机网页端 WebVM 打开输入法准备输入时页面与终端漂移：xterm 隐藏输入框改用 preventScroll 聚焦，并在软键盘弹出后把页面滚回原点',
   changelogV279Unkernel:
-    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24 / Debian 13.7、真实内核、apk / apt、bash、SMP 多 CPU、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）；新增 DSH + dsh-TUI 本地包 / GitHub 下载安装入口，NanoVM / WebVM 增加 fastfetch',
+    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24 / Debian 13.7、真实内核、apk / apt、bash、SMP 多 CPU、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）；新增 DSH go（24 MiB 静态 Go 二进制、中文 REPL）启动器演示与数据盘重置，NanoVM / WebVM 增加 fastfetch',
   changelogV279Settings:
     '设置新增「Unkernel Linux」独立一栏（中文），可配置内存、超时、联网、声音、显示、持久磁盘、Worker 与 Wisp；新增文件导入 / 下载 / 保存到工作区与重启虚拟机；页面界面全面汉化，桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel；侧栏增加入口，README 与许可证鸣谢补充 unkernel',
   changelogV279Apk: '同步构建 2.7.9 APK（versionCode 279），使用 xiaohuangbo.jks 签名',

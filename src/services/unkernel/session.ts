@@ -102,6 +102,21 @@ export const openUnkernel = () => {
 export const closeUnkernel = () => useUnkernel.setState({ open: false })
 
 /**
+ * 卸载 iframe（不自动重新挂载）：重置数据盘前先让页面释放 IndexedDB
+ * 连接和 Web Lock。之后调用 restartUnkernel 再启动一台干净的虚拟机。
+ */
+export const unloadUnkernel = () => {
+  detachUnkernelFrame()
+  useUnkernel.setState({
+    mounted: false,
+    open: false,
+    status: 'idle',
+    error: null,
+    workspaceMounted: false,
+  })
+}
+
+/**
  * 重启虚拟机：换一个 iframe key，页面从头加载并重新 boot。
  * 工作区挂载会重新建立；设置页的「重启虚拟机」和 Agent 工具都走这里。
  */

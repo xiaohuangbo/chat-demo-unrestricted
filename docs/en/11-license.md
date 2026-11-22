@@ -17,6 +17,7 @@
 - **WebVM / CheerpX**: the x86 virtualisation runtime and the default Debian image come from [Leaning Technologies](https://cheerpx.io). CheerpX is proprietary software, free for personal and open-source projects, and requires a commercial licence otherwise; this repository only calls the public runtime on their CDN and does not redistribute the engine files.
 - **xterm.js**: the terminal component, MIT licensed, see [@xterm/xterm](https://github.com/xtermjs/xterm.js).
 - **unkernel**: real Linux compiled to WebAssembly, by Pooya Parsa and contributors, MIT / GPL-2.0-only; the full upstream page, UP/SMP kernel and the Alpine / Debian images are bundled under `public/unkernel/` (see `LICENSE-unkernel-*` there).
+- **go-deepseek / DSH go**: the pure-Go DeepSeek Harness SDK and terminal client, Copyright (c) 2026 Robomotion, MIT; its 24 MiB aarch64 binary lives in `public/unkernel/demos/dsh-go/` with `LICENSE` and `NOTICE` (the embedded DeepSeek Harness is MIT as well).
 - The engines under `src/services/unrestricted/` (input perturbation, AutoTune, STM, race scoring, GODMODE prompt) are ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3) and licensed [AGPL-3.0](../../src/services/unrestricted/COPYING-AGPL-3.0); that directory keeps its own license, separate from the MIT-licensed rest of the repo.
 
 ---

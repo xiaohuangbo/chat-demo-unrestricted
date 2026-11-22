@@ -1485,33 +1485,38 @@ export const en = {
   unkernelSettingsHint:
     'A real Linux 7.x kernel compiled to WebAssembly: Alpine or Debian with bash, apt / apk, networking, sound, a framebuffer and a persistent disk, running in the browser. The first open loads about 10 MB of kernel plus a 4 MB Alpine (or 70 MB Debian) image.',
   unkernelEnable: 'Enable Unkernel Linux',
-  unkernelEnableHint: 'When off, the sidebar entry is hidden and the model cannot see the unkernel tools.',
+  unkernelEnableHint:
+    'When off, the sidebar entry is hidden and the model cannot see the unkernel tools.',
   unkernelAllowAgent: 'Let the model operate Unkernel',
   unkernelAllowAgentHint:
     'The model only sees the unkernel_* tools (shell, file reads and writes, workspace transfer and more) when this is on. Writes still ask for confirmation.',
   unkernelResources: 'Resources',
   unkernelMemory: 'Kernel memory',
   unkernelMemoryHint:
-    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian defaults to 2 GiB for the DSH runtime unpack. Changing it restarts the VM.',
+    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian defaults to 2 GiB because apt / Node programs need more. Changing it restarts the VM.',
   unkernelTimeout: 'Command timeout',
   unkernelTimeoutHint: 'Longest an Agent command may run, in seconds.',
   unkernelDevices: 'Devices',
   unkernelNetwork: 'Network',
-  unkernelNetworkHint: 'Gives the guest a NIC through a Wisp proxy; apk and curl work inside Alpine.',
+  unkernelNetworkHint:
+    'Gives the guest a NIC through a Wisp proxy; apk and curl work inside Alpine.',
   unkernelSound: 'Sound',
   unkernelSoundHint: 'Gives the guest ALSA / OSS; audio plays through the browser Web Audio API.',
   unkernelDisplay: 'Display',
-  unkernelDisplayHint: 'Gives the guest a framebuffer, keyboard and pointer for graphical programs.',
+  unkernelDisplayHint:
+    'Gives the guest a framebuffer, keyboard and pointer for graphical programs.',
   unkernelPersistentData: 'Persistent disk',
   unkernelPersistentDataHint: 'Keeps Alpine /data in IndexedDB so files survive a reload.',
   unkernelAdvanced: 'Advanced',
   unkernelWorker: 'Run in a Web Worker',
   unkernelWorkerHint: 'Needs crossOriginIsolated; falls back to the main thread when unavailable.',
   unkernelWisp: 'Wisp endpoint',
-  unkernelWispHint: 'Leave empty to use the public Wisp servers (anura.pro / mercurywork.shop); set your own wss:// server to use your proxy.',
+  unkernelWispHint:
+    'Leave empty to use the public Wisp servers (anura.pro / mercurywork.shop); set your own wss:// server to use your proxy.',
   unkernelWispInvalid: 'The Wisp endpoint must start with ws:// or wss://',
   unkernelAgentTools: 'Agent tools',
-  unkernelAgentToolsHint: 'Availability is controlled by “Let the model operate Unkernel” above; every command still asks for confirmation.',
+  unkernelAgentToolsHint:
+    'Availability is controlled by “Let the model operate Unkernel” above; every command still asks for confirmation.',
   unkernelToolOn: 'available',
   unkernelToolOff: 'off',
   unkernelStatusTitle: 'Status',
@@ -1525,40 +1530,63 @@ export const en = {
   unkernelRuntimeNote:
     'Requires JSPI (Chrome / Edge 137+, Firefox 153+, Safari 27+). Android WebView shows a boot error if it lacks JSPI. Bundled image: Alpine 3.24.',
   unkernelDistro: 'Distribution',
-  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node and dsh-TUI (the DSH portable needs 2 GiB of memory). Restart the VM after switching.',
+  unkernelDistroHint:
+    'Alpine is small and fast; Debian ships glibc / apt for Docker and Node. Restart the VM after switching.',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPUs',
-  unkernelCpuHint: 'More CPUs boot the SMP kernel with one Web Worker per CPU; restart the VM to apply.',
-  unkernelCpuRequiresCoi: 'Multiple CPUs need cross-origin isolation; dragging the slider enables it and reloads the page. Android WebView does not support it, so one CPU only.',
+  unkernelCpuHint:
+    'More CPUs boot the SMP kernel with one Web Worker per CPU; restart the VM to apply.',
+  unkernelCpuRequiresCoi:
+    'Multiple CPUs need cross-origin isolation; dragging the slider enables it and reloads the page. Android WebView does not support it, so one CPU only.',
   unkernelDisk: 'Data disk',
-  unkernelDiskHint: 'A sparse disk, so a larger size costs nothing up front. Restart the VM after growing it; the page installs resize2fs and grows ext4 automatically (about 30 s the first time, needs network, grow only).',
+  unkernelDiskHint:
+    'A sparse disk, so a larger size costs nothing up front. Restart the VM after growing it; the page installs resize2fs and grows ext4 automatically (about 30 s the first time, needs network, grow only).',
   unkernelDisk8: '8 GiB (default)',
   unkernelDisk16: '16 GiB',
   unkernelDisk32: '32 GiB',
+  unkernelDiskReset: 'Reset data disk',
+  unkernelDiskResetHint:
+    'Erase /data and the saved VM snapshots; the next boot recreates the disk from the template. The size setting is kept.',
+  unkernelDiskResetAction: 'Reset…',
+  unkernelDiskResetTitle: 'Reset the data disk?',
+  unkernelDiskResetBody:
+    'Everything in /data, including installed packages and saved VM snapshots, is deleted permanently. The next boot creates an empty disk from the template.',
+  unkernelDiskResetConfirm: 'Reset disk',
+  unkernelDiskResetting: 'Resetting…',
+  unkernelDiskResetDone: 'Data disk reset; starting a clean VM',
+  unkernelDiskResetFailed: 'Could not reset the data disk: {reason}',
+  unkernelDshGoHint:
+    'The page’s Demos → DSH go starts a lightweight DeepSeek Harness inside the VM (a 24 MiB static binary with a Chinese REPL). Its first run asks for an API key in the terminal and saves it to ~/.dsh-go/api-key in the guest.',
   unkernelCoiEnabling: 'Enabling cross-origin isolation; the page reloads once…',
-  unkernelCoiUnsupported: 'Cross-origin isolation is unavailable here (Android WebView), so multiple CPUs cannot run',
+  unkernelCoiUnsupported:
+    'Cross-origin isolation is unavailable here (Android WebView), so multiple CPUs cannot run',
   unkernelCoiFailed: 'Could not enable cross-origin isolation: {reason}',
   pullUnkernelHint: 'Keep pulling to open Unkernel Linux',
   pullUnkernelRelease: 'Release to open Unkernel Linux',
   unkernelFiles: 'Files',
   unkernelImportTarget: 'Import into guest directory',
-  unkernelImportTargetHint: 'An absolute path; /mnt/workspace by default, the same files as the chat workspace.',
+  unkernelImportTargetHint:
+    'An absolute path; /mnt/workspace by default, the same files as the chat workspace.',
   unkernelWorkspacePath: 'Workspace',
   unkernelHomePath: 'Home',
   unkernelTmpPath: 'Temp',
-  unkernelImportHint: 'Pick several files or drop them here; binaries are written as-is. The first import starts Linux.',
+  unkernelImportHint:
+    'Pick several files or drop them here; binaries are written as-is. The first import starts Linux.',
   unkernelDropFiles: 'Drop files here, or click to choose',
   unkernelChooseFiles: 'Choose files',
   unkernelImportingFile: 'Importing {name}…',
   unkernelImportOverwrite: 'Overwrite same name',
-  unkernelImportOverwriteHint: 'When off, existing files are skipped with a note instead of overwritten.',
+  unkernelImportOverwriteHint:
+    'When off, existing files are skipped with a note instead of overwritten.',
   unkernelFileLimit: 'Up to {import} per import and {export} per export.',
-  unkernelImportLargeHint: 'For large files such as the 600 MB DSH archive, import into /home/user; /mnt/workspace is limited by the workspace quota.',
+  unkernelImportLargeHint:
+    'For large files such as the 600 MB DSH archive, import into /home/user; /mnt/workspace is limited by the workspace quota.',
   unkernelImportDone: 'Imported {count} file(s) ({size})',
   unkernelImportFailed: 'Import failed: {reason}',
   unkernelExportPath: 'Export from guest',
-  unkernelExportHint: 'Files download as-is; directories become a .tar.gz. You can also save them to the chat workspace.',
+  unkernelExportHint:
+    'Files download as-is; directories become a .tar.gz. You can also save them to the chat workspace.',
   unkernelExportButton: 'Download',
   unkernelExporting: 'Exporting…',
   unkernelExportWorkspace: 'Save to workspace',
@@ -2095,7 +2123,7 @@ export const en = {
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',
   changelogV279Unkernel:
-    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH + dsh-TUI installer (local archive or GitHub) is added, and NanoVM / WebVM gain `fastfetch`',
+    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH go demo (a 24 MiB static Go binary with a Chinese REPL) and data-disk reset are added, and NanoVM / WebVM gain `fastfetch`',
   changelogV279Settings:
     'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel; sidebar entry, README and license credits updated',
   changelogV279Apk: 'Builds the 2.7.9 APK (versionCode 279), signed with xiaohuangbo.jks',

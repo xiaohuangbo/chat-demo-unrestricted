@@ -42,9 +42,13 @@ Unkernel does not need cross-origin isolation in the default main-thread mode; m
 
 When rebuilding `public/unkernel/`, keep the vendored `dropLegacyScope` check: Unkernel's boot drops the legacy root-scope service worker, and the page must only unregister `/vm-sw.js`, never the host's `coi-sw.js`; otherwise the multi-CPU iframe reload loses COEP and Firefox blocks it with `NS_ERROR_DOM_COEP_FAILED`. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
 
+DSH go in the launcher is built from `cmd/dsh-go` in the `go-deepseek` checkout (a 24 MiB static aarch64 Go binary) and checked in at `public/unkernel/demos/dsh-go/dsh-go-linux-arm64`; `web/src/demos/dsh.ts` pins its SHA-256 and byte size, so a rebuild must update both or the page refuses to push the file into the guest.
+
+The built page assumes it is deployed at the origin root: distro images point at `/distros/`, the preview Service Worker registers `/vm-sw.js` / `/vm/`, and the manifest scope is `/`. The app serves the page under `/unkernel/`, so after syncing into `public/unkernel/` run `pnpm patch:unkernel` (or let `pnpm build` do it); the script prefixes the paths and validates the distro URLs, Service Worker and manifest, so a missed rewrite cannot turn into a 404 at boot.
+
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.9.apk` (about 105 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.9.apk` (about 112 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, camera capture (system camera plus a content:// hand-off), microphone permission, the back key and external links are wired up;

@@ -691,10 +691,10 @@ The server-side tool calls (deepseek_web_search, deepseek_read_url) and the titl
 - 设置栏新增文件区：可把本机文件拖入或选择后导入 guest（默认 `/mnt/workspace`，支持二进制、覆盖开关、批量进度），可把 guest 文件下载到本机、把目录打包成 `.tar.gz`，或直接保存到聊天工作区；另有「重启虚拟机」按钮。
 - 聊天工作区通过 `src/services/workspace/store.ts` 上的 9p 适配器挂到 `/mnt/workspace`，guest 读写会双向同步。
 - Agent 工具扩展到十个：`unkernel_shell`、`unkernel_ls`、`unkernel_read_file`、`unkernel_write_file`、`unkernel_transfer`（工作区互传）、`unkernel_python`、`unkernel_info`、`unkernel_open`、`unkernel_restart`、`unkernel_status`；首次调用会打开 iframe、等待内核启动，再用 `vm.exec()` 执行，不打断交互终端。
-- 同时打包 Alpine 3.24（3.9 MiB）和 Debian 13.7（70 MiB）：设置页和页面选项都能切换，Debian 带 glibc / apt，适合 Docker、Node 和 dsh-TUI；APK 因此增至约 105 MB。
+- 同时打包 Alpine 3.24（3.9 MiB）和 Debian 13.7（70 MiB）：设置页和页面选项都能切换，Debian 带 glibc / apt，适合 Docker 和 Node；加上 DSH go 的 24 MiB 静态二进制，APK 因此增至约 112 MB。
 - 多 CPU（SMP）可在设置里选择 1–4 个；超过 1 个需要跨源隔离，桌面静态站点会提示并自动开启一次（刷新后打开 Unkernel），Android WebView 不支持，只能 1 个 CPU。
-- 启动器新增 **DSH + dsh-TUI** 演示：Debian 下优先解压用户导入到 `/home/user` 的 `dsh-tui-standalone-linux-arm64.tar.gz`，没有本地包时才从 GitHub Releases 下载；解压到 `~/.local` 并启动。约 600 MB，需要 2 GiB 内存，首次运行需要持久数据盘。
-- 设置页新增「数据盘」大小（8 / 16 / 32 GiB，默认 8 GiB）：磁盘是稀疏的，选大不会立即占用；扩容后重启，页面会自动安装 `resize2fs`（Debian `e2fsprogs`、Alpine `e2fsprogs-extra`）并把 ext4 扩到新大小，已有数据保留，且只增不减。首次扩容约 30 秒（需要网络）。
+- 启动器把原来的 **DSH + dsh-TUI** 演示换成 **DSH go**：`go-deepseek` 的纯 Go 版 DeepSeek Harness，编译成 24 MiB 的静态 aarch64 二进制，由页面按 SHA-256 校验后推入 guest，不依赖 Node.js、pnpm 或 600 MB 运行时；终端里是中文 REPL（`/help`、`/new`、`/session`、`/exit`），首次运行输入 API Key 后保存在 `~/.dsh-go/api-key`，会话记录在 `~/.dsh-go/sessions`。
+- 设置页新增「数据盘」大小（8 / 16 / 32 GiB，默认 8 GiB）：磁盘是稀疏的，选大不会立即占用；扩容后重启，页面会自动安装 `resize2fs`（Debian `e2fsprogs`、Alpine `e2fsprogs-extra`）并把 ext4 扩到新大小，已有数据保留，且只增不减。首次扩容约 30 秒（需要网络）。同一栏新增「重置数据盘」：确认后卸载 iframe、删除 `kwdisk:kwdata-*` 和 `kwsnap:session-*`，下次启动从模板创建一个空磁盘；磁盘大小设置保留。
 - NanoVM 新增内置 `fastfetch` 命令，WebVM 的 bash 也注入 `fastfetch` 函数，输出 OS / 内核 / 运行时间 / Shell / 内存 / 磁盘等状态。
 UP + SMP 内核（约 18 MiB）与页面资源由 rspack 复制到 `dist/unkernel/`；Android 资源服务器新增 HTTP Range 支持，供 unkernel 惰性读取只读镜像。
 - 需要 JSPI（Chrome / Edge 137+、Firefox 153+、Safari 27+）；Android WebView 不支持时会显示启动错误。
