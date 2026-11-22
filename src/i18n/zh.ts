@@ -1379,7 +1379,7 @@ export const zh = {
   unkernelAllowAgentHint: '开启后模型才能使用 unkernel_shell、读写文件、工作区互传等 unkernel_* 工具；写操作仍会先确认。',
   unkernelResources: '资源',
   unkernelMemory: '内核内存',
-  unkernelMemoryHint: '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian / DSH 建议 1 GiB，改完会重启虚拟机。',
+  unkernelMemoryHint: '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian 默认 2 GiB（DSH 运行时解压需要），改完会重启虚拟机。',
   unkernelTimeout: '命令超时',
   unkernelTimeoutHint: 'Agent 单条命令最长执行时间（秒）。',
   unkernelDevices: '设备',
@@ -1412,7 +1412,7 @@ export const zh = {
   unkernelRuntimeNote:
     '需要支持 JSPI 的浏览器（Chrome / Edge 137+、Firefox 153+、Safari 27+）。Android WebView 若不支持 JSPI 会显示启动错误。当前打包镜像：Alpine 3.24。',
   unkernelDistro: '发行版',
-  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序（DSH 便携包建议 1 GiB 内存）。切换后重启虚拟机生效。',
+  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序（DSH 便携包需要 2 GiB 内存）。切换后重启虚拟机生效。',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPU 数量',

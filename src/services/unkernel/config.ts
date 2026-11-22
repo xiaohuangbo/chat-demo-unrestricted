@@ -75,7 +75,7 @@ const read = (): UnkernelConfig => {
       enabled: typeof source.enabled === 'boolean' ? source.enabled : defaults.enabled,
       allowAgent: typeof source.allowAgent === 'boolean' ? source.allowAgent : defaults.allowAgent,
       distro: source.distro === 'debian' ? 'debian' : 'alpine',
-      memoryMiB: clamp(source.memoryMiB ?? defaults.memoryMiB, 64, 1024),
+      memoryMiB: clamp(source.memoryMiB ?? defaults.memoryMiB, 64, 2048),
       network: typeof source.network === 'boolean' ? source.network : defaults.network,
       sound: typeof source.sound === 'boolean' ? source.sound : defaults.sound,
       display: typeof source.display === 'boolean' ? source.display : defaults.display,
@@ -106,7 +106,7 @@ export const unkernelConfig = (): UnkernelConfig => useUnkernelConfig.getState()
 export const setUnkernelConfig = (patch: Partial<UnkernelConfig>) => {
   const next = { ...useUnkernelConfig.getState(), ...patch }
   next.distro = next.distro === 'debian' ? 'debian' : 'alpine'
-  next.memoryMiB = clamp(next.memoryMiB, 64, 1024)
+  next.memoryMiB = clamp(next.memoryMiB, 64, 2048)
   next.cpus = clamp(next.cpus, 1, 4)
   next.timeoutMs = clamp(next.timeoutMs, 5_000, 120_000)
   next.wispUrl = next.wispUrl.trim().slice(0, 300)

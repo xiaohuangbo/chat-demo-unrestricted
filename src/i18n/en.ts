@@ -1492,7 +1492,7 @@ export const en = {
   unkernelResources: 'Resources',
   unkernelMemory: 'Kernel memory',
   unkernelMemoryHint:
-    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian / DSH prefer 1 GiB. Changing it restarts the VM.',
+    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian defaults to 2 GiB for the DSH runtime unpack. Changing it restarts the VM.',
   unkernelTimeout: 'Command timeout',
   unkernelTimeoutHint: 'Longest an Agent command may run, in seconds.',
   unkernelDevices: 'Devices',
@@ -1525,7 +1525,7 @@ export const en = {
   unkernelRuntimeNote:
     'Requires JSPI (Chrome / Edge 137+, Firefox 153+, Safari 27+). Android WebView shows a boot error if it lacks JSPI. Bundled image: Alpine 3.24.',
   unkernelDistro: 'Distribution',
-  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node and dsh-TUI (use 1 GiB of memory for the DSH portable). Restart the VM after switching.',
+  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node and dsh-TUI (the DSH portable needs 2 GiB of memory). Restart the VM after switching.',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPUs',

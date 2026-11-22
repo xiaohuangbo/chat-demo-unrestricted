@@ -693,7 +693,7 @@ The server-side tool calls (deepseek_web_search, deepseek_read_url) and the titl
 - Agent 工具扩展到十个：`unkernel_shell`、`unkernel_ls`、`unkernel_read_file`、`unkernel_write_file`、`unkernel_transfer`（工作区互传）、`unkernel_python`、`unkernel_info`、`unkernel_open`、`unkernel_restart`、`unkernel_status`；首次调用会打开 iframe、等待内核启动，再用 `vm.exec()` 执行，不打断交互终端。
 - 同时打包 Alpine 3.24（3.9 MiB）和 Debian 13.7（70 MiB）：设置页和页面选项都能切换，Debian 带 glibc / apt，适合 Docker、Node 和 dsh-TUI；APK 因此增至约 105 MB。
 - 多 CPU（SMP）可在设置里选择 1–4 个；超过 1 个需要跨源隔离，桌面静态站点会提示并自动开启一次（刷新后打开 Unkernel），Android WebView 不支持，只能 1 个 CPU。
-- 启动器新增 **DSH + dsh-TUI** 演示：Debian 下优先解压用户导入到 `/home/user` 的 `dsh-tui-standalone-linux-arm64.tar.gz`，没有本地包时才从 GitHub Releases 下载；解压到 `~/.local` 并启动。约 600 MB，建议 1 GiB 内存，首次运行需要持久数据盘。
+- 启动器新增 **DSH + dsh-TUI** 演示：Debian 下优先解压用户导入到 `/home/user` 的 `dsh-tui-standalone-linux-arm64.tar.gz`，没有本地包时才从 GitHub Releases 下载；解压到 `~/.local` 并启动。约 600 MB，需要 2 GiB 内存，首次运行需要持久数据盘。
 - NanoVM 新增内置 `fastfetch` 命令，WebVM 的 bash 也注入 `fastfetch` 函数，输出 OS / 内核 / 运行时间 / Shell / 内存 / 磁盘等状态。
 UP + SMP 内核（约 18 MiB）与页面资源由 rspack 复制到 `dist/unkernel/`；Android 资源服务器新增 HTTP Range 支持，供 unkernel 惰性读取只读镜像。
 - 需要 JSPI（Chrome / Edge 137+、Firefox 153+、Safari 27+）；Android WebView 不支持时会显示启动错误。

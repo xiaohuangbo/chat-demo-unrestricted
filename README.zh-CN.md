@@ -70,7 +70,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.9.apk`（105 MB，versionCode 279，
-SHA-256 `8ee46b83427e7079ea1e92c9185c582b05acfc464263317d419e0df7c2b6620d`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+SHA-256 `356910c613db67e0b053d4dd56118b067db11df942de83545e18a009742dab58`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -95,7 +95,7 @@ SHA-256 `8ee46b83427e7079ea1e92c9185c582b05acfc464263317d419e0df7c2b6620d`），
 
 ## 最近版本
 
-- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，启动器可安装 DSH + dsh-TUI，NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
+- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU、Debian 默认 2 GiB 内存），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，启动器可安装 DSH + dsh-TUI，NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
 
 - **2.7.8**：修复 DeepSeek V4 Pro 调用报错——请求不再下发服务端联网工具与联网标题，`latest_reminder` 折进 system，智能搜索提示改用 Flash，新会话用首问自动生成标题；README 鸣谢新增 Linux DO 社区。
 - **2.7.7**：设置重组成「破甲」与「附件」两页——越狱相关的解除限制、提示词预设、自动越狱、扰动、自动调参、防撤回、跳过安全审核、拒绝后继续生成集中到「破甲」，附件投毒并入「附件」；移植 DeepChat 的记忆更新提示（气泡显示本次写入内容，可在设置 → 记忆关闭）；头像上传改为圆形取景框裁剪（拖动 / 缩放、圆外变暗、输出 384×384）；APK 输入栏的回形针换成「+」展开拍照 / 相册 / 文件，拍照直接调用系统相机；移动端侧边栏改为 DeepChat 式右滑抽屉，桌面展开带滑入动画；

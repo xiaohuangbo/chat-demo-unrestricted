@@ -125,7 +125,7 @@ export const UnkernelConsole = () => {
     setUnkernelConfig({
       distro,
       // Debian 的 apt / Node 程序比 Alpine 吃内存，默认至少给 512 MiB。
-      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 1024) : config.memoryMiB,
+      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 2048) : config.memoryMiB,
     })
   }
 
@@ -294,8 +294,8 @@ export const UnkernelConsole = () => {
             type="range"
             className={nanoStyles.range}
             min={64}
-            max={1024}
-            step={64}
+            max={2048}
+            step={128}
             value={config.memoryMiB}
             aria-label={t('unkernelMemory')}
             onChange={(event) => setUnkernelConfig({ memoryMiB: Number(event.target.value) })}
