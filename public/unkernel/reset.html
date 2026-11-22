@@ -1,0 +1,99 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (C) 2026 Pooya Parsa <pooya@pi0.io> -->
+<!--
+  /reset.html: clear what the page keeps in this browser (service worker
+  registrations, the Cache API, IndexedDB, localStorage, sessionStorage),
+  for a page that is stuck on stale state. The persistent data disk
+  (IndexedDB kwdisk:kwdata-v1) is kept unless its box is ticked.
+  Close other tabs of the page first: an open tab holds its databases.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>unkernel: reset</title>
+<style>
+	body { margin: 0; padding: 2rem 1rem; background: #000; color: #ddd; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+	main { max-width: 40rem; margin: 0 auto; }
+	h1 { font-size: 1.2rem; color: #fff; }
+	label { display: block; margin: 1rem 0; }
+	button { font: inherit; padding: .4rem 1rem; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; }
+	button:disabled { opacity: .5; cursor: default; }
+	pre { white-space: pre-wrap; background: #111; padding: .75rem; border-radius: 4px; min-height: 1.5em; }
+	.warn { color: #f88; }
+	a { color: #8cf; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Reset unkernel in this browser</h1>
+	<p>Unregisters the service workers and deletes the caches, the saved session, the settings and other site data. Close the page's other tabs first.</p>
+	<label><input type="checkbox" id="disk"> <span class="warn">Also delete the persistent data disk (<code>/data</code>, IndexedDB <code>kwdisk:kwdata-v1</code>). This cannot be undone.</span></label>
+	<button id="go">Reset</button>
+	<pre id="log"></pre>
+	<p><a href="/">Back to the page</a></p>
+</main>
+<script>
+"use strict";
+const DATA_DISK = "kwdisk:kwdata-v1";
+/** Databases the page is known to open, for browsers without indexedDB.databases(). */
+const KNOWN_DBS = [DATA_DISK, "kwsnap:session-v2", "kwsnap:session-v1"];
+const out = document.getElementById("log");
+const log = (s) => { out.textContent += s + "\n"; };
+
+function deleteDb(name) {
+	return new Promise((resolve) => {
+		const r = indexedDB.deleteDatabase(name);
+		r.onsuccess = () => resolve("deleted");
+		r.onerror = () => resolve("failed: " + (r.error && r.error.message));
+		r.onblocked = () => log(`  ${name}: blocked by an open tab, waiting for it to close…`);
+	});
+}
+
+async function step(what, fn) {
+	try { await fn(); } catch (e) { log(`${what}: failed: ${e && e.message || e}`); }
+}
+
+async function reset(wipeDisk) {
+	out.textContent = "";
+	await step("service workers", async () => {
+		if (!("serviceWorker" in navigator)) return log("service workers: not available here");
+		const regs = await navigator.serviceWorker.getRegistrations();
+		for (const r of regs) log(`service worker ${new URL(r.scope).pathname}: ${await r.unregister() ? "unregistered" : "not unregistered"}`);
+		if (!regs.length) log("service workers: none");
+	});
+	await step("caches", async () => {
+		if (typeof caches === "undefined") return log("caches: not available here");
+		const keys = await caches.keys();
+		for (const k of keys) log(`cache ${k}: ${await caches.delete(k) ? "deleted" : "not deleted"}`);
+		if (!keys.length) log("caches: none");
+	});
+	await step("IndexedDB", async () => {
+		if (typeof indexedDB === "undefined") return log("IndexedDB: not available here");
+		const names = indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : KNOWN_DBS;
+		let n = 0;
+		for (const name of names) {
+			if (name === DATA_DISK && !wipeDisk) { log(`IndexedDB ${name}: kept (the data disk)`); continue; }
+			log(`IndexedDB ${name}: ${await deleteDb(name)}`);
+			n++;
+		}
+		if (!n && !names.includes(DATA_DISK)) log("IndexedDB: none");
+	});
+	await step("localStorage", async () => { log(`localStorage: ${localStorage.length} keys cleared`); localStorage.clear(); });
+	await step("sessionStorage", async () => { sessionStorage.clear(); log("sessionStorage: cleared"); });
+	log("\nDone.");
+}
+
+const btn = document.getElementById("go");
+btn.addEventListener("click", async () => {
+	const wipeDisk = document.getElementById("disk").checked;
+	if (wipeDisk && !confirm("Delete the persistent data disk? Everything in /data is lost.")) return;
+	btn.disabled = true;
+	try { await reset(wipeDisk); } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>

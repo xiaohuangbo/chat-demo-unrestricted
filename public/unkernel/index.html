@@ -1,0 +1,111 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (C) 2026 Pooya Parsa <pooya@pi0.io> -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#000000">
+<!-- Added to the home screen, iOS opens the page without Safari's bars (it has no element full screen on iPhone). -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- Not black-translucent: iOS 26+ then gives the page a viewport short of the screen by the status bar and leaves a black band at the bottom (WebKit bug 301108). The page is black, so the status bar matches. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="unkernel">
+<meta name="color-scheme" content="dark">
+<title>unkernel</title>
+<meta name="description" content="A real Linux kernel, compiled to WebAssembly. It boots to a shell in less than a second.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="unkernel">
+<meta property="og:title" content="unkernel: real Linux, in your browser">
+<meta property="og:description" content="A real Linux kernel, compiled to WebAssembly. It boots to a shell in less than a second.">
+<meta property="og:url" content="https://unkernel.dev/">
+<meta property="og:image" content="https://unkernel.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="unkernel: real Linux in your browser. ARM64, Debian or Alpine, up to 16 CPUs, and your tools.">
+<meta name="twitter:card" content="summary_large_image">
+<script>
+// Runs before the page module, so a module that fails to load or throw
+// still ends up on screen: the splash card and the status line below (the
+// markup React replaces once src/main.tsx runs) turn red, and src/ui.ts
+// shows everything recorded here once it runs.
+(() => {
+	const KW = window.KW = { t0: Date.now(), errors: [], ui: null, started: false };
+	const el = (id) => document.getElementById(id);
+	// Before src/ui.ts takes over: show the error on the splash card and the status line.
+	KW.early = (e) => {
+		if (!e.fatal || !el("splash")) return;
+		el("app").setAttribute("data-state", "error");
+		el("status-label").textContent = "Error";
+		el("status-label").classList.remove("sr-only");
+		el("splash").setAttribute("data-error", "");
+		el("splash-title").textContent = "Couldn't start";
+		el("splash-msg").textContent = e.message + (e.detail ? "\n\n" + e.detail : "");
+	};
+	KW.report = (kind, message, detail, fatal) => {
+		const e = { t: Date.now() - KW.t0, kind, message: String(message), detail: detail ? String(detail) : "", fatal: !!fatal };
+		KW.errors.push(e);
+		try { if (KW.ui) KW.ui.onError(e); else KW.early(e); } catch { KW.early(e); }
+		return e;
+	};
+	addEventListener("error", (ev) => {
+		const t = ev.target;
+		if (t && t !== window && t.tagName) {
+			const url = t.src || t.href || "";
+			// A failed script is fatal; a failed stylesheet only degrades the look.
+			KW.report("resource", "Failed to load " + (t.type === "module" ? "the page module " + url + " or a module it imports" : url),
+				"<" + t.tagName.toLowerCase() + "> load error (404, network or MIME type)", t.tagName === "SCRIPT");
+			return;
+		}
+		KW.report("exception", ev.message || "Script error", ev.error?.stack || (ev.filename ? ev.filename + ":" + ev.lineno + ":" + ev.colno : ""), !KW.started);
+	}, true);
+	addEventListener("unhandledrejection", (ev) => {
+		const r = ev.reason;
+		KW.report("rejection", "Unhandled promise rejection: " + (r?.message ?? String(r)), r?.stack ?? "", !KW.started);
+	});
+	setTimeout(() => {
+		const s = !KW.ui && el("splash");
+		if (s) s.setAttribute("data-slow", "");
+	}, 1500);
+	setTimeout(() => {
+		if (!KW.ui) KW.report("watchdog", "The page script did not run",
+			"The page module failed to load or parse, or the browser is too old for it (Chrome/Edge 137+, Firefox 153+ or Safari 27+ is needed anyway). Check the network and the server log.", true);
+	}, 8000);
+})();
+</script>
+<link rel="icon" type="image/svg+xml" href="/unkernel/assets/logo-Cv3wHR3E.svg">
+<!-- The home screen icon (iOS takes no SVG here): assets/logo.svg full bleed, inside its border, at 6x. -->
+<link rel="apple-touch-icon" href="/unkernel/apple-touch-icon.png">
+<!-- Installable as an app (public/manifest.webmanifest). -->
+<link rel="manifest" href="/unkernel/manifest.webmanifest">
+  <script type="module" crossorigin src="/unkernel/assets/index-DJEF1-Mb.js"></script>
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/shortcuts-D1eYHziH.js">
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/bottom-DRNtNtCT.js">
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/demos-DKGB35i1.js">
+  <link rel="stylesheet" crossorigin href="/unkernel/assets/index-C1Jnzrae.css">
+</head>
+<body>
+<!-- React (src/main.tsx) renders the page here. Until then, and if the page
+     module never runs, this is what shows: the splash card and the status line. -->
+<div id="root">
+	<div id="app" data-state="checking" class="fixed inset-x-0 top-0 flex h-dvh flex-col">
+		<main id="stage" class="relative min-h-0 flex-1">
+			<div id="splash" role="status" aria-live="polite" class="group absolute inset-0 grid place-items-center bg-bg p-5">
+				<div class="invisible w-full max-w-[420px] text-center group-data-error:visible group-data-slow:visible">
+					<h1 id="splash-title" class="mb-1.5 font-mono text-[15px] font-medium group-data-error:text-err">Starting</h1>
+					<p id="splash-msg" class="font-mono text-[12.5px] break-words text-muted group-data-error:whitespace-pre-wrap group-data-error:text-fg">Loading the page scripts…</p>
+				</div>
+			</div>
+		</main>
+		<footer id="bar" class="flex min-h-[calc(var(--bar-h)+var(--sb))] items-stretch gap-2 border-t border-line bg-surface pr-1 pb-(--sb) font-mono text-[12px] leading-none">
+			<div class="brand flex flex-1 items-center gap-1.5 pl-2.5 text-fg"><span class="text-faint">❯</span><b class="font-semibold">unkernel</b></div>
+			<span id="status" class="inline-flex items-center px-1.5"><span id="status-label" class="sr-only">Starting</span></span>
+		</footer>
+	</div>
+</div>
+
+<noscript><div class="fixed inset-0 z-50 grid place-items-center bg-bg p-6 text-center"><div class="max-w-[420px]"><h1 class="mb-1.5 text-lg font-semibold">JavaScript is required</h1><p class="text-[13.5px] text-muted">This page boots a Linux kernel compiled to WebAssembly, which needs JavaScript. Enable it for this site and reload.</p></div></div></noscript>
+
+</body>
+</html>

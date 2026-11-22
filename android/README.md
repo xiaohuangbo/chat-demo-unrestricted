@@ -1,4 +1,4 @@
-# Android APK（DeepSeek Unrestricted 2.7.8）
+# Android APK（DeepSeek Unrestricted 2.7.9）
 
 这是纯原生 WebView 壳，不依赖 Capacitor / Cordova：
 
@@ -7,14 +7,15 @@
 - 已接入文件选择器、拍照（系统相机 + content:// 回传）、麦克风运行时权限、返回键和外部浏览器跳转；
 - Android WebView 不支持跨源隔离（SharedArrayBuffer），所以 WebVM 无法在 APK 内运行；应用内会提示用手机 Chrome / 桌面浏览器打开在线版，NanoVM 不受影响；
 - WebView 也没有 WebGPU，浏览器内的 WebLLM 模型不可用；设置 → 本地模型里改用 MLC-LLM API 或切回云端模型；
-- `assets/backend` 内含 `mcp-server` 与 EasyJailbreak 源码，仅作随包附带；Python / torch 后端不会在 Android 内执行。
+- `assets/backend` 内含 `mcp-server` 与 EasyJailbreak 源码，仅作随包附带；Python / torch 后端不会在 Android 内执行；
+- `assets/public/unkernel/` 是 Unkernel Linux 的完整页面、UP/SMP 内核与 Alpine 镜像，资源服务器对 `alpine.erofs` 支持 HTTP Range；WebView 支持 JSPI 时可直接运行。
 
 ## 产物
 
-`android/deepseek-unrestricted-2.7.8.apk`，versionCode 278，使用
+`android/deepseek-unrestricted-2.7.9.apk`，versionCode 279，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`（24 MB）。
+SHA-256：`30cb9cc47d10ac7e88c04ce09f69801c3935f6c3048287f46fe7b8c0c120624d`（36 MB）。
 
 ## 构建
 

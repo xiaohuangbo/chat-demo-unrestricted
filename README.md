@@ -34,12 +34,13 @@
 - **Virtual workspace**: a local file store with any-format import/export, the OPFS file system, and app storage on Android;
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox commands, single-file import (device / workspace, zip and binaries included, `nanovm_import` agent tool) and a PyBot toolchain (640k lines of pure-Python rules, no weights), docked right on desktop and a bottom panel on phones; Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
+- **Unkernel Linux**: a third VM running a real Linux 7.x kernel compiled to WebAssembly — Alpine 3.24, `apk`, bash, networking over Wisp, Web Audio sound, a framebuffer/evdev display, a persistent IndexedDB disk, file import/export and the full unkernel page; the chat workspace is mounted at `/mnt/workspace`, and the model gets `unkernel_shell` / `unkernel_ls` / `unkernel_status`;
 - **Chat modes**: Chat only / Web agent / PTC / Creator decide which client tools and round limit apply;
 - **Local models**: a port of mlc-ai/web-llm-chat — WebGPU models (Llama / Qwen / Gemma / Phi / DeepSeek) run in the browser, downloaded weights stay cached on device, the chat bar switches between them, `.mlcmodel` bundles import/export, and a self-hosted MLC-LLM REST endpoint is supported; local models also write long-term memories, use a search pre-pass, read text attachments and stay Chat-only;
 - **Characters and account**: role cards (persona, avatar, auto memory), My profile, a compression threshold and DeepSeek balance plus usage overview, ported from Remember and wired into the existing memory and stats systems;
 - **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match refuses locally without calling the API, even without a key;
 - **Statistics and billing**: usage ledger, context breakdown, per-model pricing and the free server-search switch;
-- **Android**: APK builds, in-app update check and a built-in network proxy for NanoVM; WebVM stays browser-only because Android WebView has no cross-origin isolation.
+- **Android**: APK builds, in-app update check and a built-in network proxy for NanoVM; WebVM stays browser-only because Android WebView has no cross-origin isolation, while Unkernel runs in the bundled page when the WebView supports JSPI.
 
 ## Documentation
 
@@ -49,14 +50,14 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | ------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | 1. What this is                 | Scope, original features and everything this fork adds               | [01-what-is-this.md](docs/en/01-what-is-this.md)       |
 | 2. Restrictions in the original | What was hard-coded on the request and UI side                       | [02-original-limits.md](docs/en/02-original-limits.md) |
-| 3. What this fork changes       | 3.1–3.35: every settings group, NanoVM Slim, WebVM and chat modes in detail | [03-changes.md](docs/en/03-changes.md)                 |
+| 3. What this fork changes       | 3.1–3.39: every settings group, NanoVM Slim, WebVM, Unkernel and chat modes in detail | [03-changes.md](docs/en/03-changes.md)                 |
 | 4. Behaviour matrix             | Original / default / unrestricted mode, side by side                 | [04-behaviour.md](docs/en/04-behaviour.md)             |
 | 5. Settings reference           | Defaults and localStorage keys for every setting                     | [05-settings.md](docs/en/05-settings.md)               |
 | 6. What the request contains    | The JSON that actually goes out                                      | [06-request.md](docs/en/06-request.md)                 |
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 81 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 82 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -70,13 +71,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: `deepseek-unrestricted-2.7.8.apk` (24 MB, versionCode 278,
-SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`) — see [android/README.md](android/README.md).
+Prebuilt artifact: `deepseek-unrestricted-2.7.9.apk` (36 MB, versionCode 279,
+SHA-256 `30cb9cc47d10ac7e88c04ce09f69801c3935f6c3048287f46fe7b8c0c120624d`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.8, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.9, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -94,10 +95,13 @@ Last regression run (2026-11, v2.7.8, both `compat` and `compat-prod` matrices):
 | Chat modes       | Tool groups and round limits for all four modes          | 10/10  |
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
+| Unkernel Linux   | iframe boot, Alpine shell, workspace mount / write-back, resizing, settings section | pass |
 
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.9**: fixes mobile WebVM drift when the soft keyboard opens; ports Unkernel Linux (real Linux 7.x kernel in WebAssembly, Alpine 3.24) with networking, sound, display, persistent disk, import/export, a full-screen page, a `/mnt/workspace` mount shared with the chat workspace, three `unkernel_*` Agent tools and a separate Chinese settings section.
 
 - **2.7.8**: fixes DeepSeek V4 Pro requests — server-side web tools and cloud titles are no longer sent, `latest_reminder` is folded into system, the search toggle points users to Flash and new sessions take their title from the first question; the README acknowledgements now include the Linux DO community.
 - **2.7.7**: settings are regrouped into Jailbreak and Attachments — unrestricted mode, prompt presets, auto jailbreak, obfuscation, AutoTune, anti-retraction, skip safety check and continue-after-refusal now live on Jailbreak, and attachment poisoning moves under Attachments; DeepChat memory-update notices are ported (a toast shows what was written, switchable under Settings → Memory); avatar upload opens a circular crop dialog (drag / zoom, dimmed outside the circle, 384×384 output); inside the APK the composer paperclip becomes a + tray for camera / photos / files, and the camera opens the system camera app; the mobile sidebar becomes a DeepChat-style swipe drawer, with a slide-in animation on desktop;
@@ -125,6 +129,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 ## Acknowledgements
 
 - **Linux DO community**: <https://linux.do/> — thanks for the discussion, feedback and testing support.
+- **unkernel**: <https://github.com/pithings/unkernel> — the Linux-in-WebAssembly kernel and upstream page, MIT / GPL-2.0-only.
 - Upstream projects, reference implementations and licensing details are listed in [11. License and credits](docs/en/11-license.md).
 
 ## License

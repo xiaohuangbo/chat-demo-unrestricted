@@ -18,6 +18,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.Random;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
@@ -101,14 +102,21 @@ final class LocalServer implements Closeable {
                 return;
             }
             int contentLength = 0;
+            String rangeHeader = null;
             for (int index = 1; index < headerLines.length; index += 1) {
                 String line = headerLines[index];
                 int colon = line.indexOf(':');
-                if (colon > 0 && "content-length".equalsIgnoreCase(line.substring(0, colon).trim())) {
-                    try {
-                        contentLength = Integer.parseInt(line.substring(colon + 1).trim());
-                    } catch (NumberFormatException ignored) {
-                        contentLength = 0;
+                if (colon > 0) {
+                    String name = line.substring(0, colon).trim();
+                    String value = line.substring(colon + 1).trim();
+                    if ("content-length".equalsIgnoreCase(name)) {
+                        try {
+                            contentLength = Integer.parseInt(value);
+                        } catch (NumberFormatException ignored) {
+                            contentLength = 0;
+                        }
+                    } else if ("range".equalsIgnoreCase(name)) {
+                        rangeHeader = value;
                     }
                 }
             }
@@ -188,10 +196,51 @@ final class LocalServer implements Closeable {
                 }
                 body = html.getBytes(StandardCharsets.UTF_8);
             }
+            int totalLength = body.length;
+            int rangeStart = 0;
+            int rangeEnd = body.length - 1;
+            boolean partial = false;
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=") && body.length > 0) {
+                String spec = rangeHeader.substring("bytes=".length()).trim();
+                int dash = spec.indexOf('-');
+                if (dash >= 0) {
+                    try {
+                        String left = spec.substring(0, dash).trim();
+                        String right = spec.substring(dash + 1).trim();
+                        if (left.isEmpty()) {
+                            int suffix = Integer.parseInt(right);
+                            rangeStart = Math.max(0, body.length - suffix);
+                            rangeEnd = body.length - 1;
+                        } else {
+                            rangeStart = Integer.parseInt(left);
+                            rangeEnd = right.isEmpty() ? body.length - 1 : Integer.parseInt(right);
+                        }
+                        if (rangeStart < 0 || rangeEnd < rangeStart || rangeStart >= body.length) {
+                            OutputStream invalid = client.getOutputStream();
+                            invalid.write(("HTTP/1.1 416 Range Not Satisfiable\r\n"
+                                + "Content-Range: bytes */" + body.length + "\r\n"
+                                + "Content-Length: 0\r\n"
+                                + "Connection: close\r\n\r\n").getBytes(StandardCharsets.ISO_8859_1));
+                            invalid.flush();
+                            return;
+                        }
+                        rangeEnd = Math.min(rangeEnd, body.length - 1);
+                        body = Arrays.copyOfRange(body, rangeStart, rangeEnd + 1);
+                        partial = true;
+                    } catch (NumberFormatException ignored) {
+                        // A malformed Range falls back to the full body.
+                    }
+                }
+            }
+
             OutputStream output = client.getOutputStream();
-            String header = "HTTP/1.1 200 OK\r\n"
+            String status = partial ? "206 Partial Content" : "200 OK";
+            String header = "HTTP/1.1 " + status + "\r\n"
                 + "Content-Type: " + contentType + "\r\n"
                 + "Content-Length: " + body.length + "\r\n"
+                + "Accept-Ranges: bytes\r\n"
+                + (partial ? ("Content-Range: bytes " + rangeStart + "-" + rangeEnd + "/"
+                    + totalLength + "\r\n") : "")
                 + "Cache-Control: no-cache\r\n"
                 + "X-Content-Type-Options: nosniff\r\n"
                 + "Connection: close\r\n\r\n";

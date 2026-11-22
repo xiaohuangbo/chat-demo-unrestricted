@@ -114,6 +114,7 @@ import { WorkspaceSetting } from './WorkspaceSetting.js'
 import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import { WebVMConsole } from '../webvm/WebVMConsole.js'
+import { UnkernelConsole } from '../unkernel/UnkernelConsole.js'
 import { LocalModelSettings } from '../local/LocalModelSettings.js'
 import { RolesSettings } from './RolesSettings.js'
 import { AccountSettings } from './AccountSettings.js'
@@ -190,6 +191,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'nanovm',
     label: 'settingDialogAsideNanoVMOptionLabel',
     icon: <IconTerminalOutline16 />,
+  },
+  {
+    value: 'unkernel',
+    label: 'settingDialogAsideUnkernelOptionLabel',
+    icon: <IconChipOutline16 />,
   },
   { value: 'stats', label: 'settingDialogAsideStatsOptionLabel', icon: <IconChartOutline16 /> },
   {
@@ -292,6 +298,8 @@ const SettingsContent = () => {
               <NanoVMConsole />
               <WebVMConsole />
             </>
+          ) : section === 'unkernel' ? (
+            <UnkernelConsole />
           ) : section === 'stats' ? (
             <StatsSettings />
           ) : section === 'account' ? (
@@ -769,6 +777,15 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV279Title',
+      items: [
+        'changelogV279Webvm',
+        'changelogV279Unkernel',
+        'changelogV279Settings',
+        'changelogV279Apk',
+      ],
+    },
     {
       title: 'changelogV278Title',
       items: ['changelogV278V4Pro', 'changelogV278Credit', 'changelogV278Apk'],

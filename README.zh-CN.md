@@ -34,10 +34,11 @@
 - **虚拟工作区**：浏览器本地文件库，任意格式导入导出、OPFS 真文件系统、安卓端为应用存储；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制，另有 `nanovm_import` Agent 工具），并新增 PyBot 工具链（64 万行纯 Python 规则聊天机器人，无模型权重），桌面端右侧停靠、手机端底部面板，Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git 按需安装，虚拟机内自带虚拟网络（Node 与 Python 的 HTTP / WebSocket 服务）；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，自带 bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
+- **Unkernel Linux**：第三个虚拟机，跑真正编译成 WebAssembly 的 Linux 7.x 内核——Alpine 3.24、`apk`、bash、Wisp 联网、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘、文件导入导出和完整 unkernel 页面；聊天工作区挂到 `/mnt/workspace`，模型可用 `unkernel_shell` / `unkernel_ls` / `unkernel_status`；
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术，命中用户输入时本地直接拒答，不请求接口，未填 API Key 也能触发；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
-- **安卓端**：APK 构建、应用内更新检测、NanoVM 联网内置代理；WebVM 因 Android WebView 不支持跨源隔离而只能在浏览器里运行。
+- **安卓端**：APK 构建、应用内更新检测、NanoVM 联网内置代理；WebVM 因 Android WebView 不支持跨源隔离而只能在浏览器里运行，Unkernel 在 WebView 支持 JSPI 时可直接使用。
 
 ## 文档导航
 
@@ -47,14 +48,14 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.30：设置页每一组功能、NanoVM Slim、WebVM、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.39：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 81 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 82 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -68,13 +69,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：`deepseek-unrestricted-2.7.8.apk`（24 MB，versionCode 278，
-SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`），详情见 [android/README.md](android/README.md)。
+预构建产物：`deepseek-unrestricted-2.7.9.apk`（36 MB，versionCode 279，
+SHA-256 `30cb9cc47d10ac7e88c04ce09f69801c3935f6c3048287f46fe7b8c0c120624d`），详情见 [android/README.md](android/README.md)。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.8，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.9，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -88,10 +89,13 @@ SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`），
 | 聊天模式        | 仅聊天 / 网页 Agent / PTC / 创造 的工具分组与往返上限      | 10/10 |
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
+| Unkernel Linux  | iframe 启动、Alpine shell、工作区挂载/写回、窗口缩放、设置页 | 通过  |
 
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，工作区挂到 `/mnt/workspace`，新增三个 `unkernel_*` Agent 工具和独立的 Unkernel 中文设置栏。
 
 - **2.7.8**：修复 DeepSeek V4 Pro 调用报错——请求不再下发服务端联网工具与联网标题，`latest_reminder` 折进 system，智能搜索提示改用 Flash，新会话用首问自动生成标题；README 鸣谢新增 Linux DO 社区。
 - **2.7.7**：设置重组成「破甲」与「附件」两页——越狱相关的解除限制、提示词预设、自动越狱、扰动、自动调参、防撤回、跳过安全审核、拒绝后继续生成集中到「破甲」，附件投毒并入「附件」；移植 DeepChat 的记忆更新提示（气泡显示本次写入内容，可在设置 → 记忆关闭）；头像上传改为圆形取景框裁剪（拖动 / 缩放、圆外变暗、输出 384×384）；APK 输入栏的回形针换成「+」展开拍照 / 相册 / 文件，拍照直接调用系统相机；移动端侧边栏改为 DeepChat 式右滑抽屉，桌面展开带滑入动画；
@@ -119,6 +123,7 @@ SHA-256 `8765337b130a9767758650276281776814c1317b697ffffaa7d7bcc87a1b79ec`），
 ## 鸣谢
 
 - **Linux DO 社区**：<https://linux.do/> —— 感谢社区提供的交流、反馈与测试支持。
+- **unkernel**：<https://github.com/pithings/unkernel> —— Linux 内核 WebAssembly 化与上游页面，MIT / GPL-2.0-only。
 - 上游项目、参考实现与许可信息见 [11. 许可与致谢](docs/zh/11-license.md)。
 
 ## 许可

@@ -842,6 +842,7 @@ export const allAgentTools = (): AgentTool[] => [
   ...workspaceTools(),
   ...nanovmTools(),
   ...webvmTools(),
+  ...unkernelTools(),
 ]
 
 export const agentToolById = (id: string): AgentTool | undefined =>
@@ -851,6 +852,7 @@ export const agentToolById = (id: string): AgentTool | undefined =>
 let workspaceTools: () => AgentTool[] = () => []
 let nanovmTools: () => AgentTool[] = () => []
 let webvmTools: () => AgentTool[] = () => []
+let unkernelTools: () => AgentTool[] = () => []
 
 export const registerWorkspaceTools = (loader: () => AgentTool[]) => {
   workspaceTools = loader
@@ -864,6 +866,11 @@ export const registerNanovmTools = (loader: () => AgentTool[]) => {
 /** 由 agentToolSettings 注入 WebVM（CheerpX）工具 */
 export const registerWebvmTools = (loader: () => AgentTool[]) => {
   webvmTools = loader
+}
+
+/** 由 agentToolSettings 注入 Unkernel Linux 工具 */
+export const registerUnkernelTools = (loader: () => AgentTool[]) => {
+  unkernelTools = loader
 }
 
 /** 该工具在本机是否可用（通知 / 剪贴板 / 定位依赖浏览器能力） */

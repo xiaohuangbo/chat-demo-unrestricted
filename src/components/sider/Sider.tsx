@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
+  IconChipOutline16,
   IconGlobeLanguageOutline14,
   IconPanelLeftOutline16,
   IconSettingsOutline16,
@@ -22,6 +23,8 @@ import { closeLab, openLab, useLab } from '../../services/lab/labStore.js'
 import { toggleNanoVM, toggleWebVM, useNanoVM } from '../../services/nanovm/session.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
 import { useWebVMConfig } from '../../services/webvm/config.js'
+import { useUnkernelConfig } from '../../services/unkernel/config.js'
+import { openUnkernel, useUnkernel } from '../../services/unkernel/session.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
@@ -33,6 +36,8 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const labOpen = useLab((state) => state.open)
   const nanoVMEnabled = useNanoVMConfig((state) => state.enabled)
   const webVMEnabled = useWebVMConfig((state) => state.enabled)
+  const unkernelEnabled = useUnkernelConfig((state) => state.enabled)
+  const unkernelOpen = useUnkernel((state) => state.open)
   const nanoVMOpen = useNanoVM((state) => state.open)
   const activeVm = useNanoVM((state) => state.activeVm)
   const activeId = useChatStore((state) => state.activeId)
@@ -147,6 +152,23 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
               <IconGlobeLanguageOutline14 />
             </span>
             <span className={styles.settingsLabel}>{t('webvm')}</span>
+          </button>
+        ) : null}
+        {unkernelEnabled ? (
+          <button
+            type="button"
+            className={clsx(styles.settings, unkernelOpen && styles.settingsActive)}
+            onClick={() => {
+              openUnkernel()
+              if (mobile) {
+                closeMobileSider()
+              }
+            }}
+          >
+            <span className={styles.settingsIcon}>
+              <IconChipOutline16 />
+            </span>
+            <span className={styles.settingsLabel}>{t('unkernel')}</span>
           </button>
         ) : null}
         <button

@@ -15,6 +15,7 @@ export type SettingsSection =
   | 'agentTools'
   | 'workspace'
   | 'nanovm'
+  | 'unkernel'
   | 'stats'
   | 'account'
   | 'data'

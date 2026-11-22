@@ -92,6 +92,8 @@ export const createConfig = ({
         { from: path.resolve(root, 'public/coi-sw.js'), to: 'coi-sw.js', toType: 'file' },
         // NanoVM 的 PyBot 工具链快照（来自 huggingface/pybot，Apache-2.0），安装时离线解压
         { from: path.resolve(root, 'public/pybot.zip'), to: 'pybot.zip', toType: 'file' },
+        // unkernel 的完整网页与内核/镜像，放在 /unkernel/ 下作为 iframe 载入
+        { from: path.resolve(root, 'public/unkernel'), to: 'unkernel' },
       ],
     }),
   ],

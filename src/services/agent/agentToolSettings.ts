@@ -3,23 +3,28 @@ import {
   allAgentTools,
   registerNanovmTools,
   registerWebvmTools,
+  registerUnkernelTools,
   registerWorkspaceTools,
   type AgentTool,
 } from './tools.js'
 import { WORKSPACE_TOOLS } from './workspaceTools.js'
 import { NANOVM_TOOLS } from './nanovmTools.js'
 import { WEBVM_TOOLS } from './webvmTools.js'
+import { UNKERNEL_TOOLS } from './unkernelTools.js'
 import { isWorkspaceEnabled } from '../workspace/store.js'
 import { nanoVMAgentAvailable } from '../nanovm/config.js'
 import { webVMAgentAvailable } from '../webvm/config.js'
+import { unkernelAgentAvailable } from '../unkernel/config.js'
 import { modeAllowsGroup, type ToolGroup } from '../chat/mode.js'
 
 const WORKSPACE_IDS = new Set(WORKSPACE_TOOLS.map((tool) => tool.id))
 const NANOVM_IDS = new Set(NANOVM_TOOLS.map((tool) => tool.id))
 const WEBVM_IDS = new Set(WEBVM_TOOLS.map((tool) => tool.id))
+const UNKERNEL_IDS = new Set(UNKERNEL_TOOLS.map((tool) => tool.id))
 registerWorkspaceTools(() => WORKSPACE_TOOLS)
 registerNanovmTools(() => NANOVM_TOOLS)
 registerWebvmTools(() => WEBVM_TOOLS)
+registerUnkernelTools(() => UNKERNEL_TOOLS)
 
 /**
  * 浏览器工具的开关状态。
@@ -106,12 +111,16 @@ export const isAgentToolEnabled = (id: string): boolean => {
   if (WEBVM_IDS.has(id) && !webVMAgentAvailable()) {
     return false
   }
+  // Unkernel 有独立的启用 / 允许模型操作开关
+  if (UNKERNEL_IDS.has(id) && !unkernelAgentAvailable()) {
+    return false
+  }
   return state.flags[id] !== false
 }
 
 /** 工具属于设置页的哪一组：浏览器 / 工作区 / NanoVM */
 export const agentToolGroup = (id: string): ToolGroup =>
-  NANOVM_IDS.has(id) || WEBVM_IDS.has(id)
+  NANOVM_IDS.has(id) || WEBVM_IDS.has(id) || UNKERNEL_IDS.has(id)
     ? 'nanovm'
     : WORKSPACE_IDS.has(id)
       ? 'workspace'

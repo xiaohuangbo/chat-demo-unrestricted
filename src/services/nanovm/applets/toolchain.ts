@@ -199,7 +199,7 @@ const vmInfo = async (ctx: AppletContext): Promise<AppletResult> => {
   }).join(' · ')
   const totalMB = memory.totalMB > 0 ? memory.totalMB : config.memoryMB
   const lines = [
-    `NanoVM Slim ${info?.version ?? '2.7.8'}`,
+    `NanoVM Slim ${info?.version ?? '2.7.9'}`,
     `引擎：${info?.wasm === false ? 'JS 兼容内核' : 'WASM Shell Engine'}（异步 chunk 懒加载）`,
   ]
   if (applets > 0) {

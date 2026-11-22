@@ -2,7 +2,7 @@
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to seventeen:
+The settings dialog grows from two groups to eighteen:
 
 | Group                 | Contents                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,6 +18,7 @@ The settings dialog grows from two groups to seventeen:
 | **Browser tools**     | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
 | **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
 | **Virtual machines**  | Two terminals: NanoVM Slim (WASM shell, quotas, toolchains, virtual network) and WebVM (CheerpX x86 Debian, cross-origin isolation, images, import/export, environment check); both run at once and switch freely |
+| **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24, Wisp networking, sound, framebuffer, persistent disk, import/export, `/mnt/workspace` mount and three Agent tools |
 | **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
 | Data                  | API key, import, export, restore default settings, delete all                                                                                                                                  |
 | About                 | Repository, demo and upstream links                                                                                                                                                            |
@@ -678,3 +679,17 @@ While fixing it we found that V4 Pro also rejects the `latest_reminder` role wit
 > V4 Pro's `input_modalities` is `text` only: the API accepts image blocks but the model cannot see them. Switch to DeepSeek Flash for images, web search or cloud titles.
 
 [← 返回 README](../../README.md) · [全部文档](README.md)
+
+### 3.39 Unkernel Linux and mobile WebVM input fix (2.7.9)
+
+**Mobile WebVM drift.** When the soft keyboard opened, Chromium scrolled the page to bring xterm's hidden textarea into view; the fixed bottom sheet moved with it and the terminal appeared to drift. `WebVmTerminal` now focuses the textarea with `preventScroll`, resets the page scroll on the next frame and again after 120 ms, and does the same on a native textarea focus. Desktop behaviour is unchanged.
+
+**Unkernel Linux.** A third VM, embedded from the upstream [unkernel](https://github.com/pithings/unkernel) page (MIT / GPL-2.0) under `public/unkernel/`, runs a real Linux 7.x kernel compiled to WebAssembly with an Alpine 3.24 aarch64 user space. The page is served same-origin in a full-screen iframe, so the host can reach its `window.KW.vm` handle. It exposes the complete upstream page: interactive terminal and windows, `apk`, networking over a Wisp proxy, Web Audio sound, framebuffer/evdev display, persistent IndexedDB disk, file import/export and the upstream settings/options UI.
+
+- The app's Chinese **Settings → Unkernel Linux** section controls the iframe URL: enabled, Agent permission, memory, command timeout, network, sound, display, persistent data, Worker mode, CPU count and a custom Wisp endpoint.
+- The chat workspace is exposed as a 9p file system at `/mnt/workspace` through a small adapter over `src/services/workspace/store.ts`; guest reads and writes are synchronized both ways.
+- `unkernel_shell`, `unkernel_ls` and `unkernel_status` join the existing VM tools. They open the iframe on first use, wait for the kernel, and run commands through `vm.exec()` without disturbing the interactive terminal.
+- Only `alpine.erofs` is bundled (3.9 MiB); the 69 MiB Debian image is not shipped. The kernel (UP + SMP wasm, ~18 MiB) and the page assets are copied by rspack into `dist/unkernel/`; the Android asset server now answers HTTP Range requests, which unkernel uses to read the read-only image lazily.
+- Requires JSPI (Chrome / Edge 137+, Firefox 153+, Safari 27+). Android WebView shows a boot error when JSPI is missing.
+
+**Files:** `src/components/unkernel/`, `src/services/unkernel/`, `src/services/agent/unkernelTools.ts`, `public/unkernel/`, `rspack.config.ts`, `android/src/.../LocalServer.java`.

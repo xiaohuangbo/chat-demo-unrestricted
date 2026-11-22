@@ -2,7 +2,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.7.8**
+> Current version: **2.7.9**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -11,6 +11,7 @@ On top of that, this fork turns the hard-coded limits of the original into confi
 - **Virtual workspace**: a long-lived file store in browser localStorage with create / edit / delete, per-file download, archive import / export, plus five workspace tools;
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox-style commands and single-file import from this device or the workspace (zip / binaries included), with a `nanovm_import` tool for the model, docked to the right on desktop and a bottom panel on phones; Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git / PyBot install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / coreutils / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim built in; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
+- **Unkernel Linux**: a real Linux 7.x kernel compiled to WebAssembly (Alpine 3.24) in a full-screen same-origin page, with Wisp networking, sound, a framebuffer, a persistent disk, import/export, a `/mnt/workspace` mount shared with the chat workspace and the `unkernel_shell` / `unkernel_ls` / `unkernel_status` tools;
 - **Chat modes**: a four-way switch in the composer — Chat only / Web agent / PTC / Creator — that decides which client tools are sent this turn and how many round trips are allowed; Creator lets the model install runtimes and turn scripts into new commands inside the VM;
 - **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match produces a local refusal reply without calling the API, even when no API key is set;
 - **Statistics and context**: usage ledger, trend / heatmap / hourly charts, an eight-way context breakdown (system prompt, tool definitions, messages, thinking, tool calls / results, attachments) and billing rates;

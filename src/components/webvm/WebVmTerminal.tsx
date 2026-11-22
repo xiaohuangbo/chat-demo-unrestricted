@@ -174,6 +174,22 @@ export const WebVmTerminal = ({
     termRef.current = terminal
     fitRef.current = fit
 
+    const textarea = terminal.textarea
+    const onTerminalFocus = () => {
+      if (!window.matchMedia('(pointer: coarse)').matches) {
+        return
+      }
+      const resetScroll = () => {
+        if (window.scrollY !== 0 || window.scrollX !== 0) {
+          window.scrollTo(0, 0)
+        }
+      }
+      resetScroll()
+      requestAnimationFrame(resetScroll)
+      window.setTimeout(resetScroll, 120)
+    }
+    textarea?.addEventListener('focus', onTerminalFocus)
+
     const write = subscribeWebVmOutput((chunk) => {
       terminal.write(chunk)
       if (rootPending.current) {
@@ -258,6 +274,7 @@ export const WebVmTerminal = ({
     fitNow()
 
     return () => {
+      textarea?.removeEventListener('focus', onTerminalFocus)
       host.removeEventListener('touchstart', onTouchStart, { capture: true })
       host.removeEventListener('touchmove', onTouchMove, { capture: true })
       scrollSync.dispose()
@@ -290,7 +307,7 @@ export const WebVmTerminal = ({
       } catch {
         // 忽略尺寸瞬时错误
       }
-      host.focus()
+      focusTerminal()
     }, 30)
     return () => window.clearTimeout(timer)
   }, [visible])
@@ -300,6 +317,37 @@ export const WebVmTerminal = ({
       termRef.current?.clear()
     }
   }, [clearToken])
+
+  // 软键盘弹出会让 visualViewport 连续 resize；部分 Android WebView 还会在
+  // resize 之后再次把页面滚动到隐藏输入框。这里在键盘动画期间再兜底两次。
+  useEffect(() => {
+    if (!visible || !window.matchMedia('(pointer: coarse)').matches) {
+      return
+    }
+    const viewport = window.visualViewport
+    if (!viewport) {
+      return
+    }
+    let timers: number[] = []
+    const reset = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0)
+      }
+    }
+    const onResize = () => {
+      reset()
+      timers.push(window.setTimeout(reset, 180))
+      timers.push(window.setTimeout(reset, 360))
+    }
+    viewport.addEventListener('resize', onResize)
+    return () => {
+      viewport.removeEventListener('resize', onResize)
+      for (const timer of timers) {
+        window.clearTimeout(timer)
+      }
+      timers = []
+    }
+  }, [visible])
 
   // 打开 WebVM 时按配置自动启动
   useEffect(() => {
@@ -328,8 +376,33 @@ export const WebVmTerminal = ({
     return () => window.clearTimeout(timer)
   }, [status, visible])
 
+  /**
+   * 手机浏览器在 xterm 的隐藏 textarea 获得焦点时，会为了"把输入框滚进
+   * 可视区"而滚动整个页面；底部面板虽然 fixed，终点位置仍会跟着偏移，
+   * 看起来就是终端和输入法一起漂移。用 preventScroll 聚焦，并在下一帧
+   * 把页面滚回原点；桌面端保持原行为。
+   */
   const focusTerminal = () => {
-    termRef.current?.focus()
+    const term = termRef.current
+    if (!term) {
+      return
+    }
+    const textarea = term.textarea
+    if (textarea) {
+      textarea.focus({ preventScroll: true })
+    } else {
+      term.focus()
+    }
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      const resetScroll = () => {
+        if (window.scrollY !== 0 || window.scrollX !== 0) {
+          window.scrollTo(0, 0)
+        }
+      }
+      resetScroll()
+      requestAnimationFrame(resetScroll)
+      window.setTimeout(resetScroll, 120)
+    }
   }
 
   /** 启动前把 xterm 的真实行列数同步给 CheerpX，避免 shell 按默认 100 列排版 */

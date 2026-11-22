@@ -678,3 +678,17 @@ The server-side tool calls (deepseek_web_search, deepseek_read_url) and the titl
 > V4 Pro 的 `input_modalities` 只有 `text`：API 不会报错，但模型看不到图片内容。需要看图、联网搜索或联网标题时请切回 DeepSeek Flash。
 
 [← 返回 README](../../README.md) · [全部文档](README.md)
+
+### 3.39 Unkernel Linux 与手机端 WebVM 输入修复（2.7.9）
+
+**手机端 WebVM 漂移。** 软键盘弹出时，Chromium 会把页面滚动到 xterm 隐藏 textarea 的位置，fixed 底部面板跟着位移，看起来就是终端漂移。`WebVmTerminal` 现在用 `preventScroll` 聚焦 textarea，并在下一帧和 120 ms 后再把页面滚回原点；原生 textarea 获得焦点时也做同样处理。桌面端行为不变。
+
+**Unkernel Linux。** 第三个虚拟机：把上游 [unkernel](https://github.com/pithings/unkernel) 页面（MIT / GPL-2.0）完整放在 `public/unkernel/`，运行真正编译成 WebAssembly 的 Linux 7.x 内核和 Alpine 3.24 aarch64 用户空间。页面以同源全屏 iframe 载入，宿主可以拿到 `window.KW.vm`。上游的终端/多窗口、`apk`、Wisp 联网、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘、文件导入导出和设置页都保留。
+
+- 应用里的中文 **设置 → Unkernel Linux** 独立一栏控制 iframe 参数：启用、允许 Agent、内存、命令超时、联网、声音、显示、持久磁盘、Worker 模式、CPU 数和自定义 Wisp 地址。
+- 聊天工作区通过 `src/services/workspace/store.ts` 上的 9p 适配器挂到 `/mnt/workspace`，guest 读写会双向同步。
+- 新增 `unkernel_shell`、`unkernel_ls`、`unkernel_status` 三个 Agent 工具；首次调用会打开 iframe、等待内核启动，再用 `vm.exec()` 执行，不打断交互终端。
+- 只打包 `alpine.erofs`（3.9 MiB），不打包 69 MiB 的 Debian 镜像；UP + SMP 内核（约 18 MiB）与页面资源由 rspack 复制到 `dist/unkernel/`；Android 资源服务器新增 HTTP Range 支持，供 unkernel 惰性读取只读镜像。
+- 需要 JSPI（Chrome / Edge 137+、Firefox 153+、Safari 27+）；Android WebView 不支持时会显示启动错误。
+
+**涉及文件：** `src/components/unkernel/`、`src/services/unkernel/`、`src/services/agent/unkernelTools.ts`、`public/unkernel/`、`rspack.config.ts`、`android/src/.../LocalServer.java`。

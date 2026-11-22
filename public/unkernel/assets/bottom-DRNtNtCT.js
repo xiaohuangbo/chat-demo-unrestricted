@@ -1,0 +1,1 @@
+function e(e){let t=!0,n=e.clientHeight,r=()=>{t=e.scrollHeight-e.scrollTop-e.clientHeight<5},i=()=>{let r=e.clientHeight;r<n&&t&&(e.scrollTop=e.scrollHeight),n=r},a=new ResizeObserver(i);return a.observe(e),e.addEventListener(`scroll`,r,{passive:!0}),{keep:i,dispose(){a.disconnect(),e.removeEventListener(`scroll`,r)}}}export{e as t};
