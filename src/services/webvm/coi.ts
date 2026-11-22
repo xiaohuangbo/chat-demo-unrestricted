@@ -44,6 +44,13 @@ export const readCoiState = (): CoiSnapshot => {
   return { state: 'registerable' }
 }
 
+/**
+ * 注意：嵌入的 Unkernel 页面启动时会清理旧版根作用域 Service Worker。
+ * vendored 页面已限制为只注销 `/vm-sw.js`；如果重新构建后它又按 scope 全注销，
+ * 会把 coi-sw.js 一起注销，后续 iframe 重载没有 COEP，Firefox 会报
+ * NS_ERROR_DOM_COEP_FAILED。
+ */
+
 /** 记住「刷新后自动打开 WebVM」的意图，避免用户还要再点一次侧栏 */
 export const markPendingWebVmBoot = () => {
   try {

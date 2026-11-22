@@ -40,6 +40,8 @@ WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 
 
 Unkernel 默认在主线程运行，不需要跨源隔离；多 CPU 需要跨源隔离，静态站点会注册 `coi-sw.js` 并刷新一次。完整页面、UP/SMP 内核 wasm 与 Alpine 镜像从 `public/unkernel/` 复制到 `dist/unkernel/`，Android 资源服务器会对 3.9 MiB 的 `alpine.erofs` 响应 `Range` 请求。它需要 JSPI，旧 WebView 会显示启动错误而不是终端。
 
+重建 `public/unkernel/` 时注意保留 vendored 版本的 `dropLegacyScope` 检查：Unkernel 启动时会清理旧的根作用域 Service Worker，页面只能注销 `/vm-sw.js`，不能把宿主应用的 `coi-sw.js` 一起注销；否则多 CPU 的 iframe 重载会因缺少 COEP 被 Firefox 拦成 `NS_ERROR_DOM_COEP_FAILED`。
+
 ### 9.1 Android APK
 
 仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.9.apk`（约 105 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：

@@ -38,7 +38,9 @@ The API origin is set in [`rspack.config.ts`](../../rspack.config.ts) via `creat
 
 WebVM (CheerpX) needs cross-origin isolation. On static hosting such as GitHub Pages, where response headers cannot be customised, the first WebVM enable registers `coi-sw.js` and reloads once, after which the service worker adds the headers to same-origin responses. **Android WebView does not support cross-origin isolation (Chromium issue 40914606), so WebVM cannot run inside the APK; use Chrome on the phone or a desktop browser for the online version.**
 
-Unkernel does not need cross-origin isolation in the default main-thread mode; multiple CPUs do, and a static site registers `coi-sw.js` and reloads once. Its full page, UP/SMP kernel wasm and the Alpine image are copied from `public/unkernel/` into `dist/unkernel/`; the Android asset server answers `Range` requests for the 3.9 MiB `alpine.erofs`. It needs JSPI, so an old WebView shows a boot error instead of a terminal. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
+Unkernel does not need cross-origin isolation in the default main-thread mode; multiple CPUs do, and a static site registers `coi-sw.js` and reloads once. Its full page, UP/SMP kernel wasm and the Alpine image are copied from `public/unkernel/` into `dist/unkernel/`; the Android asset server answers `Range` requests for the 3.9 MiB `alpine.erofs`. It needs JSPI, so an old WebView shows a boot error instead of a terminal.
+
+When rebuilding `public/unkernel/`, keep the vendored `dropLegacyScope` check: Unkernel's boot drops the legacy root-scope service worker, and the page must only unregister `/vm-sw.js`, never the host's `coi-sw.js`; otherwise the multi-CPU iframe reload loses COEP and Firefox blocks it with `NS_ERROR_DOM_COEP_FAILED`. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
 
 ### 9.1 Android APK
 
