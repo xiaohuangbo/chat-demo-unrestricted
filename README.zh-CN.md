@@ -34,7 +34,7 @@
 - **虚拟工作区**：浏览器本地文件库，任意格式导入导出、OPFS 真文件系统、安卓端为应用存储；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制，另有 `nanovm_import` Agent 工具），并新增 PyBot 工具链（64 万行纯 Python 规则聊天机器人，无模型权重），桌面端右侧停靠、手机端底部面板，Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git 按需安装，虚拟机内自带虚拟网络（Node 与 Python 的 HTTP / WebSocket 服务）；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，自带 bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
-- **Unkernel Linux**：第三个虚拟机，跑真正编译成 WebAssembly 的 Linux 7.x 内核——Alpine 3.24 / Debian 13.7、`apk` / `apt`、bash、SMP 多 CPU、Wisp 联网（默认公共 anura.pro / mercurywork.shop 代理）、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘（设置里可扩容、可重置）、文件导入导出和完整 unkernel 页面（界面已汉化）；聊天工作区挂到 `/mnt/workspace`，模型可用 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个 `unkernel_*` 工具；启动器内置 **DSH go**——24 MiB 的 Go 单文件 DeepSeek Harness，自带中文 REPL，不需要 Node.js 和几百 MB 的运行时；NanoVM / WebVM 新增 `fastfetch`；
+- **Unkernel Linux**：第三个虚拟机，跑真正编译成 WebAssembly 的 Linux 7.x 内核——Alpine 3.24 / Debian 13.7、`apk` / `apt`、bash、SMP 多 CPU、Wisp 联网（默认公共 anura.pro / mercurywork.shop 代理）、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘（设置里可扩容、可重置）、文件导入导出和完整 unkernel 页面（界面已汉化）；聊天工作区挂到 `/mnt/workspace`，模型可用 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个 `unkernel_*` 工具；启动器内置 **DSH go**——24 MiB 的 Go 单文件 DeepSeek Harness，自带中文 REPL 和可用的 `bash` 工具，不需要 Node.js 和几百 MB 的运行时；NanoVM / WebVM 新增 `fastfetch`；
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术，命中用户输入时本地直接拒答，不请求接口，未填 API Key 也能触发；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
@@ -70,7 +70,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.9.apk`（112 MB，versionCode 279，
-SHA-256 `882c8b19bbd7a4c58c2698ff27bfc111450b03a8ebd38a2d85745ed019f1b540`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+SHA-256 `2ab40b356be4888fbf7b3a5f84a8ed8d5b1617370f06ca90ab190bde9ddaa201`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -95,7 +95,7 @@ SHA-256 `882c8b19bbd7a4c58c2698ff27bfc111450b03a8ebd38a2d85745ed019f1b540`），
 
 ## 最近版本
 
-- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU、Debian 默认 2 GiB 内存），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，数据盘可在设置里扩容或一键重置，启动器内置 **DSH go**（24 MiB 静态 Go 二进制、中文 REPL，取代原来的 DSH + dsh-TUI 安装入口），NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
+- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU、Debian 默认 2 GiB 内存），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，数据盘可在设置里扩容或一键重置，启动器内置 **DSH go**（24 MiB 静态 Go 二进制、中文 REPL 与 `bash` 工具，取代原来的 DSH + dsh-TUI 安装入口），NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
 
 - **2.7.8**：修复 DeepSeek V4 Pro 调用报错——请求不再下发服务端联网工具与联网标题，`latest_reminder` 折进 system，智能搜索提示改用 Flash，新会话用首问自动生成标题；README 鸣谢新增 Linux DO 社区。
 - **2.7.7**：设置重组成「破甲」与「附件」两页——越狱相关的解除限制、提示词预设、自动越狱、扰动、自动调参、防撤回、跳过安全审核、拒绝后继续生成集中到「破甲」，附件投毒并入「附件」；移植 DeepChat 的记忆更新提示（气泡显示本次写入内容，可在设置 → 记忆关闭）；头像上传改为圆形取景框裁剪（拖动 / 缩放、圆外变暗、输出 384×384）；APK 输入栏的回形针换成「+」展开拍照 / 相册 / 文件，拍照直接调用系统相机；移动端侧边栏改为 DeepChat 式右滑抽屉，桌面展开带滑入动画；
