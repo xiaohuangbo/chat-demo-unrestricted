@@ -96,7 +96,7 @@
 80. **PyBot 启动不是即时的**：每次提问都要把约 39MB 源码同步进 Pyodide 并导入 528 个模块，实测约 8 秒；安装需要 Python 工具链（约 12MB），离线快照固定为提交 24cbc04，更新需重新打 `public/pybot.zip`；交互会话期间终端输入按聊天消息处理，要执行 shell 命令先 `/exit`。
 81. **V4 Pro 缺少联网与图片能力**：服务端明确拒绝 `deepseek_web_search` / `deepseek_read_url` / `title` / `latest_reminder`。本项目为 V4 Pro 去掉这些字段、把日期提醒与压缩摘要折进 system、用首问生成标题并停用智能搜索；图片输入不会报错，但模型看不到图片内容。需要联网、联网标题或看图时请切回 DeepSeek Flash。
 
-82. **Unkernel 需要 JSPI，且只打包 Alpine**：内核依赖 `WebAssembly.Suspending` / `promising`（Chrome / Edge 137+、Firefox 153+、Safari 27+）；旧 Android WebView 会显示启动错误，请用新版浏览器打开在线版。只打包 `alpine.erofs`，没有 69 MiB 的 Debian 镜像；在上游 Options 里选 Debian 会失败。联网走 Wisp 代理；默认服务器拒绝当前页面 Origin 时，在 设置 → Unkernel Linux 里填自己的 `wss://` 地址。全屏页面是上游 unkernel 的英文 UI；应用内的设置栏和 Agent 工具是中文。
+82. **Unkernel 需要 JSPI，且只打包 Alpine**：内核依赖 `WebAssembly.Suspending` / `promising`（Chrome / Edge 137+、Firefox 153+、Safari 27+）；旧 Android WebView 会显示启动错误，请用新版浏览器打开在线版。只打包 `alpine.erofs`，没有 69 MiB 的 Debian 镜像，选项里也不显示 Debian。联网走 Wisp 代理；默认服务器拒绝当前页面 Origin 时，在 设置 → Unkernel Linux 里填自己的 `wss://` 地址。全屏页面 UI 已汉化（终端里 Linux 内核自己的输出仍是英文）；应用内的设置栏和 Agent 工具也是中文。
 
 ---
 

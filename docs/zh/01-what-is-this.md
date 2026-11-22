@@ -11,7 +11,7 @@
 - **虚拟工作区**：浏览器 localStorage 里的长期文件库，可新建 / 编辑 / 删除、单文件下载、整包导入导出，并配有 5 个工作区工具；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 风格命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制），模型可用 `nanovm_import` 工具写入文件；桌面端右侧停靠、手机端底部面板；Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git / PyBot 按需安装，还有一套虚拟机内虚拟网络，能跑 Node 与 Python 的 HTTP / WebSocket 服务；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，内置 bash / coreutils / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
-- **Unkernel Linux**：真正编译成 WebAssembly 的 Linux 7.x 内核（Alpine 3.24），完整页面以同源全屏 iframe 运行，支持 Wisp 联网、声音、framebuffer、持久磁盘、导入导出，工作区挂到 `/mnt/workspace`，并提供 `unkernel_shell` / `unkernel_ls` / `unkernel_status` 三个模型工具；
+- **Unkernel Linux**：真正编译成 WebAssembly 的 Linux 7.x 内核（Alpine 3.24），完整页面以同源全屏 iframe 运行，支持 Wisp 联网、声音、framebuffer、持久磁盘、导入导出，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置栏可导入/下载文件、保存到工作区和重启虚拟机，并提供十个 `unkernel_*` 模型工具；
 - **聊天模式**：输入栏四档切换——仅聊天 / 网页 Agent / PTC / 创造，决定这一轮下发哪些客户端工具、允许多少次工具往返；创造模式让模型在虚拟机里自己装运行时、把脚本变成新命令；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术；命中用户输入时在本地直接生成拒答回复，不请求接口，未填 API Key 也能触发；
 - **统计与上下文**：用量账本、趋势 / 热力 / 小时分布、上下文分类构成（系统提示词、工具定义、消息、思考、工具调用 / 结果、附件）与计费口径；

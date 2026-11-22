@@ -18,19 +18,33 @@ export type UnkernelExecResult = {
   signal: number | null
 }
 
+/** 二进制模式（encoding: 'buffer'）：stdout / stderr 是原始字节，适合导入导出文件。 */
+export type UnkernelExecBytes = {
+  stdout: Uint8Array
+  stderr: Uint8Array
+  exitCode: number | null
+  signal: number | null
+}
+
+type UnkernelExecOptions = {
+  cwd?: string
+  env?: Record<string, string>
+  input?: string | Uint8Array
+  timeout?: number
+  signal?: AbortSignal
+  maxBuffer?: number
+}
 
 export type UnkernelVm = {
   exec(
     file: string,
+    args: readonly string[] | undefined,
+    opts: UnkernelExecOptions & { encoding: 'buffer' }
+  ): Promise<UnkernelExecBytes>
+  exec(
+    file: string,
     args?: readonly string[],
-    opts?: {
-      cwd?: string
-      env?: Record<string, string>
-      input?: string | Uint8Array
-      timeout?: number
-      signal?: AbortSignal
-      encoding?: 'utf8'
-    }
+    opts?: UnkernelExecOptions & { encoding?: 'utf8' }
   ): Promise<UnkernelExecResult>
   mount(
     path: string,
@@ -61,6 +75,8 @@ type UnkernelState = {
   workspaceMounted: boolean
   /** 当前的 iframe（用于调试/重载） */
   url: string
+  /** 重启计数器：变化时重挂 iframe，让 Linux 从头启动 */
+  restartKey: number
 }
 
 export const useUnkernel = create<UnkernelState>(() => ({
@@ -70,6 +86,7 @@ export const useUnkernel = create<UnkernelState>(() => ({
   error: null,
   workspaceMounted: false,
   url: '',
+  restartKey: 0,
 }))
 
 let currentVm: UnkernelVm | null = null
@@ -83,6 +100,25 @@ export const openUnkernel = () => {
 }
 
 export const closeUnkernel = () => useUnkernel.setState({ open: false })
+
+/**
+ * 重启虚拟机：换一个 iframe key，页面从头加载并重新 boot。
+ * 工作区挂载会重新建立；设置页的「重启虚拟机」和 Agent 工具都走这里。
+ */
+export const restartUnkernel = () => {
+  if (!useUnkernelConfig.getState().enabled) {
+    return
+  }
+  detachUnkernelFrame()
+  useUnkernel.setState((state) => ({
+    open: true,
+    mounted: true,
+    status: 'loading',
+    error: null,
+    workspaceMounted: false,
+    restartKey: state.restartKey + 1,
+  }))
+}
 
 export const getUnkernelVm = (): UnkernelVm | null => currentVm
 
@@ -196,7 +232,12 @@ export const waitForUnkernelVm = async (timeoutMs = 180_000): Promise<UnkernelVm
 /** 在 unkernel 的 Alpine 里执行命令（独立 sh，不打断页面里的交互终端） */
 export const execUnkernel = async (
   command: string,
-  options: { cwd?: string; timeoutMs?: number; signal?: AbortSignal } = {}
+  options: {
+    cwd?: string
+    timeoutMs?: number
+    signal?: AbortSignal
+    input?: string | Uint8Array
+  } = {}
 ): Promise<UnkernelExecResult> => {
   const vm = await waitForUnkernelVm()
   const timeoutMs = Math.min(
@@ -212,6 +253,7 @@ export const execUnkernel = async (
       cwd: options.cwd || '/home/user',
       timeout: Math.min(120_000, timeoutMs + 10_000),
       signal: controller.signal,
+      input: options.input,
     })
   } finally {
     clearTimeout(timer)
@@ -228,5 +270,6 @@ export const resetUnkernelState = () => {
     error: null,
     workspaceMounted: false,
     url: '',
+    restartKey: 0,
   })
 }

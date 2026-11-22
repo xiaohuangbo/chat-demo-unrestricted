@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Switch } from '../base/Switch.js'
@@ -8,7 +8,24 @@ import {
   setUnkernelConfig,
   useUnkernelConfig,
 } from '../../services/unkernel/config.js'
-import { openUnkernel, useUnkernel } from '../../services/unkernel/session.js'
+import {
+  openUnkernel,
+  restartUnkernel,
+  useUnkernel,
+  waitForUnkernelVm,
+} from '../../services/unkernel/session.js'
+import {
+  downloadGuestExport,
+  exportGuestPath,
+  formatBytes,
+  importGuestFiles,
+  MAX_EXPORT_BYTES,
+  MAX_IMPORT_BYTES,
+  normalizeGuestPath,
+  saveGuestExportToWorkspace,
+  type GuestImportOutcome,
+} from '../../services/unkernel/files.js'
+import { isWorkspaceEnabled } from '../../services/workspace/store.js'
 import { UNKERNEL_TOOLS } from '../../services/agent/unkernelTools.js'
 import nanoStyles from '../nanovm/NanoVM.module.css'
 import styles from './UnkernelConsole.module.css'
@@ -48,6 +65,15 @@ export const UnkernelConsole = () => {
   const [wispDraft, setWispDraft] = useState(config.wispUrl)
   const [wispInvalid, setWispInvalid] = useState(false)
   const [timeoutDraft, setTimeoutDraft] = useState(Math.round(config.timeoutMs / 1000))
+  const [importDir, setImportDir] = useState('/mnt/workspace')
+  const [exportPath, setExportPath] = useState('/mnt/workspace')
+  const [overwrite, setOverwrite] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [importProgress, setImportProgress] = useState<string | null>(null)
+  const [importResults, setImportResults] = useState<GuestImportOutcome[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setWispDraft(config.wispUrl)
@@ -74,6 +100,103 @@ export const UnkernelConsole = () => {
       return
     }
     setUnkernelConfig({ timeoutMs: Math.round(seconds) * 1000 })
+  }
+
+  const pickFiles = () => {
+    if (!importing) {
+      fileInput.current?.click()
+    }
+  }
+
+  const runImport = async (files: readonly File[]) => {
+    if (!files.length || importing) {
+      return
+    }
+    const target = importDir.trim()
+    if (!normalizeGuestPath(target)) {
+      showToast(t('unkernelInvalidGuestPath'))
+      return
+    }
+    setImporting(true)
+    setImportResults([])
+    setImportProgress(files[0]?.name ?? null)
+    try {
+      const outcomes = await importGuestFiles(files, target, {
+        overwrite,
+        onProgress: (name) => setImportProgress(name),
+      })
+      setImportResults(outcomes)
+      const done = outcomes.filter((item) => item.ok)
+      const bytes = done.reduce((sum, item) => sum + item.bytes, 0)
+      if (done.length) {
+        showToast(
+          t('unkernelImportDone', {
+            count: done.length,
+            size: formatBytes(bytes),
+          })
+        )
+      } else {
+        showToast(t('unkernelImportFailed', { reason: outcomes[0]?.error ?? '—' }))
+      }
+    } catch (error) {
+      showToast(
+        t('unkernelImportFailed', {
+          reason: error instanceof Error ? error.message : String(error),
+        })
+      )
+    } finally {
+      setImporting(false)
+      setImportProgress(null)
+      if (fileInput.current) {
+        fileInput.current.value = ''
+      }
+    }
+  }
+
+  const runExport = async (toWorkspace: boolean) => {
+    if (exporting) {
+      return
+    }
+    const target = exportPath.trim()
+    if (!normalizeGuestPath(target)) {
+      showToast(t('unkernelInvalidGuestPath'))
+      return
+    }
+    setExporting(true)
+    try {
+      const vm = await waitForUnkernelVm()
+      const result = await exportGuestPath(vm, target)
+      if (toWorkspace) {
+        const path = saveGuestExportToWorkspace(result)
+        showToast(
+          t('unkernelExportWorkspaceDone', {
+            path,
+            size: formatBytes(result.bytes.length),
+          })
+        )
+      } else {
+        downloadGuestExport(result)
+        showToast(
+          t('unkernelExportDone', { name: result.name, size: formatBytes(result.bytes.length) })
+        )
+      }
+    } catch (error) {
+      showToast(
+        t('unkernelExportFailed', {
+          reason: error instanceof Error ? error.message : String(error),
+        })
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const exportToWorkspace = () => {
+    if (!isWorkspaceEnabled()) {
+      showToast(t('unkernelWorkspaceDisabled'))
+      return
+    }
+    void runExport(true)
   }
 
   const statusText: Record<string, string> = {
@@ -142,6 +265,144 @@ export const UnkernelConsole = () => {
               }
             }}
           />
+        </div>
+      </div>
+
+      <div className={nanoStyles.groupTitle}>{t('unkernelFiles')}</div>
+      <div className={nanoStyles.card}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="unkernel-import-dir">
+            {t('unkernelImportTarget')}
+          </label>
+          <input
+            id="unkernel-import-dir"
+            className={styles.input}
+            value={importDir}
+            spellCheck={false}
+            onChange={(event) => setImportDir(event.target.value)}
+            onBlur={() => {
+              const normalized = normalizeGuestPath(importDir)
+              if (normalized) {
+                setImportDir(normalized)
+              }
+            }}
+          />
+          <div className={nanoStyles.hint}>{t('unkernelImportTargetHint')}</div>
+          <div className={styles.quickRow}>
+            <Button variant="outlined" size="s" onClick={() => setImportDir('/mnt/workspace')}>
+              {t('unkernelWorkspacePath')}
+            </Button>
+            <Button variant="outlined" size="s" onClick={() => setImportDir('/home/user')}>
+              {t('unkernelHomePath')}
+            </Button>
+            <Button variant="outlined" size="s" onClick={() => setImportDir('/tmp')}>
+              {t('unkernelTmpPath')}
+            </Button>
+          </div>
+        </div>
+
+        <div
+          className={styles.dropZone}
+          data-active={dragOver || undefined}
+          data-busy={importing || undefined}
+          role="button"
+          tabIndex={0}
+          onClick={pickFiles}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              pickFiles()
+            }
+          }}
+          onDragOver={(event) => {
+            event.preventDefault()
+            setDragOver(true)
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDragOver(false)
+            void runImport(Array.from(event.dataTransfer.files))
+          }}
+        >
+          <div className={styles.dropTitle}>
+            {importing
+              ? t('unkernelImportingFile', { name: importProgress ?? '—' })
+              : t('unkernelDropFiles')}
+          </div>
+          <div className={nanoStyles.hint}>{t('unkernelImportHint')}</div>
+          <div className={styles.dropButton}>{t('unkernelChooseFiles')}</div>
+        </div>
+        <input
+          ref={fileInput}
+          className={styles.hiddenFile}
+          type="file"
+          multiple
+          onChange={(event) => void runImport(Array.from(event.target.files ?? []))}
+        />
+
+        <SwitchRow
+          label={t('unkernelImportOverwrite')}
+          hint={t('unkernelImportOverwriteHint')}
+          checked={overwrite}
+          onChange={setOverwrite}
+        />
+        <div className={nanoStyles.hint}>
+          {t('unkernelFileLimit', {
+            import: formatBytes(MAX_IMPORT_BYTES),
+            export: formatBytes(MAX_EXPORT_BYTES),
+          })}
+        </div>
+        {importResults.length > 0 && (
+          <div className={styles.fileList}>
+            {importResults.map((item, index) => (
+              <div className={styles.fileItem} key={`${item.name}-${index}`}>
+                <span className={styles.fileName}>{item.name}</span>
+                <span className={styles.fileMeta} data-error={!item.ok || undefined}>
+                  {item.ok ? formatBytes(item.bytes) : item.error}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="unkernel-export-path">
+            {t('unkernelExportPath')}
+          </label>
+          <input
+            id="unkernel-export-path"
+            className={styles.input}
+            value={exportPath}
+            spellCheck={false}
+            onChange={(event) => setExportPath(event.target.value)}
+            onBlur={() => {
+              const normalized = normalizeGuestPath(exportPath)
+              if (normalized) {
+                setExportPath(normalized)
+              }
+            }}
+          />
+          <div className={nanoStyles.hint}>{t('unkernelExportHint')}</div>
+          <div className={styles.quickRow}>
+            <Button variant="outlined" size="s" onClick={() => setExportPath('/mnt/workspace')}>
+              {t('unkernelWorkspacePath')}
+            </Button>
+            <Button variant="outlined" size="s" onClick={() => setExportPath('/home/user')}>
+              {t('unkernelHomePath')}
+            </Button>
+            <Button variant="outlined" size="s" onClick={() => setExportPath('/tmp')}>
+              {t('unkernelTmpPath')}
+            </Button>
+          </div>
+          <div className={styles.actions}>
+            <Button size="m" disabled={exporting} onClick={() => void runExport(false)}>
+              {exporting ? t('unkernelExporting') : t('unkernelExportButton')}
+            </Button>
+            <Button variant="outlined" size="m" disabled={exporting} onClick={exportToWorkspace}>
+              {t('unkernelExportWorkspace')}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -244,6 +505,17 @@ export const UnkernelConsole = () => {
             }}
           >
             {t('unkernelOpen')}
+          </Button>
+          <Button
+            variant="outlined"
+            size="m"
+            disabled={!config.enabled}
+            onClick={() => {
+              restartUnkernel()
+              showToast(t('unkernelRestarting'))
+            }}
+          >
+            {t('unkernelRestart')}
           </Button>
           <Button
             variant="outlined"

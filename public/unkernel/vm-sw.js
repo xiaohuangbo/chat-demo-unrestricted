@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Pooya Parsa <pooya@pi0.io>
-// The page's service worker (registered by src/sw.ts at scope /unkernel/vm/). One
+// The page's service worker (registered by src/sw.ts at scope /vm/). One
 // job, the guest preview (.agents/web.md, Guest preview, has the whole
-// design). It answers /unkernel/vm/<vmId>/<port>/<path> and nothing else, by
+// design). It answers /vm/<vmId>/<port>/<path> and nothing else, by
 // relaying the request to the page that runs that kernel, which calls
 // vm.fetch() on the guest's 127.0.0.1:<port> and streams the response
 // back. Every other request, a preview's root-relative /style.css
@@ -23,8 +23,8 @@
 // that every engine with service workers runs it as it is.
 "use strict";
 
-/** /unkernel/vm/<vmId>/<port>[/<path>] */
-const PREVIEW_RE = /^\/vm\/([A-Za-z0-9_-]{1,64})\/(\d{1,5})(\/.*)?$/;
+/** /vm/<vmId>/<port>[/<path>] */
+const PREVIEW_RE = /^\/unkernel\/vm\/([A-Za-z0-9_-]{1,64})\/(\d{1,5})(\/.*)?$/;
 /** A page must accept within this, else 502 (no page runs that kernel any more). */
 const ACCEPT_MS = 5000;
 /** The guest must send the status line and headers within this, else 504. */
@@ -45,7 +45,7 @@ const NULL_BODY = new Set([101, 103, 204, 205, 304]);
 /**
  * Running in the old scope-/ registration of builds that kept an offline
  * copy. Such a worker only serves pages of those builds: it leaves their
- * requests to the network like any other outside /unkernel/vm/, so the next load of
+ * requests to the network like any other outside /vm/, so the next load of
  * / is the newest page (whose sw.ts unregisters this scope), and tells them
  * an update is ready.
  */
@@ -67,7 +67,7 @@ self.addEventListener("fetch", (event) => {
 	if (url.origin !== location.origin) return; // cross-origin: the network, as usual
 	const m = PREVIEW_RE.exec(url.pathname);
 	if (!m) return; // not a preview URL: the network, as if there were no worker
-	// /unkernel/vm/<id>/<port> without the slash: relative URLs in the page need it.
+	// /vm/<id>/<port> without the slash: relative URLs in the page need it.
 	if (m[3] === undefined) event.respondWith(Response.redirect(new URL(`${url.pathname}/${url.search}`, url).href, 308));
 	else event.respondWith(relay(event, m[1], Number(m[2]), m[3] + url.search));
 });

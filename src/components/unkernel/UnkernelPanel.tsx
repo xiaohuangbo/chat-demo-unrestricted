@@ -26,6 +26,7 @@ export const UnkernelPanel = () => {
   const status = useUnkernel((state) => state.status)
   const error = useUnkernel((state) => state.error)
   const workspaceMounted = useUnkernel((state) => state.workspaceMounted)
+  const restartKey = useUnkernel((state) => state.restartKey)
   const config = useUnkernelConfig()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -47,7 +48,7 @@ export const UnkernelPanel = () => {
       frame.removeEventListener('load', onLoad)
       detachUnkernelFrame()
     }
-  }, [mounted, config])
+  }, [mounted, config, restartKey])
 
   if (!mounted) {
     return null
@@ -73,11 +74,7 @@ export const UnkernelPanel = () => {
           <span className={styles.status}>{statusText}</span>
         </div>
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.config}
-            onClick={() => openSettings('unkernel')}
-          >
+          <button type="button" className={styles.config} onClick={() => openSettings('unkernel')}>
             {t('unkernelConfig')}
           </button>
           <IconButton
@@ -95,6 +92,7 @@ export const UnkernelPanel = () => {
         </div>
       </div>
       <iframe
+        key={restartKey}
         ref={iframeRef}
         className={styles.frame}
         title={t('unkernelTitle')}

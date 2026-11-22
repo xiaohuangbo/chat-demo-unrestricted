@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (C) 2026 Pooya Parsa <pooya@pi0.io> -->
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
@@ -11,14 +11,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <!-- Not black-translucent: iOS 26+ then gives the page a viewport short of the screen by the status bar and leaves a black band at the bottom (WebKit bug 301108). The page is black, so the status bar matches. -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="unkernel">
+<meta name="apple-mobile-web-app-title" content="Unkernel">
 <meta name="color-scheme" content="dark">
-<title>unkernel</title>
-<meta name="description" content="A real Linux kernel, compiled to WebAssembly. It boots to a shell in less than a second.">
+<title>Unkernel Linux</title>
+<meta name="description" content="真正的 Linux 内核，编译成 WebAssembly，不到一秒启动到 shell。">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="unkernel">
-<meta property="og:title" content="unkernel: real Linux, in your browser">
-<meta property="og:description" content="A real Linux kernel, compiled to WebAssembly. It boots to a shell in less than a second.">
+<meta property="og:site_name" content="Unkernel Linux">
+<meta property="og:title" content="Unkernel Linux：浏览器里的真正 Linux">
+<meta property="og:description" content="真正的 Linux 内核，编译成 WebAssembly，不到一秒启动到 shell。">
 <meta property="og:url" content="https://unkernel.dev/">
 <meta property="og:image" content="https://unkernel.dev/og.png">
 <meta property="og:image:width" content="1200">
@@ -37,10 +37,10 @@
 	KW.early = (e) => {
 		if (!e.fatal || !el("splash")) return;
 		el("app").setAttribute("data-state", "error");
-		el("status-label").textContent = "Error";
+		el("status-label").textContent = "错误";
 		el("status-label").classList.remove("sr-only");
 		el("splash").setAttribute("data-error", "");
-		el("splash-title").textContent = "Couldn't start";
+		el("splash-title").textContent = "无法启动";
 		el("splash-msg").textContent = e.message + (e.detail ? "\n\n" + e.detail : "");
 	};
 	KW.report = (kind, message, detail, fatal) => {
@@ -79,10 +79,10 @@
 <link rel="apple-touch-icon" href="/unkernel/apple-touch-icon.png">
 <!-- Installable as an app (public/manifest.webmanifest). -->
 <link rel="manifest" href="/unkernel/manifest.webmanifest">
-  <script type="module" crossorigin src="/unkernel/assets/index-DJEF1-Mb.js"></script>
-  <link rel="modulepreload" crossorigin href="/unkernel/assets/shortcuts-D1eYHziH.js">
+  <script type="module" crossorigin src="/unkernel/assets/index-JTmlOqP8.js"></script>
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/shortcuts-Bby4J-O-.js">
   <link rel="modulepreload" crossorigin href="/unkernel/assets/bottom-DRNtNtCT.js">
-  <link rel="modulepreload" crossorigin href="/unkernel/assets/demos-DKGB35i1.js">
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/demos-Bvnbbh1f.js">
   <link rel="stylesheet" crossorigin href="/unkernel/assets/index-C1Jnzrae.css">
 </head>
 <body>
@@ -93,19 +93,19 @@
 		<main id="stage" class="relative min-h-0 flex-1">
 			<div id="splash" role="status" aria-live="polite" class="group absolute inset-0 grid place-items-center bg-bg p-5">
 				<div class="invisible w-full max-w-[420px] text-center group-data-error:visible group-data-slow:visible">
-					<h1 id="splash-title" class="mb-1.5 font-mono text-[15px] font-medium group-data-error:text-err">Starting</h1>
-					<p id="splash-msg" class="font-mono text-[12.5px] break-words text-muted group-data-error:whitespace-pre-wrap group-data-error:text-fg">Loading the page scripts…</p>
+					<h1 id="splash-title" class="mb-1.5 font-mono text-[15px] font-medium group-data-error:text-err">正在启动</h1>
+					<p id="splash-msg" class="font-mono text-[12.5px] break-words text-muted group-data-error:whitespace-pre-wrap group-data-error:text-fg">正在加载页面脚本…</p>
 				</div>
 			</div>
 		</main>
 		<footer id="bar" class="flex min-h-[calc(var(--bar-h)+var(--sb))] items-stretch gap-2 border-t border-line bg-surface pr-1 pb-(--sb) font-mono text-[12px] leading-none">
-			<div class="brand flex flex-1 items-center gap-1.5 pl-2.5 text-fg"><span class="text-faint">❯</span><b class="font-semibold">unkernel</b></div>
-			<span id="status" class="inline-flex items-center px-1.5"><span id="status-label" class="sr-only">Starting</span></span>
+			<div class="brand flex flex-1 items-center gap-1.5 pl-2.5 text-fg"><span class="text-faint">❯</span><b class="font-semibold">Unkernel Linux</b></div>
+			<span id="status" class="inline-flex items-center px-1.5"><span id="status-label" class="sr-only">正在启动</span></span>
 		</footer>
 	</div>
 </div>
 
-<noscript><div class="fixed inset-0 z-50 grid place-items-center bg-bg p-6 text-center"><div class="max-w-[420px]"><h1 class="mb-1.5 text-lg font-semibold">JavaScript is required</h1><p class="text-[13.5px] text-muted">This page boots a Linux kernel compiled to WebAssembly, which needs JavaScript. Enable it for this site and reload.</p></div></div></noscript>
+<noscript><div class="fixed inset-0 z-50 grid place-items-center bg-bg p-6 text-center"><div class="max-w-[420px]"><h1 class="mb-1.5 text-lg font-semibold">需要 JavaScript</h1><p class="text-[13.5px] text-muted">这个页面要启动编译成 WebAssembly 的 Linux 内核，因此需要 JavaScript。请为本站启用后重新加载。</p></div></div></noscript>
 
 </body>
 </html>
