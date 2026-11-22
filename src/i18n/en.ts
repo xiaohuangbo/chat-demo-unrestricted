@@ -1492,7 +1492,7 @@ export const en = {
   unkernelResources: 'Resources',
   unkernelMemory: 'Kernel memory',
   unkernelMemoryHint:
-    'Memory given to the guest. Alpine is comfortable above 128 MiB. Changing it restarts the VM.',
+    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian / DSH prefer 1 GiB. Changing it restarts the VM.',
   unkernelTimeout: 'Command timeout',
   unkernelTimeoutHint: 'Longest an Agent command may run, in seconds.',
   unkernelDevices: 'Devices',
@@ -1525,7 +1525,7 @@ export const en = {
   unkernelRuntimeNote:
     'Requires JSPI (Chrome / Edge 137+, Firefox 153+, Safari 27+). Android WebView shows a boot error if it lacks JSPI. Bundled image: Alpine 3.24.',
   unkernelDistro: 'Distribution',
-  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node, dsh-TUI and other programs. Restart the VM after switching.',
+  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node and dsh-TUI (use 1 GiB of memory for the DSH portable). Restart the VM after switching.',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPUs',
@@ -1549,6 +1549,7 @@ export const en = {
   unkernelImportOverwrite: 'Overwrite same name',
   unkernelImportOverwriteHint: 'When off, existing files are skipped with a note instead of overwritten.',
   unkernelFileLimit: 'Up to {import} per import and {export} per export.',
+  unkernelImportLargeHint: 'For large files such as the 600 MB DSH archive, import into /home/user; /mnt/workspace is limited by the workspace quota.',
   unkernelImportDone: 'Imported {count} file(s) ({size})',
   unkernelImportFailed: 'Import failed: {reason}',
   unkernelExportPath: 'Export from guest',
@@ -2089,7 +2090,7 @@ export const en = {
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',
   changelogV279Unkernel:
-    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH + dsh-TUI installer is added, and NanoVM / WebVM gain `fastfetch`',
+    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH + dsh-TUI installer (local archive or GitHub) is added, and NanoVM / WebVM gain `fastfetch`',
   changelogV279Settings:
     'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel; sidebar entry, README and license credits updated',
   changelogV279Apk: 'Builds the 2.7.9 APK (versionCode 279), signed with xiaohuangbo.jks',

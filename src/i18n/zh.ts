@@ -1379,7 +1379,7 @@ export const zh = {
   unkernelAllowAgentHint: '开启后模型才能使用 unkernel_shell、读写文件、工作区互传等 unkernel_* 工具；写操作仍会先确认。',
   unkernelResources: '资源',
   unkernelMemory: '内核内存',
-  unkernelMemoryHint: '给 guest 的内存；Alpine 在 128 MiB 以上比较从容，改完会重启虚拟机。',
+  unkernelMemoryHint: '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian / DSH 建议 1 GiB，改完会重启虚拟机。',
   unkernelTimeout: '命令超时',
   unkernelTimeoutHint: 'Agent 单条命令最长执行时间（秒）。',
   unkernelDevices: '设备',
@@ -1412,7 +1412,7 @@ export const zh = {
   unkernelRuntimeNote:
     '需要支持 JSPI 的浏览器（Chrome / Edge 137+、Firefox 153+、Safari 27+）。Android WebView 若不支持 JSPI 会显示启动错误。当前打包镜像：Alpine 3.24。',
   unkernelDistro: '发行版',
-  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序。切换后重启虚拟机生效。',
+  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序（DSH 便携包建议 1 GiB 内存）。切换后重启虚拟机生效。',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPU 数量',
@@ -1436,6 +1436,7 @@ export const zh = {
   unkernelImportOverwrite: '覆盖同名文件',
   unkernelImportOverwriteHint: '关闭时遇到同名文件会跳过并提示，不会覆盖。',
   unkernelFileLimit: '单次导入上限 {import}，单次导出上限 {export}。',
+  unkernelImportLargeHint: '导入 600 MB 的 DSH 包等大文件时，目标目录请选 /home/user；/mnt/workspace 受工作区容量限制。',
   unkernelImportDone: '已导入 {count} 个文件（{size}）',
   unkernelImportFailed: '导入失败：{reason}',
   unkernelExportPath: '从 guest 导出',
@@ -1945,7 +1946,7 @@ export const zh = {
   changelogV279Webvm:
     '修复手机网页端 WebVM 打开输入法准备输入时页面与终端漂移：xterm 隐藏输入框改用 preventScroll 聚焦，并在软键盘弹出后把页面滚回原点',
   changelogV279Unkernel:
-    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24 / Debian 13.7、真实内核、apk / apt、bash、SMP 多 CPU、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）；新增 DSH + dsh-TUI 下载安装入口，NanoVM / WebVM 增加 fastfetch',
+    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24 / Debian 13.7、真实内核、apk / apt、bash、SMP 多 CPU、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）；新增 DSH + dsh-TUI 本地包 / GitHub 下载安装入口，NanoVM / WebVM 增加 fastfetch',
   changelogV279Settings:
     '设置新增「Unkernel Linux」独立一栏（中文），可配置内存、超时、联网、声音、显示、持久磁盘、Worker 与 Wisp；新增文件导入 / 下载 / 保存到工作区与重启虚拟机；页面界面全面汉化，桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel；侧栏增加入口，README 与许可证鸣谢补充 unkernel',
   changelogV279Apk: '同步构建 2.7.9 APK（versionCode 279），使用 xiaohuangbo.jks 签名',

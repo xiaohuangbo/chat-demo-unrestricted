@@ -125,7 +125,7 @@ export const UnkernelConsole = () => {
     setUnkernelConfig({
       distro,
       // Debian 的 apt / Node 程序比 Alpine 吃内存，默认至少给 512 MiB。
-      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 512) : config.memoryMiB,
+      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 1024) : config.memoryMiB,
     })
   }
 
@@ -159,7 +159,8 @@ export const UnkernelConsole = () => {
     try {
       const outcomes = await importGuestFiles(files, target, {
         overwrite,
-        onProgress: (name) => setImportProgress(name),
+        onProgress: (name, _index, done, total) =>
+          setImportProgress(total > 0 ? `${name} · ${Math.min(100, Math.round((done / total) * 100))}%` : name),
       })
       setImportResults(outcomes)
       const done = outcomes.filter((item) => item.ok)

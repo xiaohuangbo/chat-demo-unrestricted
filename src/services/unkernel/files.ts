@@ -9,8 +9,10 @@ import { mimeForPath, saveWorkspaceFile, uniqueWorkspacePath } from '../workspac
  * 在 guest 里用 tar 打包成 .tar.gz。
  */
 
-/** 单次导入的文件上限 */
-export const MAX_IMPORT_BYTES = 32 * 1024 * 1024
+/** 单次导入的文件上限（大文件按 8 MiB 分块写入，不会整体读入内存） */
+export const MAX_IMPORT_BYTES = 1024 * 1024 * 1024
+/** 大文件分块大小 */
+const IMPORT_CHUNK_BYTES = 8 * 1024 * 1024
 /** 单次导出的文件 / 压缩包上限 */
 export const MAX_EXPORT_BYTES = 48 * 1024 * 1024
 /** Agent 单次读取文本的上限 */
@@ -393,6 +395,51 @@ export const exportGuestPath = async (
   }
 }
 
+/** 大文件从本机 File 分块写入 guest，避免一次性分配整个文件的内存 */
+const writeGuestFileStream = async (
+  vm: UnkernelVm,
+  target: string,
+  file: File,
+  options: {
+    overwrite?: boolean
+    signal?: AbortSignal
+    onChunk?: (done: number, total: number) => void
+  } = {}
+): Promise<void> => {
+  const dir = parentOf(target)
+  await ensureGuestDir(vm, dir)
+  const kind = await probeGuestPath(vm, target, { signal: options.signal })
+  if (kind === 'dir') {
+    throw new Error(`目标是目录：${target}`)
+  }
+  if (kind === 'file' && !options.overwrite) {
+    throw new Error(`目标已存在：${target}（勾选“覆盖同名文件”后可覆盖）`)
+  }
+  // 先截断，再追加；每块一个独立的 cat，内存只保留一块。
+  const truncate = await runShBytes(vm, ': > "$1"', [target], {
+    signal: options.signal,
+    timeoutMs: 15_000,
+  })
+  if (truncate.exitCode !== 0) {
+    throw new Error(`无法创建 ${target}`)
+  }
+  let offset = 0
+  while (offset < file.size) {
+    const end = Math.min(file.size, offset + IMPORT_CHUNK_BYTES)
+    const bytes = new Uint8Array(await file.slice(offset, end).arrayBuffer())
+    const result = await runShBytes(vm, 'cat >> "$1"', [target], {
+      input: bytes,
+      signal: options.signal,
+      timeoutMs: 120_000,
+    })
+    if (result.exitCode !== 0) {
+      throw new Error(stderrText(result.stderr).trim() || `写入 ${target} 失败`)
+    }
+    offset = end
+    options.onChunk?.(offset, file.size)
+  }
+}
+
 /** 把本机 File 列表导入 guest 目录 */
 export const importGuestFiles = async (
   files: readonly File[],
@@ -400,7 +447,7 @@ export const importGuestFiles = async (
   options: {
     overwrite?: boolean
     signal?: AbortSignal
-    onProgress?: (name: string, index: number) => void
+    onProgress?: (name: string, index: number, done: number, total: number) => void
   } = {}
 ): Promise<GuestImportOutcome[]> => {
   const vm = await waitForUnkernelVm()
@@ -413,7 +460,7 @@ export const importGuestFiles = async (
   for (const [index, file] of files.entries()) {
     const name = sanitizeName(file.name) || `file-${index + 1}`
     const target = joinGuestPath(dir, name)
-    options.onProgress?.(name, index)
+    options.onProgress?.(name, index, 0, file.size)
     if (!target) {
       outcomes.push({ name, path: '', bytes: file.size, ok: false, error: '文件名无效' })
       continue
@@ -429,12 +476,21 @@ export const importGuestFiles = async (
       continue
     }
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer())
-      await writeGuestBytes(vm, target, bytes, {
-        overwrite: options.overwrite,
-        signal: options.signal,
-      })
-      outcomes.push({ name, path: target, bytes: bytes.length, ok: true })
+      if (file.size > IMPORT_CHUNK_BYTES) {
+        await writeGuestFileStream(vm, target, file, {
+          overwrite: options.overwrite,
+          signal: options.signal,
+          onChunk: (done, total) => options.onProgress?.(name, index, done, total),
+        })
+        outcomes.push({ name, path: target, bytes: file.size, ok: true })
+      } else {
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        await writeGuestBytes(vm, target, bytes, {
+          overwrite: options.overwrite,
+          signal: options.signal,
+        })
+        outcomes.push({ name, path: target, bytes: bytes.length, ok: true })
+      }
     } catch (error) {
       outcomes.push({
         name,
