@@ -27,6 +27,25 @@
   position: relative;
 }
 
+/* 桌面端打开右侧虚拟机时，和左侧侧边栏一样轻微滑入 */
+@media (min-width: 768px) {
+  .dock {
+    animation: dockEnter 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes dockEnter {
+  from {
+    opacity: 0.4;
+    transform: translate3d(16px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 /* desktopDock 关闭：浮在聊天区右侧，不挤压聊天 */
 .dockFloating {
   position: absolute;

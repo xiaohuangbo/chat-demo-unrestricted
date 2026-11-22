@@ -1483,7 +1483,7 @@ export const en = {
   unkernelStatusError: 'Boot failed: {reason}',
   unkernelSettingsTitle: 'Unkernel Linux',
   unkernelSettingsHint:
-    'A real Linux 7.x kernel compiled to WebAssembly: Alpine with bash, apk, networking, sound, a framebuffer and a persistent disk, running in the browser. The first open loads about 10 MB of kernel plus a 4 MB Alpine image.',
+    'A real Linux 7.x kernel compiled to WebAssembly: Alpine or Debian with bash, apt / apk, networking, sound, a framebuffer and a persistent disk, running in the browser. The first open loads about 10 MB of kernel plus a 4 MB Alpine (or 70 MB Debian) image.',
   unkernelEnable: 'Enable Unkernel Linux',
   unkernelEnableHint: 'When off, the sidebar entry is hidden and the model cannot see the unkernel tools.',
   unkernelAllowAgent: 'Let the model operate Unkernel',
@@ -1524,6 +1524,18 @@ export const en = {
   unkernelOpening: 'Opening Unkernel…',
   unkernelRuntimeNote:
     'Requires JSPI (Chrome / Edge 137+, Firefox 153+, Safari 27+). Android WebView shows a boot error if it lacks JSPI. Bundled image: Alpine 3.24.',
+  unkernelDistro: 'Distribution',
+  unkernelDistroHint: 'Alpine is small and fast; Debian ships glibc / apt for Docker, Node, dsh-TUI and other programs. Restart the VM after switching.',
+  unkernelDistroAlpine: 'Alpine 3.24',
+  unkernelDistroDebian: 'Debian 13.7',
+  unkernelCpu: 'CPUs',
+  unkernelCpuHint: 'More CPUs boot the SMP kernel with one Web Worker per CPU; restart the VM to apply.',
+  unkernelCpuRequiresCoi: 'Multiple CPUs need cross-origin isolation; dragging the slider enables it and reloads the page. Android WebView does not support it, so one CPU only.',
+  unkernelCoiEnabling: 'Enabling cross-origin isolation; the page reloads once…',
+  unkernelCoiUnsupported: 'Cross-origin isolation is unavailable here (Android WebView), so multiple CPUs cannot run',
+  unkernelCoiFailed: 'Could not enable cross-origin isolation: {reason}',
+  pullUnkernelHint: 'Keep pulling to open Unkernel Linux',
+  pullUnkernelRelease: 'Release to open Unkernel Linux',
   unkernelFiles: 'Files',
   unkernelImportTarget: 'Import into guest directory',
   unkernelImportTargetHint: 'An absolute path; /mnt/workspace by default, the same files as the chat workspace.',
@@ -2077,9 +2089,9 @@ export const en = {
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',
   changelogV279Unkernel:
-    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24, real kernel, apk / bash, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status), and networking defaults to public Wisp proxies (anura.pro / mercurywork.shop)',
+    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH + dsh-TUI installer is added, and NanoVM / WebVM gain `fastfetch`',
   changelogV279Settings:
-    'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; sidebar entry, README and license credits updated',
+    'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel; sidebar entry, README and license credits updated',
   changelogV279Apk: 'Builds the 2.7.9 APK (versionCode 279), signed with xiaohuangbo.jks',
   changelogV278Title: 'v2.7.8 · 2026-11',
   changelogV278V4Pro:

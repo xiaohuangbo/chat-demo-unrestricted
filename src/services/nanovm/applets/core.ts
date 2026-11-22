@@ -2476,6 +2476,52 @@ const uptimeApplet: Applet = {
   },
 }
 
+const fastfetchApplet: Applet = {
+  name: 'fastfetch',
+  summary: '以 fastfetch 风格显示 NanoVM 系统状态',
+  summaryEn: 'Show NanoVM system information in fastfetch style',
+  usage: 'fastfetch',
+  run: (context) => {
+    const stats = context.memory()
+    const limits = context.fs.getLimits()
+    const usage = context.fs.usage()
+    const seconds = Math.max(0, Math.floor((Date.now() - loadedAt) / 1000))
+    const uptime =
+      seconds < 60
+        ? `${seconds}s`
+        : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`
+    const host = context.env.HOSTNAME ?? 'nanovm'
+    const logo = [
+      '       ▄▄▄▄▄       ',
+      '    ▄█████████▄    ',
+      '   ███▀     ▀███   ',
+      '   ███  ◉ ◉  ███   ',
+      '   ███▄  ▄▄  ███   ',
+      '    ▀█████████▀    ',
+    ]
+    const info = [
+      `${USER}@${host}`,
+      '----------------',
+      `OS: NanoVM Slim ${APP_VERSION} (wasm32)`,
+      `Kernel: Linux ${APP_VERSION}`,
+      `Uptime: ${uptime}`,
+      `Shell: ${context.env.SHELL ?? 'sh'}`,
+      `Terminal: ${context.env.TERM ?? 'xterm'}`,
+      `CPU: wasm32 (1 core)`,
+      `Memory: ${humanSize(stats.usedBytes)} / ${stats.totalMB} MiB`,
+      `Disk: ${humanSize(usage.bytes)} / ${limits.diskMB} MiB`,
+      `Files: ${usage.files}`,
+      `CWD: ${context.cwd}`,
+    ]
+    const rows = Math.max(logo.length, info.length)
+    const lines: string[] = []
+    for (let i = 0; i < rows; i += 1) {
+      lines.push(`${(logo[i] ?? '').padEnd(22)}${info[i] ?? ''}`.trimEnd())
+    }
+    return ok(`${lines.join('\n')}\n`)
+  },
+}
+
 const mountApplet: Applet = {
   name: 'mount',
   summary: '列出虚拟挂载点',
@@ -2528,6 +2574,7 @@ export const CORE_APPLETS: Applet[] = [
   sleepApplet,
   dateApplet,
   unameApplet,
+  fastfetchApplet,
   hostnameApplet,
   whoamiApplet,
   idApplet,

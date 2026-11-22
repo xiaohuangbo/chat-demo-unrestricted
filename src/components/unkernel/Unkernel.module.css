@@ -10,6 +10,11 @@
   &[data-open='false'] {
     display: none;
   }
+
+  /* 从主页下拉 / 侧栏进入时，页面从上方轻轻落下 */
+  &[data-open='true'] {
+    animation: unkernelEnter 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 .header {
@@ -89,6 +94,18 @@
   min-height: 0;
   border: 0;
   background-color: #0b0d10;
+}
+
+@keyframes unkernelEnter {
+  from {
+    opacity: 0.3;
+    transform: translate3d(0, -14px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @keyframes pulse {

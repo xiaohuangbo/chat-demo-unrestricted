@@ -38,11 +38,11 @@ API 地址在 [`rspack.config.ts`](../../rspack.config.ts) 的 `createConfig({ a
 
 WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 这类不能自定义响应头的静态托管上，第一次启用 WebVM 时会注册 `coi-sw.js` 并刷新一次，之后由 Service Worker 为同源响应补头。**Android WebView 不支持跨源隔离（Chromium issue 40914606），所以 APK 内无法运行 WebVM；请在手机 Chrome 或桌面浏览器里打开在线版。** 也可以自己在 Nginx / Vercel 上直接配置 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: credentialless`，省掉这次刷新。
 
-Unkernel 默认在主线程运行，不需要跨源隔离；完整页面、UP/SMP 内核 wasm 与 Alpine 镜像从 `public/unkernel/` 复制到 `dist/unkernel/`，Android 资源服务器会对 3.9 MiB 的 `alpine.erofs` 响应 `Range` 请求。它需要 JSPI，旧 WebView 会显示启动错误而不是终端。
+Unkernel 默认在主线程运行，不需要跨源隔离；多 CPU 需要跨源隔离，静态站点会注册 `coi-sw.js` 并刷新一次。完整页面、UP/SMP 内核 wasm 与 Alpine 镜像从 `public/unkernel/` 复制到 `dist/unkernel/`，Android 资源服务器会对 3.9 MiB 的 `alpine.erofs` 响应 `Range` 请求。它需要 JSPI，旧 WebView 会显示启动错误而不是终端。
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.9.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.9.apk`（约 105 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、拍照（系统相机 + content:// 回传）、麦克风权限、返回键和外部链接跳转；

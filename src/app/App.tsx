@@ -35,6 +35,7 @@ import {
 } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
 import { NanoVMHost } from '../components/nanovm/NanoVMHost.js'
+import { PullToUnkernel } from '../components/unkernel/PullToUnkernel.js'
 import { UnkernelPanel } from '../components/unkernel/UnkernelPanel.js'
 import { isLocalModel, isWebllmModel, webllmModelId } from '../services/local/catalog.js'
 import { loadModel, refreshDownloaded } from '../services/local/engine.js'
@@ -299,6 +300,7 @@ export const App = () => {
                 <Welcome />
               )}
             </div>
+            <PullToUnkernel />
             <NanoVMHost />
           </div>
           {mobileSiderOpen ? (

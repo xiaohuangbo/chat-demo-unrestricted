@@ -10,3 +10,7 @@ build/
 !.env.example
 tmp/
 .nanovm-build/
+
+# 构建产物：APK 通过 GitHub Releases 分发（单文件超过 GitHub 100 MB 限制）
+*.apk
+*.apk.idsig

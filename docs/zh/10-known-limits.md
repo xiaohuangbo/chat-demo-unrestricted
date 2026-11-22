@@ -96,7 +96,7 @@
 80. **PyBot 启动不是即时的**：每次提问都要把约 39MB 源码同步进 Pyodide 并导入 528 个模块，实测约 8 秒；安装需要 Python 工具链（约 12MB），离线快照固定为提交 24cbc04，更新需重新打 `public/pybot.zip`；交互会话期间终端输入按聊天消息处理，要执行 shell 命令先 `/exit`。
 81. **V4 Pro 缺少联网与图片能力**：服务端明确拒绝 `deepseek_web_search` / `deepseek_read_url` / `title` / `latest_reminder`。本项目为 V4 Pro 去掉这些字段、把日期提醒与压缩摘要折进 system、用首问生成标题并停用智能搜索；图片输入不会报错，但模型看不到图片内容。需要联网、联网标题或看图时请切回 DeepSeek Flash。
 
-82. **Unkernel 需要 JSPI，且只打包 Alpine**：内核依赖 `WebAssembly.Suspending` / `promising`（Chrome / Edge 137+、Firefox 153+、Safari 27+）；旧 Android WebView 会显示启动错误，请用新版浏览器打开在线版。只打包 `alpine.erofs`，没有 69 MiB 的 Debian 镜像，选项里也不显示 Debian。联网默认走公共 Wisp 代理（anura.pro / mercurywork.shop，代理运营方能看到 guest 连接的主机名、端口和明文 HTTP 内容；TLS 仍是端到端）。如果公共代理不可用，在 设置 → Unkernel Linux 里填自己的 `wss://` 地址。全屏页面 UI 已汉化（终端里 Linux 内核自己的输出仍是英文）；应用内的设置栏和 Agent 工具也是中文。
+82. **Unkernel 需要 JSPI，Alpine / Debian 双镜像**：内核依赖 `WebAssembly.Suspending` / `promising`（Chrome / Edge 137+、Firefox 153+、Safari 27+）；旧 Android WebView 会显示启动错误，请用新版浏览器打开在线版。同时打包 Alpine（3.9 MiB）和 Debian（70 MiB），APK 约 105 MB；Debian 首次启动会流式读取 70 MiB 镜像。多 CPU 需要跨源隔离：桌面静态站点会提示开启并刷新一次，Android WebView 不支持，只能 1 个 CPU。联网默认走公共 Wisp 代理（anura.pro / mercurywork.shop，代理运营方能看到 guest 连接的主机名、端口和明文 HTTP 内容；TLS 仍是端到端）。如果公共代理不可用，在 设置 → Unkernel Linux 里填自己的 `wss://` 地址。DSH + dsh-TUI 演示仅支持 Debian，首次需从 GitHub 下载约 600 MB 便携包并写入数据盘；NanoVM / WebVM 的 `fastfetch` 是内置命令。全屏页面 UI 已汉化（终端里 Linux 内核自己的输出仍是英文）；应用内的设置栏和 Agent 工具也是中文。
 
 ---
 

@@ -26,6 +26,10 @@ import {
   type GuestImportOutcome,
 } from '../../services/unkernel/files.js'
 import { isWorkspaceEnabled } from '../../services/workspace/store.js'
+import {
+  enableCrossOriginIsolationForUnkernel,
+  readCoiState,
+} from '../../services/webvm/coi.js'
 import { UNKERNEL_TOOLS } from '../../services/agent/unkernelTools.js'
 import nanoStyles from '../nanovm/NanoVM.module.css'
 import styles from './UnkernelConsole.module.css'
@@ -73,6 +77,7 @@ export const UnkernelConsole = () => {
   const [importProgress, setImportProgress] = useState<string | null>(null)
   const [importResults, setImportResults] = useState<GuestImportOutcome[]>([])
   const [dragOver, setDragOver] = useState(false)
+  const [coiState] = useState(() => readCoiState())
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -91,6 +96,37 @@ export const UnkernelConsole = () => {
     }
     setWispInvalid(false)
     setUnkernelConfig({ wispUrl: value })
+  }
+
+  const chooseCpus = (next: number) => {
+    if (next === config.cpus) {
+      return
+    }
+    if (next > 1 && coiState.state !== 'isolated') {
+      if (coiState.state === 'registerable') {
+        setUnkernelConfig({ cpus: next })
+        showToast(t('unkernelCoiEnabling'))
+        void enableCrossOriginIsolationForUnkernel().catch((reason: unknown) => {
+          showToast(
+            t('unkernelCoiFailed', {
+              reason: reason instanceof Error ? reason.message : String(reason),
+            })
+          )
+        })
+        return
+      }
+      showToast(t('unkernelCoiUnsupported'))
+      return
+    }
+    setUnkernelConfig({ cpus: next })
+  }
+
+  const chooseDistro = (distro: 'alpine' | 'debian') => {
+    setUnkernelConfig({
+      distro,
+      // Debian 的 apt / Node 程序比 Alpine 吃内存，默认至少给 512 MiB。
+      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 512) : config.memoryMiB,
+    })
   }
 
   const commitTimeout = () => {
@@ -228,6 +264,26 @@ export const UnkernelConsole = () => {
 
       <div className={nanoStyles.groupTitle}>{t('unkernelResources')}</div>
       <div className={nanoStyles.card}>
+        <div className={styles.field}>
+          <div className={styles.label}>{t('unkernelDistro')}</div>
+          <div className={styles.quickRow}>
+            <Button
+              variant={config.distro === 'alpine' ? 'primary' : 'outlined'}
+              size="s"
+              onClick={() => chooseDistro('alpine')}
+            >
+              {t('unkernelDistroAlpine')}
+            </Button>
+            <Button
+              variant={config.distro === 'debian' ? 'primary' : 'outlined'}
+              size="s"
+              onClick={() => chooseDistro('debian')}
+            >
+              {t('unkernelDistroDebian')}
+            </Button>
+          </div>
+          <div className={nanoStyles.hint}>{t('unkernelDistroHint')}</div>
+        </div>
         <div className={nanoStyles.sliderRow}>
           <div className={nanoStyles.sliderHead}>
             <span className={nanoStyles.sliderLabel}>{t('unkernelMemory')}</span>
@@ -244,6 +300,27 @@ export const UnkernelConsole = () => {
             onChange={(event) => setUnkernelConfig({ memoryMiB: Number(event.target.value) })}
           />
           <div className={nanoStyles.hint}>{t('unkernelMemoryHint')}</div>
+        </div>
+        <div className={nanoStyles.sliderRow}>
+          <div className={nanoStyles.sliderHead}>
+            <span className={nanoStyles.sliderLabel}>{t('unkernelCpu')}</span>
+            <span className={nanoStyles.sliderValue}>{config.cpus}</span>
+          </div>
+          <input
+            type="range"
+            className={nanoStyles.range}
+            min={1}
+            max={coiState.state === 'unsupported' ? 1 : 4}
+            step={1}
+            value={Math.min(config.cpus, coiState.state === 'unsupported' ? 1 : 4)}
+            aria-label={t('unkernelCpu')}
+            onChange={(event) => chooseCpus(Number(event.target.value))}
+          />
+          <div className={nanoStyles.hint}>
+            {coiState.state === 'isolated'
+              ? t('unkernelCpuHint')
+              : t('unkernelCpuRequiresCoi')}
+          </div>
         </div>
         <div className={nanoStyles.switchRow}>
           <div className={nanoStyles.switchText}>
@@ -439,7 +516,7 @@ export const UnkernelConsole = () => {
         <SwitchRow
           label={t('unkernelWorker')}
           hint={t('unkernelWorkerHint')}
-          checked={config.worker}
+          checked={config.worker || config.cpus > 1}
           onChange={(worker) => setUnkernelConfig({ worker })}
         />
         <div className={styles.field}>

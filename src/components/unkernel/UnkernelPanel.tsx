@@ -3,11 +3,13 @@ import { useTranslate } from '../../i18n/index.js'
 import { IconButton } from '../base/IconButton.js'
 import { IconCloseOutline16, IconSettingsOutline16 } from '../base/icons.js'
 import { openSettings } from '../settings/settingsDialogState.js'
+import { consumePendingUnkernelBoot } from '../../services/webvm/coi.js'
 import { useUnkernelConfig, unkernelUrl } from '../../services/unkernel/config.js'
 import {
   attachUnkernelFrame,
   closeUnkernel,
   detachUnkernelFrame,
+  openUnkernel,
   useUnkernel,
 } from '../../services/unkernel/session.js'
 import styles from './Unkernel.module.css'
@@ -29,6 +31,12 @@ export const UnkernelPanel = () => {
   const restartKey = useUnkernel((state) => state.restartKey)
   const config = useUnkernelConfig()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    if (consumePendingUnkernelBoot()) {
+      openUnkernel()
+    }
+  }, [])
 
   useEffect(() => {
     if (!mounted) {

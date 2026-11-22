@@ -1372,7 +1372,7 @@ export const zh = {
   unkernelStatusError: '启动失败：{reason}',
   unkernelSettingsTitle: 'Unkernel Linux',
   unkernelSettingsHint:
-    '真正的 Linux 7.x 内核编译成 WebAssembly：在浏览器里启动 Alpine，带 bash、apk、网络、声音、显示和持久磁盘。首次打开会加载约 10 MB 内核与 4 MB Alpine 镜像。',
+    '真正的 Linux 7.x 内核编译成 WebAssembly：在浏览器里启动 Alpine 或 Debian，带 bash、apt / apk、网络、声音、显示和持久磁盘。首次打开会加载约 10 MB 内核与 4 MB Alpine（或 70 MB Debian）镜像。',
   unkernelEnable: '启用 Unkernel Linux',
   unkernelEnableHint: '关闭后侧栏入口隐藏，模型也看不到 unkernel 工具。',
   unkernelAllowAgent: '允许模型操作 Unkernel',
@@ -1411,6 +1411,18 @@ export const zh = {
   unkernelOpening: '正在打开 Unkernel…',
   unkernelRuntimeNote:
     '需要支持 JSPI 的浏览器（Chrome / Edge 137+、Firefox 153+、Safari 27+）。Android WebView 若不支持 JSPI 会显示启动错误。当前打包镜像：Alpine 3.24。',
+  unkernelDistro: '发行版',
+  unkernelDistroHint: 'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node、dsh-TUI 等程序。切换后重启虚拟机生效。',
+  unkernelDistroAlpine: 'Alpine 3.24',
+  unkernelDistroDebian: 'Debian 13.7',
+  unkernelCpu: 'CPU 数量',
+  unkernelCpuHint: '多 CPU 会启动 SMP 内核，每个 CPU 在独立 Web Worker 中，重启虚拟机生效。',
+  unkernelCpuRequiresCoi: '多 CPU 需要跨源隔离；拖动滑块会按提示开启并刷新页面。Android WebView 不支持跨源隔离，只能用 1 个 CPU。',
+  unkernelCoiEnabling: '正在开启跨源隔离，页面会刷新一次…',
+  unkernelCoiUnsupported: '当前环境不支持跨源隔离（Android WebView 不支持），多 CPU 不可用',
+  unkernelCoiFailed: '开启跨源隔离失败：{reason}',
+  pullUnkernelHint: '继续下拉进入 Unkernel Linux',
+  pullUnkernelRelease: '松开进入 Unkernel Linux',
   unkernelFiles: '文件',
   unkernelImportTarget: '导入到 guest 目录',
   unkernelImportTargetHint: '必须是绝对路径；默认 /mnt/workspace，和聊天工作区是同一份文件。',
@@ -1933,9 +1945,9 @@ export const zh = {
   changelogV279Webvm:
     '修复手机网页端 WebVM 打开输入法准备输入时页面与终端漂移：xterm 隐藏输入框改用 preventScroll 聚焦，并在软键盘弹出后把页面滚回原点',
   changelogV279Unkernel:
-    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24、真实内核、apk / bash、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）',
+    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24 / Debian 13.7、真实内核、apk / apt、bash、SMP 多 CPU、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）；新增 DSH + dsh-TUI 下载安装入口，NanoVM / WebVM 增加 fastfetch',
   changelogV279Settings:
-    '设置新增「Unkernel Linux」独立一栏（中文），可配置内存、超时、联网、声音、显示、持久磁盘、Worker 与 Wisp；新增文件导入 / 下载 / 保存到工作区与重启虚拟机；页面界面全面汉化，侧栏增加入口，README 与许可证鸣谢补充 unkernel',
+    '设置新增「Unkernel Linux」独立一栏（中文），可配置内存、超时、联网、声音、显示、持久磁盘、Worker 与 Wisp；新增文件导入 / 下载 / 保存到工作区与重启虚拟机；页面界面全面汉化，桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel；侧栏增加入口，README 与许可证鸣谢补充 unkernel',
   changelogV279Apk: '同步构建 2.7.9 APK（versionCode 279），使用 xiaohuangbo.jks 签名',
   changelogV278Title: 'v2.7.8 · 2026-11',
   changelogV278V4Pro:

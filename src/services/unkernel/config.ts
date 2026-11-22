@@ -4,14 +4,16 @@ import { create } from 'zustand'
  * unkernel（Linux 7.x 编译成 WebAssembly）的配置。
  *
  * unkernel 页面本身在 public/unkernel/ 里，由 iframe 承载；这里只保存
- * 启动参数，改完后重建 iframe。默认用 Alpine 镜像，避免把 69 MiB 的
- * Debian 镜像一起打进 APK。
+ * 启动参数，改完后重建 iframe。Alpine 和 Debian 镜像都随应用分发；
+ * Debian 需要更多磁盘和内存，适合 apt / glibc 程序。
  */
 
 const KEY = 'chat-demo:unkernel-config'
 
 /** 公共 Wisp 代理：上游默认服务器只接受 localhost，部署到其他域名时用它。 */
 export const PUBLIC_WISP_SERVERS = 'wss://anura.pro/,wss://wisp.mercurywork.shop/'
+
+export type UnkernelDistro = 'alpine' | 'debian'
 
 export type UnkernelConfig = {
   /** 侧栏入口、设置页和控制台总开关 */
@@ -20,6 +22,8 @@ export type UnkernelConfig = {
   allowAgent: boolean
   /** 内核内存（MiB） */
   memoryMiB: number
+  /** 发行版镜像 */
+  distro: UnkernelDistro
   /** 给 guest 一张网卡（Wisp 代理） */
   network: boolean
   /** 给 guest 声卡（Web Audio） */
@@ -41,6 +45,7 @@ export type UnkernelConfig = {
 const defaults: UnkernelConfig = {
   enabled: true,
   allowAgent: false,
+  distro: 'alpine',
   memoryMiB: 256,
   network: true,
   sound: true,
@@ -69,6 +74,7 @@ const read = (): UnkernelConfig => {
     return {
       enabled: typeof source.enabled === 'boolean' ? source.enabled : defaults.enabled,
       allowAgent: typeof source.allowAgent === 'boolean' ? source.allowAgent : defaults.allowAgent,
+      distro: source.distro === 'debian' ? 'debian' : 'alpine',
       memoryMiB: clamp(source.memoryMiB ?? defaults.memoryMiB, 64, 1024),
       network: typeof source.network === 'boolean' ? source.network : defaults.network,
       sound: typeof source.sound === 'boolean' ? source.sound : defaults.sound,
@@ -99,6 +105,7 @@ export const unkernelConfig = (): UnkernelConfig => useUnkernelConfig.getState()
 
 export const setUnkernelConfig = (patch: Partial<UnkernelConfig>) => {
   const next = { ...useUnkernelConfig.getState(), ...patch }
+  next.distro = next.distro === 'debian' ? 'debian' : 'alpine'
   next.memoryMiB = clamp(next.memoryMiB, 64, 1024)
   next.cpus = clamp(next.cpus, 1, 4)
   next.timeoutMs = clamp(next.timeoutMs, 5_000, 120_000)
@@ -123,13 +130,13 @@ export const unkernelAgentAvailable = (): boolean => {
  */
 export const unkernelUrl = (config = unkernelConfig()): string => {
   const params = new URLSearchParams()
-  params.set('distro', 'alpine')
+  params.set('distro', config.distro)
   params.set('mem', String(config.memoryMiB))
   params.set('net', config.network ? '1' : '0')
   params.set('sound', config.sound ? '1' : '0')
   params.set('display', config.display ? '1' : '0')
   params.set('data', config.persistentData ? '1' : '0')
-  params.set('worker', config.worker ? '1' : '0')
+  params.set('worker', config.worker || config.cpus > 1 ? '1' : '0')
   params.set('cpus', String(config.cpus))
   // 上游默认 Wisp 只接受 localhost；留空时用公共代理，页面里会同时竞速两个服务器。
   params.set('wisp', config.wispUrl || PUBLIC_WISP_SERVERS)

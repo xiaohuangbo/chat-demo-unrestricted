@@ -270,6 +270,23 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : typeof error === 'string' ? error : String(error)
 
+const fastfetchFn =
+  'BASH_FUNC_fastfetch%%=() { ' +
+  'echo "   ╭─────╮   user@webvm"; ' +
+  'echo "   │ ◉ ◉ │   ──────────"; ' +
+  'echo "   ╰─────╯"; ' +
+  'echo " OS       Debian $(cat /etc/debian_version 2>/dev/null)"; ' +
+  'echo " Kernel   $(uname -srm)"; ' +
+  'echo " Uptime   ${SECONDS}s"; ' +
+  'echo " Shell    ${SHELL:-/bin/bash}"; ' +
+  'echo " Terminal ${TERM:-xterm}"; ' +
+  'echo " User     $(id -un 2>/dev/null || echo user)"; ' +
+  'echo " Home     $HOME"; ' +
+  'echo " CPU      CheerpX x86 (single core)"; ' +
+  'echo " Memory   browser-managed (CheerpX)"; ' +
+  'echo " Disk     $HOME (persistent overlay)"; ' +
+  '}'
+
 const shellEnv = [
   'HOME=/home/user',
   'TERM=xterm',
@@ -280,6 +297,7 @@ const shellEnv = [
   'LC_ALL=C',
   'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   'BASH_FUNC_sudo%%=() { if [ "$(id -u)" -eq 0 ]; then "$@"; return $?; fi; if [ $# -eq 0 ]; then echo "usage: sudo command (root password: password)" >&2; return 1; fi; if [ "$1" = "-i" ] || [ "$1" = "-s" ]; then exec su - root; fi; su -c "$*" root; }',
+  fastfetchFn,
 ]
 
 export type WebVmRunResult = {
@@ -804,7 +822,7 @@ export const checkWebVmEnvironment = async (): Promise<string> => {
       [
         'echo "uname: $(uname -srm)"',
         'echo "debian: $(cat /etc/debian_version 2>/dev/null || echo unknown)"',
-        'for c in bash sh ls cat grep sed awk tar gzip curl wget git gcc g++ make python3 pip3 node npm ruby perl lua5.3 luajit vim nano; do',
+        'for c in bash sh ls cat grep sed awk tar gzip curl wget git gcc g++ make python3 pip3 node npm ruby perl lua5.3 luajit vim nano fastfetch; do',
         '  if command -v "$c" >/dev/null 2>&1; then printf "%-9s %s\\n" "$c" "$(command -v "$c")"; else printf "%-9s missing\\n" "$c"; fi;',
         'done',
       ].join('\n'),
