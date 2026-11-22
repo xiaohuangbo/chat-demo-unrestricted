@@ -1395,7 +1395,7 @@ export const zh = {
   unkernelWorker: '在 Worker 中运行',
   unkernelWorkerHint: '需要 crossOriginIsolated；不满足时会自动回退到主线程。',
   unkernelWisp: 'Wisp 地址',
-  unkernelWispHint: '留空使用 unkernel 默认 Wisp；网络被默认服务器限制时可填自己的 wss:// 地址。',
+  unkernelWispHint: '留空使用公共 Wisp（anura.pro / mercurywork.shop）；想走自己的代理时填 wss:// 地址。',
   unkernelWispInvalid: 'Wisp 地址必须以 ws:// 或 wss:// 开头',
   unkernelAgentTools: 'Agent 工具',
   unkernelAgentToolsHint: '工具是否可用由上面的「允许模型操作 Unkernel」控制；每条命令仍会先确认。',
@@ -1933,7 +1933,7 @@ export const zh = {
   changelogV279Webvm:
     '修复手机网页端 WebVM 打开输入法准备输入时页面与终端漂移：xterm 隐藏输入框改用 preventScroll 聚焦，并在软键盘弹出后把页面滚回原点',
   changelogV279Unkernel:
-    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24、真实内核、apk / bash、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个',
+    '移植 Unkernel Linux（Linux 7.x 编译成 WebAssembly）：Alpine 3.24、真实内核、apk / bash、网络、声音、显示、持久磁盘与全屏页面；工作区自动挂到 /mnt/workspace；页面界面全面汉化，设置页新增文件导入 / 下载 / 保存到工作区与重启虚拟机，Agent 工具扩展到 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个；联网默认改用公共 Wisp 代理（anura.pro / mercurywork.shop）',
   changelogV279Settings:
     '设置新增「Unkernel Linux」独立一栏（中文），可配置内存、超时、联网、声音、显示、持久磁盘、Worker 与 Wisp；新增文件导入 / 下载 / 保存到工作区与重启虚拟机；页面界面全面汉化，侧栏增加入口，README 与许可证鸣谢补充 unkernel',
   changelogV279Apk: '同步构建 2.7.9 APK（versionCode 279），使用 xiaohuangbo.jks 签名',

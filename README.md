@@ -34,7 +34,7 @@
 - **Virtual workspace**: a local file store with any-format import/export, the OPFS file system, and app storage on Android;
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox commands, single-file import (device / workspace, zip and binaries included, `nanovm_import` agent tool) and a PyBot toolchain (640k lines of pure-Python rules, no weights), docked right on desktop and a bottom panel on phones; Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
-- **Unkernel Linux**: a third VM running a real Linux 7.x kernel compiled to WebAssembly — Alpine 3.24, `apk`, bash, networking over Wisp, Web Audio sound, a framebuffer/evdev display, a persistent IndexedDB disk and the full unkernel page (its UI localized to Chinese); the chat workspace is mounted at `/mnt/workspace`, and the model gets ten `unkernel_*` tools (shell, list, read/write files, workspace transfer, Python, system info, open, restart, status);
+- **Unkernel Linux**: a third VM running a real Linux 7.x kernel compiled to WebAssembly — Alpine 3.24, `apk`, bash, networking over Wisp (public anura.pro / mercurywork.shop proxies by default), Web Audio sound, a framebuffer/evdev display, a persistent IndexedDB disk and the full unkernel page (its UI localized to Chinese); the chat workspace is mounted at `/mnt/workspace`, and the model gets ten `unkernel_*` tools (shell, list, read/write files, workspace transfer, Python, system info, open, restart, status);
 - **Chat modes**: Chat only / Web agent / PTC / Creator decide which client tools and round limit apply;
 - **Local models**: a port of mlc-ai/web-llm-chat — WebGPU models (Llama / Qwen / Gemma / Phi / DeepSeek) run in the browser, downloaded weights stay cached on device, the chat bar switches between them, `.mlcmodel` bundles import/export, and a self-hosted MLC-LLM REST endpoint is supported; local models also write long-term memories, use a search pre-pass, read text attachments and stay Chat-only;
 - **Characters and account**: role cards (persona, avatar, auto memory), My profile, a compression threshold and DeepSeek balance plus usage overview, ported from Remember and wired into the existing memory and stats systems;
@@ -72,7 +72,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: `deepseek-unrestricted-2.7.9.apk` (36 MB, versionCode 279,
-SHA-256 `05a7dabee9f6861098145896a5cda726152ece7f0c2bf69f71d85190dd9abad8`) — see [android/README.md](android/README.md).
+SHA-256 `dcea3f7a5df9bcdaed1077df3169e28041ed35ea0db3a0023dc00b84afd7c684`) — see [android/README.md](android/README.md).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility

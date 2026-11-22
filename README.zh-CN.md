@@ -34,7 +34,7 @@
 - **虚拟工作区**：浏览器本地文件库，任意格式导入导出、OPFS 真文件系统、安卓端为应用存储；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制，另有 `nanovm_import` Agent 工具），并新增 PyBot 工具链（64 万行纯 Python 规则聊天机器人，无模型权重），桌面端右侧停靠、手机端底部面板，Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git 按需安装，虚拟机内自带虚拟网络（Node 与 Python 的 HTTP / WebSocket 服务）；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，自带 bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
-- **Unkernel Linux**：第三个虚拟机，跑真正编译成 WebAssembly 的 Linux 7.x 内核——Alpine 3.24、`apk`、bash、Wisp 联网、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘、文件导入导出和完整 unkernel 页面（界面已汉化）；聊天工作区挂到 `/mnt/workspace`，模型可用 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个 `unkernel_*` 工具；
+- **Unkernel Linux**：第三个虚拟机，跑真正编译成 WebAssembly 的 Linux 7.x 内核——Alpine 3.24、`apk`、bash、Wisp 联网（默认公共 anura.pro / mercurywork.shop 代理）、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘、文件导入导出和完整 unkernel 页面（界面已汉化）；聊天工作区挂到 `/mnt/workspace`，模型可用 shell、列目录、读写文件、工作区互传、Python、系统信息、打开、重启、状态共十个 `unkernel_*` 工具；
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术，命中用户输入时本地直接拒答，不请求接口，未填 API Key 也能触发；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
@@ -70,7 +70,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：`deepseek-unrestricted-2.7.9.apk`（36 MB，versionCode 279，
-SHA-256 `05a7dabee9f6861098145896a5cda726152ece7f0c2bf69f71d85190dd9abad8`），详情见 [android/README.md](android/README.md)。
+SHA-256 `dcea3f7a5df9bcdaed1077df3169e28041ed35ea0db3a0023dc00b84afd7c684`），详情见 [android/README.md](android/README.md)。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性

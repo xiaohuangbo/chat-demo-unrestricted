@@ -10,6 +10,9 @@ import { create } from 'zustand'
 
 const KEY = 'chat-demo:unkernel-config'
 
+/** 公共 Wisp 代理：上游默认服务器只接受 localhost，部署到其他域名时用它。 */
+export const PUBLIC_WISP_SERVERS = 'wss://anura.pro/,wss://wisp.mercurywork.shop/'
+
 export type UnkernelConfig = {
   /** 侧栏入口、设置页和控制台总开关 */
   enabled: boolean
@@ -128,8 +131,7 @@ export const unkernelUrl = (config = unkernelConfig()): string => {
   params.set('data', config.persistentData ? '1' : '0')
   params.set('worker', config.worker ? '1' : '0')
   params.set('cpus', String(config.cpus))
-  if (config.wispUrl) {
-    params.set('wisp', config.wispUrl)
-  }
+  // 上游默认 Wisp 只接受 localhost；留空时用公共代理，页面里会同时竞速两个服务器。
+  params.set('wisp', config.wispUrl || PUBLIC_WISP_SERVERS)
   return `/unkernel/index.html?${params.toString()}`
 }

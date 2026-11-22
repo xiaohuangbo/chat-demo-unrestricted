@@ -1508,7 +1508,7 @@ export const en = {
   unkernelWorker: 'Run in a Web Worker',
   unkernelWorkerHint: 'Needs crossOriginIsolated; falls back to the main thread when unavailable.',
   unkernelWisp: 'Wisp endpoint',
-  unkernelWispHint: 'Leave empty for unkernel’s default Wisp. Set your own wss:// server if the default is restricted.',
+  unkernelWispHint: 'Leave empty to use the public Wisp servers (anura.pro / mercurywork.shop); set your own wss:// server to use your proxy.',
   unkernelWispInvalid: 'The Wisp endpoint must start with ws:// or wss://',
   unkernelAgentTools: 'Agent tools',
   unkernelAgentToolsHint: 'Availability is controlled by “Let the model operate Unkernel” above; every command still asks for confirmation.',
@@ -2077,7 +2077,7 @@ export const en = {
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',
   changelogV279Unkernel:
-    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24, real kernel, apk / bash, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status)',
+    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24, real kernel, apk / bash, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status), and networking defaults to public Wisp proxies (anura.pro / mercurywork.shop)',
   changelogV279Settings:
     'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; sidebar entry, README and license credits updated',
   changelogV279Apk: 'Builds the 2.7.9 APK (versionCode 279), signed with xiaohuangbo.jks',

@@ -686,6 +686,7 @@ The server-side tool calls (deepseek_web_search, deepseek_read_url) and the titl
 **Unkernel Linux。** 第三个虚拟机：把上游 [unkernel](https://github.com/pithings/unkernel) 页面（MIT / GPL-2.0）完整放在 `public/unkernel/`，运行真正编译成 WebAssembly 的 Linux 7.x 内核和 Alpine 3.24 aarch64 用户空间。页面以同源全屏 iframe 载入，宿主可以拿到 `window.KW.vm`。上游的终端/多窗口、`apk`、Wisp 联网、Web Audio 声音、framebuffer/evdev 显示、IndexedDB 持久磁盘、文件导入导出和设置页都保留。
 
 - 应用里的中文 **设置 → Unkernel Linux** 独立一栏控制 iframe 参数：启用、允许 Agent、内存、命令超时、联网、声音、显示、持久磁盘、Worker 模式、CPU 数和自定义 Wisp 地址。
+- 联网默认改用公共 Wisp 代理（`wss://anura.pro/`、`wss://wisp.mercurywork.shop/`，两者竞速），因为上游默认服务器只接受 localhost；仍可在设置里填自己的 `wss://`。
 - 页面 UI 已全面汉化：状态栏、系统 / 客户机 / 环境 / 内核日志 / 错误 / 快捷键面板、选项、关于、启动器、预览、显示器控制、确认框和快捷键说明都改成中文；终端里的内核输出保持原样。
 - 设置栏新增文件区：可把本机文件拖入或选择后导入 guest（默认 `/mnt/workspace`，支持二进制、覆盖开关、批量进度），可把 guest 文件下载到本机、把目录打包成 `.tar.gz`，或直接保存到聊天工作区；另有「重启虚拟机」按钮。
 - 聊天工作区通过 `src/services/workspace/store.ts` 上的 9p 适配器挂到 `/mnt/workspace`，guest 读写会双向同步。
