@@ -127,7 +127,6 @@ SHA-256 `a816e584883066dc1d3b496aa183c033260c46eced3c582309b936dacf71f5da`），
 ## 鸣谢
 
 - **Linux DO 社区**：<https://linux.do/> —— 感谢社区提供的交流、反馈与测试支持。
-- **unkernel** 与 **go-deepseek** 的鸣谢已移到应用内 **设置 → 更新日志** 的末尾。
 - 上游项目、参考实现与许可信息见 [11. 许可与致谢](docs/zh/11-license.md)。
 
 ## 许可
