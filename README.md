@@ -131,7 +131,6 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 ## Acknowledgements
 
 - **Linux DO community**: <https://linux.do/> — thanks for the discussion, feedback and testing support.
-- The acknowledgements for **unkernel** and **go-deepseek** now live at the end of **Settings → Changelog** inside the app.
 - Upstream projects, reference implementations and licensing details are listed in [11. License and credits](docs/en/11-license.md).
 
 ## License
