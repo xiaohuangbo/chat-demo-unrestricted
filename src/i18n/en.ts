@@ -1328,6 +1328,8 @@ export const en = {
   attachmentsExtsCount: 'Custom list with {count} extensions',
   attachmentsLimitsOff:
     'Attachment limits are off; uploads succeed only if the server accepts them.',
+  largeInputExtensionsOff:
+    'This turn exceeds 32768 tokens of user input, so server tools, the safety check and the title request are dropped to read the attachments through the 1M context instead.',
   attachmentsLargeText: 'Handle large text attachments',
   attachmentsLargeTextDescription:
     'When on, plain-text attachments (txt / md / csv / json / code) above 32768 tokens are split at pick time instead of being uploaded as-is, so the server no longer rejects them for being too large.',
@@ -2145,6 +2147,12 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2711Title: 'v2.7.11 · 2026-11',
+  changelogV2711RootCause:
+    'Fixes the real "token too large" failure on attachments: whenever a request carries any of the DeepSeek extension fields tools / safety_check / title, the server caps user input at 32768 tokens (`user input too long, N tokens exceeds max 32768 tokens`). Turns whose user input exceeds that now drop the three fields and go through the plain Anthropic-compatible path, reading attachments up to the 1M context; when the estimate was too small and the server still refuses, the request is retried once without them',
+  changelogV2711Notice:
+    'A toast explains when server tools, the safety check and the title request are dropped for the turn; a first large turn falls back to the first 24 characters of the question as the chat title, and usage is still recorded',
+  changelogV2711Apk: 'Builds the 2.7.11 APK (versionCode 281), signed with xiaohuangbo.jks',
   changelogV2710Title: 'v2.7.10 · 2026-11',
   changelogV2710LargeText:
     'Settings → Attachments gains "Handle large text attachments": plain-text files above 32768 tokens (txt / md / csv / json / code) are split into .partN parts at pick time, each part staying under 32768 tokens, and the parts are sent together so the server no longer rejects them for being too large',

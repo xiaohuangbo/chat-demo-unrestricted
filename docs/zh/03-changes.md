@@ -714,3 +714,37 @@ UP + SMP 内核（约 18 MiB）与页面资源由 rspack 复制到 `dist/unkerne
 **设置 → 数据管理 → 导入历史对话进度条。** `readArchive` 读中央目录时就能拿到非目录条目总数，每读完一个条目回调一次；`importArchive` 再把已写入暂存的会话数一起上报，`backup.importHistory` 透传给设置页。导入期间状态行显示百分比，下方是 6px 进度条与「已处理 x / y 个条目 · 已导入 z 个对话」，检查文件阶段显示「正在检查文件…」，失败与完成仍用原有文案。
 
 **涉及文件：** `src/services/attachmentLargeText.ts`、`src/services/chat/drafts.ts`、`src/services/chat/store.ts`、`src/services/chat/reply.ts`、`src/services/chat/types.ts`、`src/components/settings/SettingsDialog.tsx`、`src/components/files/FileCard.tsx`、`src/components/chatInput/DraftAttachments.tsx`、`src/components/chatInput/ChatInput.tsx`、`src/services/chat/history/{zipReader,importArchive}.ts`、`src/services/chat/backup.ts`。
+
+### 3.41 附件「token 过大」的真正原因（2.7.11）
+
+**现象。** 2.7.10 的拆分把 326 KB 的 txt 拆成 4 片（96+96+96+34 KB）后仍然报错：
+
+```text
+user input too long, 69942 tokens exceeds max 32768 tokens (request_id: …)
+```
+
+**定位。** 用本地日志代理抓下应用真实发出的请求体，再逐项删字段重放：
+
+| 请求字段 | 结果 |
+| --- | --- |
+| 原始请求（tools + safety_check + title） | 400 `user input too long, 60753 tokens exceeds max 32768 tokens` |
+| 去掉 title | 仍然 400 |
+| 去掉 safety_check | 仍然 400 |
+| 去掉 tools | 仍然 400 |
+| 去掉 title + safety_check（保留 tools） | 通过 |
+| 三项全去掉 | 通过，`input_tokens` 6.4 万，正文正常读出 |
+| 只加 tools / 只加 safety_check / 只加 title | 三者各自都会触发 32768 上限 |
+| 只加 thinking / temperature / top_p / max_tokens | 不触发 |
+
+也就是说：**只要请求里带 `tools`、`safety_check`、`title` 任一 DeepSeek 扩展字段，服务端就把「用户输入」（文字 + 附件解析结果）限制在 32768 token；不带这些字段的纯 Anthropic 兼容请求可以一直用到 1M 上下文。** 同一份 6 万 token 的正文改用纯文本消息发送也一样被拒，所以问题跟附件格式、分片数量都无关。RikkaHub 能读同样的 txt，是因为它把文档读成文本塞进 prompt，且请求里没有这些 DeepSeek 扩展字段。
+
+**修复。** `streamReply` 在组装请求前用 `estimateUserInputTokens()` 粗估本轮用户输入（历史与当前提问的文字 + 附件按 4 字节 1 token），超过 32768 token 时：
+
+- 不再下发 `tools`、`safety_check`、`title`，请求退化为纯 Anthropic 兼容路径，附件可以一直读到 1M 上下文；
+- 从 `titleRequests` 里摘掉本轮控制器，避免这轮用量被当成标题请求不入账；首轮改用提问前 24 个字作为会话标题；
+- 首次触发时 toast 说明「已自动去掉服务端工具、安全审核与标题请求」；
+- 估算偏小、服务端仍回 `user input too long` 时，捕获 400 去掉这三项后自动重试一次，重试仍失败才展示原始错误。
+
+小输入不受影响：同一份代码在输入低于阈值时照常下发安全审核、服务端工具与标题请求。
+
+**涉及文件：** `src/services/chat/store.ts`、`src/services/api/types.ts`（`tools` 改为可选字段）、`src/i18n/{zh,en}.ts`。

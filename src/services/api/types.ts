@@ -232,7 +232,8 @@ export type CreateMessageRequest = {
   top_p?: number
   /** 本次回复的输出上限（含思考 token）；不传时由服务端决定 */
   max_tokens?: number
-  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientToolDefinition)[]
+  /** 不传表示本轮不声明任何服务端工具 */
+  tools?: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientToolDefinition)[]
   /** 省略时不携带（等同 low 档默认检查）；high 开启基础风控，默认档下发 high */
   safety_check?: { level: 'high' | 'low' }
   title?: { enabled: boolean }

@@ -1228,6 +1228,8 @@ export const zh = {
   attachmentsExtsReset: '恢复默认白名单',
   attachmentsExtsCount: '自定义 {count} 个扩展名',
   attachmentsLimitsOff: '当前不校验附件限制，是否成功取决于服务端。',
+  largeInputExtensionsOff:
+    '本轮输入超过 32768 token：已自动去掉服务端工具、安全审核与标题请求，改用 1M 上下文直读附件。',
   attachmentsLargeText: '大文本附件自动处理',
   attachmentsLargeTextDescription:
     '开启后，超过 32768 token 的纯文本附件（txt / md / csv / json / 代码等）选择时就拆分，不再原样上传，避免服务端报 token 过大。',
@@ -1992,6 +1994,12 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2711Title: 'v2.7.11 · 2026-11',
+  changelogV2711RootCause:
+    '修好附件「token 过大」的真正原因：请求里只要带 tools / safety_check / title 任一 DeepSeek 扩展字段，服务端就把用户输入限制在 32768 token（`user input too long, N tokens exceeds max 32768 tokens`）；现在本轮用户输入超过 32768 token 时自动去掉这三项，走纯 Anthropic 兼容路径直读附件，一直到 1M 上下文；估算偏小被服务端拒绝时也会去掉后自动重试一次',
+  changelogV2711Notice:
+    '本轮自动关闭服务端工具、安全审核与标题请求时用 toast 说明；首轮大输入改用提问前 24 个字作为会话标题，用量照常记账',
+  changelogV2711Apk: '同步构建 2.7.11 APK（versionCode 281），使用 xiaohuangbo.jks 签名',
   changelogV2710Title: 'v2.7.10 · 2026-11',
   changelogV2710LargeText:
     '设置 → 附件新增「大文本附件自动处理」：超过 32768 token 的纯文本附件（txt / md / csv / json / 代码等）在选择时就拆成 .partN 分片，每个分片都不超过 32768 token，多个分片一起发送，避免服务端报 token 过大',

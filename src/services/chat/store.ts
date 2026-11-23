@@ -39,7 +39,7 @@ import { noteContextUsage } from './contextUsage.js'
 import { buildContextBreakdown, noteContextBreakdown } from './contextBreakdown.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
-import { estimatePages, noteRunTiming } from './sessionStats.js'
+import { estimatePages, estimateTokens, noteRunTiming } from './sessionStats.js'
 import { enabledAgentTools } from '../agent/agentToolSettings.js'
 import { createToolCall, runAgentToolCall, toolResultForModel } from '../agent/runTool.js'
 import { modePolicy, modeSystemNote } from './mode.js'
@@ -118,16 +118,44 @@ const safetyCheck = (
   skipSafetyCheck: boolean
 ): CreateMessageRequest['safety_check'] =>
   unrestricted || skipSafetyCheck ? undefined : { level: 'high' }
+/**
+ * 服务端在请求带 tools / safety_check / title 这些 DeepSeek 扩展字段时，
+ * 会把「用户输入」（文字 + 附件解析结果）限制在 32768 token 以内，超了直接回
+ * `user input too long, N tokens exceeds max 32768 tokens`；不带这些字段的
+ * 纯 Anthropic 兼容请求可以一直用到 1M 上下文。附件较大时本轮去掉这三项。
+ */
+const DEEPSEEK_INPUT_TOKEN_LIMIT = 32_768
+
+/** 已经提示过「大输入去掉扩展字段」的会话：同一个会话只提示一次，避免每轮都弹 */
+const largeInputNoticeSessions = new Set<string>()
+
+/** 粗估本轮用户输入 token：文字按 estimateTokens，附件按 4 字节 1 token */
+const estimateUserInputTokens = (history: Message[], question: UserMessage): number => {
+  let tokens = 0
+  for (const [user] of getContextRounds(history)) {
+    tokens += estimateTokens(user.content)
+    for (const file of user.files) {
+      tokens += Math.ceil(file.size / 4)
+    }
+  }
+  tokens += estimateTokens(question.content)
+  for (const file of question.files) {
+    tokens += Math.ceil(file.size / 4)
+  }
+  return tokens
+}
+
 /** 服务端判定 file_id 失效后，重新补传并重发的最多次数（不含首次请求） */
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
 
+/** 请求里的工具数组（tools 现在是可选字段，这里固定用非空的数组类型） */
+type RequestTools = NonNullable<CreateMessageRequest['tools']>
+
 /** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
-const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
-  const tools: CreateMessageRequest['tools'] = [
-    { type: 'deepseek_read_url', name: 'deepseek_read_url' },
-  ]
+const serverTools = (search: boolean): RequestTools => {
+  const tools: RequestTools = [{ type: 'deepseek_read_url', name: 'deepseek_read_url' }]
   if (search) {
     tools.push({ type: 'deepseek_web_search', name: 'deepseek_web_search' })
   }
@@ -138,11 +166,7 @@ const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
  * 本轮下发的工具列表：服务端工具 + 已开启的浏览器工具。
  * 浏览器工具由设置里的主开关与逐项开关过滤，关闭时模型完全看不到它。
  */
-const requestTools = (
-  search: boolean,
-  allowAgentTools: boolean,
-  model: string
-): CreateMessageRequest['tools'] => {
+const requestTools = (search: boolean, allowAgentTools: boolean, model: string): RequestTools => {
   // V4 Pro 不支持服务端联网工具；带任一服务端工具会被 API 直接拒绝
   const tools = supportsServerTools(model) ? serverTools(search) : []
   if (!allowAgentTools) {
@@ -1553,6 +1577,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   const runStartedAt = Date.now()
   let firstTokenAt: number | null = null
   let fallbackNoReasoning = false
+  // 用户输入超过 32768 token 时去掉 DeepSeek 扩展字段（tools / safety_check / title），见上方常量说明
+  let stripDeepseekExtensions = false
   beginLiveRun(sessionId, initial.model ?? MODEL)
   const flush = (force = false) => {
     cancelAnimationFrame(frame)
@@ -1711,14 +1737,31 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         if (autoTuned) {
           noteAutoTune(initial.id, autoTuned.detectedContext, autoTuned.params)
         }
+        // 大附件 / 长文本：服务端只在带 DeepSeek 扩展字段时套 32768 token 的用户输入上限，
+        // 去掉这些字段后纯 Anthropic 兼容请求可以一直用到 1M 上下文
+        if (
+          !stripDeepseekExtensions &&
+          estimateUserInputTokens(prepared.history, prepared.question) > DEEPSEEK_INPUT_TOKEN_LIMIT
+        ) {
+          stripDeepseekExtensions = true
+        }
+        if (stripDeepseekExtensions && !largeInputNoticeSessions.has(sessionId)) {
+          largeInputNoticeSessions.add(sessionId)
+          showToast({ key: 'largeInputExtensionsOff' })
+        }
+        // 本轮不再请求服务端标题：从标题请求集合里摘掉，否则这轮的用量会被当成标题请求不记账
+        if (stripDeepseekExtensions) {
+          titleRequests.delete(controller)
+        }
         // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
-        const tools = localModel
-          ? []
-          : requestTools(
-              (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
-              true,
-              initial.model ?? MODEL
-            )
+        const tools =
+          localModel || stripDeepseekExtensions
+            ? []
+            : requestTools(
+                (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
+                true,
+                initial.model ?? MODEL
+              )
         noteContextBreakdown(
           sessionId,
           buildContextBreakdown({ system: systemText, tools, messages })
@@ -1769,10 +1812,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                 temperature: autoTuned?.params.temperature ?? temperature,
                 top_p: autoTuned?.params.top_p ?? topP,
                 ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
-                safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
-                // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
-                tools,
-                ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+                // 大输入时三项都不下发：任意一项都会让服务端改用 32768 token 的用户输入上限
+                ...(stripDeepseekExtensions
+                  ? {}
+                  : {
+                      safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
+                      // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
+                      tools,
+                      ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+                    }),
               },
               controller.signal
             )
@@ -1828,8 +1876,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settle(reply, 'done', Date.now())
-        // 本地模型与 V4 Pro 没有服务端标题：首轮用提问开头几个字作为会话标题
-        if (!serverTitle && !getSession(sessionId)?.title) {
+        // 本地模型、V4 Pro 与大输入轮次没有服务端标题：首轮用提问开头几个字作为会话标题
+        if ((!serverTitle || stripDeepseekExtensions) && !getSession(sessionId)?.title) {
           const title = request.question.content.replace(/\s+/g, ' ').trim().slice(0, 24)
           if (title) {
             updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
@@ -1939,6 +1987,21 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             retryable: isRetryableApiError(error),
           })
           break
+        }
+        // 服务端按 32768 token 拒绝了用户输入（估算偏小或服务端另有口径）：去掉扩展字段重发一次
+        if (
+          !stripDeepseekExtensions &&
+          error instanceof ApiError &&
+          error.status === 400 &&
+          /user input too long|exceeds max 32768/i.test(error.message)
+        ) {
+          stripDeepseekExtensions = true
+          titleRequests.delete(controller)
+          if (!largeInputNoticeSessions.has(sessionId)) {
+            largeInputNoticeSessions.add(sessionId)
+            showToast({ key: 'largeInputExtensionsOff' })
+          }
+          continue
         }
         // 服务端不认识 reasoning_effort / budget_tokens 时，去掉强度参数退回普通思考重试一次
         if (

@@ -714,3 +714,37 @@ While fixing it we found that V4 Pro also rejects the `latest_reminder` role wit
 **Settings → Data → Import chat history progress bar.** `readArchive` learns the non-directory entry count from the central directory and reports after each consumed entry; `importArchive` adds the number of sessions written to staging and `backup.importHistory` forwards it to Settings. While importing, the status line shows the percentage above a 6 px bar with "Processed x / y entries · z chats imported"; the format check shows "Checking the file…", and the existing success/failure messages are unchanged.
 
 **Files:** `src/services/attachmentLargeText.ts`, `src/services/chat/drafts.ts`, `src/services/chat/store.ts`, `src/services/chat/reply.ts`, `src/services/chat/types.ts`, `src/components/settings/SettingsDialog.tsx`, `src/components/files/FileCard.tsx`, `src/components/chatInput/DraftAttachments.tsx`, `src/components/chatInput/ChatInput.tsx`, `src/services/chat/history/{zipReader,importArchive}.ts`, `src/services/chat/backup.ts`.
+
+### 3.41 The real cause of the attachment "token too large" error (2.7.11)
+
+**Symptom.** After 2.7.10 split a 326 KB txt into four parts (96+96+96+34 KB), the request still failed:
+
+```text
+user input too long, 69942 tokens exceeds max 32768 tokens (request_id: …)
+```
+
+**Diagnosis.** A local logging proxy captured the exact request the app sends; removing fields one at a time and replaying gave:
+
+| Request fields | Result |
+| --- | --- |
+| Original (tools + safety_check + title) | 400 `user input too long, 60753 tokens exceeds max 32768 tokens` |
+| Without title | still 400 |
+| Without safety_check | still 400 |
+| Without tools | still 400 |
+| Without title + safety_check (tools kept) | passes |
+| Without all three | passes, `input_tokens` 64k, document text read correctly |
+| Only tools / only safety_check / only title | each alone triggers the 32768 cap |
+| Only thinking / temperature / top_p / max_tokens | no effect |
+
+In other words: **whenever a request carries any of the DeepSeek extension fields `tools`, `safety_check` or `title`, the server caps "user input" (text plus parsed attachments) at 32768 tokens; a plain Anthropic-compatible request without them can use the full 1M context.** The same 60k-token body sent as plain text is rejected too, so neither the file format nor the part count matters. RikkaHub can read the same txt because it converts documents to prompt text and sends none of those DeepSeek fields.
+
+**Fix.** Before assembling the request, `streamReply` estimates user input with `estimateUserInputTokens()` (history and question text plus attachments at 4 bytes per token). Above 32768 tokens it:
+
+- stops sending `tools`, `safety_check` and `title`, so the request falls back to the plain Anthropic-compatible path and attachments can use the full 1M context;
+- removes the turn's controller from `titleRequests`, so the turn's usage is still recorded instead of being treated as a title request, and titles the chat with the first 24 characters of the question;
+- shows a toast the first time it happens, explaining that server tools, the safety check and the title request were dropped;
+- catches a server `user input too long` 400 (when the estimate was too small) and retries once without those fields, only surfacing the original error if the retry fails too.
+
+Small inputs are unaffected: below the threshold the request still carries the safety check, server tools and title request.
+
+**Files:** `src/services/chat/store.ts`, `src/services/api/types.ts` (`tools` is now optional), `src/i18n/{zh,en}.ts`.

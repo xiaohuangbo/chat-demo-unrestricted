@@ -69,13 +69,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.10.apk`（112 MB，versionCode 280，
-SHA-256 `c8851de6b6e428f2afcb40e25e4374e3407617aa3185c13b6158708ab09d7497`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.11.apk`（112 MB，versionCode 281，
+SHA-256 `a816e584883066dc1d3b496aa183c033260c46eced3c582309b936dacf71f5da`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.10，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.11，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -94,6 +94,8 @@ SHA-256 `c8851de6b6e428f2afcb40e25e4374e3407617aa3185c13b6158708ab09d7497`），
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.11**：修好附件「token 过大」的真正原因——请求里只要带 `tools` / `safety_check` / `title` 任一 DeepSeek 扩展字段，服务端就把用户输入限制在 32768 token；本轮输入超过 32768 token 时自动去掉这三项、走纯 Anthropic 兼容路径直读附件（上限 1M），估算偏小被拒时也会去掉后自动重试一次；同时首轮大输入改用提问前 24 字作标题、用量照常记账。
 
 - **2.7.10**：设置 → 附件新增「大文本附件自动处理」——超过 32768 token 的纯文本附件选择时自动拆成 `.partN` 分片（每片仍不超过 32768 token）分别上传、一起发送，另有实验性开关把大文本直接拼进本轮提问、占用模型的 1M 上下文；设置 → 数据管理 → 导入历史对话新增进度条，显示已处理条目 / 总条目、已导入对话数与百分比。
 
