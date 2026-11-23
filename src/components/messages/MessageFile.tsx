@@ -131,6 +131,7 @@ export const MessageFile = ({
       error={errorText}
       onRetry={retry ?? undefined}
       link={link}
+      note={file.inline ? t('attachmentInlineNote') : undefined}
     />
   )
 }

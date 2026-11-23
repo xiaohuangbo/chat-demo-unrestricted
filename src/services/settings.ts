@@ -137,6 +137,10 @@ type Settings = {
   attachmentMaxCount: number | null
   /** 自定义扩展名白名单；null 表示用内置清单 */
   attachmentExts: string[] | null
+  /** 大文本附件处理：超过 32768 token 的纯文本文件不再原样上传 */
+  attachmentLargeText: boolean
+  /** 实验性：大文本不拆分也不上传，直接塞进本轮提问（1M 上下文） */
+  attachmentLargeTextInline: boolean
   siderCollapsed: boolean
 }
 
@@ -202,6 +206,8 @@ const KEYS = {
   attachmentMaxMB: 'chat-demo:attachment-max-mb',
   attachmentMaxCount: 'chat-demo:attachment-max-count',
   attachmentExts: 'chat-demo:attachment-exts',
+  attachmentLargeText: 'chat-demo:attachment-large-text',
+  attachmentLargeTextInline: 'chat-demo:attachment-large-text-inline',
   siderCollapsed: 'chat-demo:sider-collapsed',
 } as const
 
@@ -487,6 +493,8 @@ export const useSettings = create<Settings>(() => ({
   attachmentMaxMB: initialAttachmentNumber(KEYS.attachmentMaxMB),
   attachmentMaxCount: initialAttachmentNumber(KEYS.attachmentMaxCount),
   attachmentExts: initialAttachmentExts(),
+  attachmentLargeText: read(KEYS.attachmentLargeText) === 'true',
+  attachmentLargeTextInline: read(KEYS.attachmentLargeTextInline) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -718,6 +726,28 @@ export const setStmModules = (stmModules: string[]) => {
 export const setAttachmentLimits = (attachmentLimits: boolean) => {
   write(KEYS.attachmentLimits, String(attachmentLimits))
   useSettings.setState({ attachmentLimits })
+}
+
+/** 大文本附件处理开关；关闭实验性模式时一并关掉，避免留下互相矛盾的组合 */
+export const setAttachmentLargeText = (attachmentLargeText: boolean) => {
+  write(KEYS.attachmentLargeText, String(attachmentLargeText))
+  if (attachmentLargeText) {
+    useSettings.setState({ attachmentLargeText })
+    return
+  }
+  write(KEYS.attachmentLargeTextInline, 'false')
+  useSettings.setState({ attachmentLargeText, attachmentLargeTextInline: false })
+}
+
+/** 实验性 1M 上下文模式：开启时自动打开主开关 */
+export const setAttachmentLargeTextInline = (attachmentLargeTextInline: boolean) => {
+  write(KEYS.attachmentLargeTextInline, String(attachmentLargeTextInline))
+  if (attachmentLargeTextInline) {
+    write(KEYS.attachmentLargeText, 'true')
+    useSettings.setState({ attachmentLargeText: true, attachmentLargeTextInline })
+    return
+  }
+  useSettings.setState({ attachmentLargeTextInline })
 }
 
 /** 传 null 表示恢复内置默认值 */

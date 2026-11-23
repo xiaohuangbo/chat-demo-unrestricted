@@ -11,7 +11,16 @@ import {
   validateFiles,
   type UploadTask,
 } from '../attachments.js'
+import {
+  INLINE_CONTEXT_TOKEN_LIMIT,
+  LARGE_TEXT_TOKEN_LIMIT,
+  isTextAttachmentName,
+  readAttachmentText,
+  splitTextAttachment,
+  textTokenWeight,
+} from '../attachmentLargeText.js'
 import { createPoisonSidecar, type AttachmentPoisonConfig } from '../attachmentPoison.js'
+import { showToast } from '../../components/base/toastState.js'
 import { useSettings } from '../settings.js'
 import { isLocalModel } from '../local/catalog.js'
 import type { FileAttachment } from './types.js'
@@ -25,6 +34,8 @@ export type DraftAttachment = {
   skipPoison?: boolean
   /** 由附件投毒自动生成的伴随附件 */
   generated?: boolean
+  /** 实验性 1M 上下文：不上传，发送时正文直接拼进本轮提问 */
+  inline?: boolean
 }
 
 type Draft = { text: string; attachments: DraftAttachment[] }
@@ -66,12 +77,47 @@ const upload = (attachment: DraftAttachment, apiKey: string) => {
   ).catch(() => {})
 }
 
+/** 把用户选中的文件展开成草稿附件：大文本按设置拆分成多个分片，或标记为直接放入上下文 */
+const expandDraftAttachment = async (file: File): Promise<DraftAttachment[]> => {
+  const plain: DraftAttachment[] = [
+    { id: createId(), file, isImage: isImage(resolveMimeType(file)) },
+  ]
+  const { attachmentLargeText, attachmentLargeTextInline } = useSettings.getState()
+  if (!attachmentLargeText || plain[0].isImage || !isTextAttachmentName(file.name)) {
+    return plain
+  }
+  const text = await readAttachmentText(file).catch(() => '')
+  if (text === '') {
+    return plain
+  }
+  const tokens = textTokenWeight(text)
+  if (tokens <= LARGE_TEXT_TOKEN_LIMIT) {
+    return plain
+  }
+  // 实验性：不拆分也不上传，正文在发送时拼进本轮提问，占用 1M 上下文
+  if (attachmentLargeTextInline) {
+    if (tokens > INLINE_CONTEXT_TOKEN_LIMIT) {
+      showToast({
+        key: 'attachmentsLargeTextTooLarge',
+        params: { tokens: Math.round(tokens).toLocaleString() },
+      })
+      return []
+    }
+    return [{ id: createId(), file, isImage: false, inline: true }]
+  }
+  const parts = splitTextAttachment(file.name, text)
+  if (parts.length <= 1) {
+    return plain
+  }
+  return parts.map((part) => ({ id: createId(), file: part, isImage: false }))
+}
+
 /** 整批校验通过后才创建预览和开始上传。 */
-export const addDraftFiles = (
+export const addDraftFiles = async (
   sessionId: string | null,
   files: File[],
   apiKey: string
-): TranslationMessage | null => {
+): Promise<TranslationMessage | null> => {
   if (files.length === 0) {
     return null
   }
@@ -79,22 +125,30 @@ export const addDraftFiles = (
   if (error) {
     return error
   }
-  const added = files.map(
-    (file): DraftAttachment => ({
-      id: createId(),
-      file,
-      isImage: isImage(resolveMimeType(file)),
-    })
-  )
+  const expanded: DraftAttachment[] = []
+  for (const file of files) {
+    expanded.push(...(await expandDraftAttachment(file)))
+  }
+  if (expanded.length === 0) {
+    return null
+  }
+  // 拆分后的分片与伴随文本附件都占名额；超出时截断并提示，避免整批被拒
+  const current = getDraft(sessionId).attachments.length
+  const available = Math.max(0, getMaxCount() - current)
+  const limited = useSettings.getState().attachmentLimits && expanded.length > available
+  const added = limited ? expanded.slice(0, available) : expanded
+  if (limited) {
+    showToast({ key: 'attachmentsLargeTextPartsLimited', params: { count: added.length } })
+  }
+  if (added.length === 0) {
+    return null
+  }
   // 伴随文本附件是普通附件，占一个名额；名额不足时只为前面的文件生成
   const poison = useSettings.getState().attachmentPoison
   const sidecars: DraftAttachment[] = []
   if (poison.enabled && poison.methods.includes('sidecar') && poison.content.trim() !== '') {
-    const available = Math.max(
-      0,
-      getMaxCount() - getDraft(sessionId).attachments.length - added.length
-    )
-    for (const attachment of added.slice(0, available)) {
+    const remaining = Math.max(0, getMaxCount() - current - added.length)
+    for (const attachment of added.filter((item) => !item.inline).slice(0, remaining)) {
       const file = createPoisonSidecar(attachment.file.name, poison.content)
       sidecars.push({
         id: createId(),
@@ -107,9 +161,12 @@ export const addDraftFiles = (
   }
   const next = [...added, ...sidecars]
   updateDraft(sessionId, (draft) => ({ ...draft, attachments: [...draft.attachments, ...next] }))
-  // 本地模型不走 Files API：附件原件留在 IndexedDB，发送时由页面读成纯文本
+  // 本地模型不走 Files API：附件原件留在 IndexedDB，发送时由页面读成纯文本；
+  // 直接放入上下文的附件同样不上传
   if (!isLocalModel(useSettings.getState().model)) {
-    next.forEach((attachment) => upload(attachment, apiKey))
+    next
+      .filter((attachment) => !attachment.inline)
+      .forEach((attachment) => upload(attachment, apiKey))
   }
   return null
 }
@@ -120,7 +177,7 @@ export const retryDraftAttachment = (
   apiKey: string
 ) => {
   const attachment = getDraft(sessionId).attachments.find((item) => item.id === attachmentId)
-  if (attachment) {
+  if (attachment && !attachment.inline) {
     upload(attachment, apiKey)
   }
 }
@@ -132,7 +189,7 @@ export const restartDraftAttachment = (
   apiKey: string
 ) => {
   const attachment = getDraft(sessionId).attachments.find((item) => item.id === attachmentId)
-  if (attachment) {
+  if (attachment && !attachment.inline) {
     restartUpload(
       apiKey,
       attachment.id,
@@ -157,7 +214,9 @@ export const prepareDraftMessage = (
   const files: (FileAttachment & { serverId: string; blob: Blob })[] = []
   for (const attachment of draft.attachments) {
     const task = tasks[attachment.id]
-    if (!localOnly && (task?.status !== 'done' || !task.serverId)) {
+    // 直接放入 1M 上下文的附件不走 Files API，没有上传任务
+    const inline = attachment.inline === true
+    if (!localOnly && !inline && (task?.status !== 'done' || !task.serverId)) {
       return null
     }
     files.push({
@@ -170,6 +229,7 @@ export const prepareDraftMessage = (
       poison: task?.status === 'done' ? task.poison : '',
       ...(localOnly ? { imageSizeChecked: true } : {}),
       ...(attachment.generated ? { generated: true } : {}),
+      ...(inline ? { inline: true } : {}),
       blob: attachment.file,
     })
   }
@@ -201,8 +261,9 @@ export const syncDraftSidecars = (sessionId: string | null, apiKey: string) => {
   const poison: AttachmentPoisonConfig = useSettings.getState().attachmentPoison
   const sidecars: DraftAttachment[] = []
   if (poison.enabled && poison.methods.includes('sidecar') && poison.content.trim() !== '') {
+    const eligible = originals.filter((attachment) => !attachment.inline)
     const available = Math.max(0, getMaxCount() - originals.length)
-    for (const original of originals.slice(0, available)) {
+    for (const original of eligible.slice(0, available)) {
       const file = createPoisonSidecar(original.file.name, poison.content)
       sidecars.push({
         id: createId(),

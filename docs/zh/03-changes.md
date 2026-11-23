@@ -14,7 +14,7 @@
 | **思维链**      | 设置页 / 输入栏卡片双入口：开关、步骤编辑、示例 / 清空、注入预览；关闭深度思考时回复上方显示注入内容                           |
 | **搜索投毒**    | 自定义当前时间与知识截止、接管联网搜索、关键字 / 正则替换、黑名单、强制自定义结果、白名单                                      |
 | **记忆**        | 长期记忆、自动提炼、记忆更新提示、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                                   |
-| **附件**        | 附件限制开关、单文件大小、单会话数量、扩展名白名单；附件投毒：上传前改写附件（文本正文 / 图片文字 / DOCX / 元数据 / 文件尾 / 文件名 / 伴随文本附件） |
+| **附件**        | 附件限制开关、单文件大小、单会话数量、扩展名白名单；大文本附件：超过 32768 token 的纯文本自动拆分成 .partN 分片，或实验性直接放入 1M 上下文；附件投毒：上传前改写附件（文本正文 / 图片文字 / DOCX / 元数据 / 文件尾 / 文件名 / 伴随文本附件） |
 | **浏览器工具**  | 一个主开关 + 十项独立开关：时间日期、网络定位、天气查询、发送通知、读 / 写剪贴板、抓取网页、生成文件、打开链接、生成可视化组件 |
 | **工作区**      | 浏览器本地的虚拟文件库：新建 / 编辑 / 删除文件、单文件下载、整包导入（合并或覆盖）与导出                                       |
 | **虚拟机**      | 两个终端：NanoVM Slim（WASM shell、配额、工具链、虚拟网络）与 WebVM（CheerpX x86 Debian、跨源隔离、镜像、导入导出、编程环境检测）；两边可同时运行、自由切换 |
@@ -700,3 +700,17 @@ UP + SMP 内核（约 18 MiB）与页面资源由 rspack 复制到 `dist/unkerne
 - 需要 JSPI（Chrome / Edge 137+、Firefox 153+、Safari 27+）；Android WebView 不支持时会显示启动错误。
 
 **涉及文件：** `src/components/unkernel/`、`src/services/unkernel/`、`src/services/agent/unkernelTools.ts`、`public/unkernel/`、`rspack.config.ts`、`android/src/.../LocalServer.java`。
+
+### 3.40 大文本附件与导入进度条（2.7.10）
+
+**问题。** 纯文本附件（txt / md / csv / json / 代码）按文档上传后，服务端会把整份文件算进本轮输入 token。文件足够大（示例：188 KB 英文约 44k token、1.23 MB 约 290k token、4.87 MB 约 1.2M token）时，最后一份直接超过上下文：`This model's maximum context length is 1048576 tokens. However, you requested 1147064 tokens ...`，用户看到的就是「token 过大」。实测 Flash 与 V4 Pro 的上下文都是 1,048,576 token，300k token 的文档都能正常解析，所以问题出在单文件把窗口吃满，而不是文件格式。
+
+**设置 → 附件 → 大文本附件。** 新增主开关，开启后选择文件时就用 `src/services/attachmentLargeText.ts` 在本地判断：纯文本、粗估 token 超过 32768 才处理（中文 1 字 1 token、其余 4 字符 1 token，与会话统计同一口径）。
+
+- **拆分模式（默认）**：按行切分，尽量在换行处断开，单个分片不超过 32768 token（留 1024 token 余量给分片头）；超长单行按字符二分硬切。分片命名为 `原名.partN.扩展名`，每片开头一行 `【附件分片 n/N：原名】`，让模型知道它们属于同一份文件。所有分片作为独立附件一起上传、一起发送，实测 8 个分片（共 223k token）在一条消息里正常返回。
+- **实验性 1M 上下文**：不拆分也不上传，附件只留在 IndexedDB；发送时 `prepareFiles` 读出正文补进请求副本，`reply.ts` 把它作为文本块拼在本轮提问前，直接占用模型 1M 上下文。超过 1M token 的文件在添加时就拒绝并提示改用拆分模式。正文按附件 id 缓存最近 4 份，避免多轮重复读大文件。
+- 拆分产生的分片仍受单会话数量上限约束，超出时截断并 toast 提示；实验性模式的附件卡片显示「已放入 1M 上下文」，不显示上传进度。
+
+**设置 → 数据管理 → 导入历史对话进度条。** `readArchive` 读中央目录时就能拿到非目录条目总数，每读完一个条目回调一次；`importArchive` 再把已写入暂存的会话数一起上报，`backup.importHistory` 透传给设置页。导入期间状态行显示百分比，下方是 6px 进度条与「已处理 x / y 个条目 · 已导入 z 个对话」，检查文件阶段显示「正在检查文件…」，失败与完成仍用原有文案。
+
+**涉及文件：** `src/services/attachmentLargeText.ts`、`src/services/chat/drafts.ts`、`src/services/chat/store.ts`、`src/services/chat/reply.ts`、`src/services/chat/types.ts`、`src/components/settings/SettingsDialog.tsx`、`src/components/files/FileCard.tsx`、`src/components/chatInput/DraftAttachments.tsx`、`src/components/chatInput/ChatInput.tsx`、`src/services/chat/history/{zipReader,importArchive}.ts`、`src/services/chat/backup.ts`。

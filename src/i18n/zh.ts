@@ -281,6 +281,12 @@ export const zh = {
   creditDeepChatNote: '长期记忆与每日 Token / 费用提醒的参考实现。',
   creditLibertasLabel: 'L1B3RT4S',
   creditLibertasNote: 'GODMODE、Hall of Fame 提示词与越狱组合的上游来源。',
+  creditUnkernelLabel: 'unkernel',
+  creditUnkernelNote:
+    '把真正的 Linux 内核编译成 WebAssembly，并提供上游页面；本作的 Unkernel 虚拟机移植自它（MIT / GPL-2.0-only）。',
+  creditGoDeepseekLabel: 'go-deepseek',
+  creditGoDeepseekNote:
+    '纯 Go 嵌入 DeepSeek Harness 的 SDK 与终端客户端；DSH go 由它构建（MIT，内嵌的 DeepSeek Harness 也是 MIT）。',
   changelogV24Title: 'v2.4.0 · 2026-11',
   changelogV24Techniques: '扰动引擎补齐单文件版的 33 种技术，按轻量 / 标准 / 重度三档',
   changelogV24Variants: '实验台新增变体赛跑：批量改写并发请求，按综合分选优',
@@ -700,6 +706,10 @@ export const zh = {
   historyImportDescription: '导入历史对话会覆盖全部本地对话和附件，支持 DeepSeek 导出的 ZIP 文件。',
   historyImportedOne: '已导入 1 个对话',
   historyImported: '已导入 {count} 个对话',
+  historyImportInProgress: '正在导入… {percent}%',
+  historyImportProgress: '已处理 {done} / {total} 个条目 · 已导入 {sessions} 个对话',
+  historyImportProgressPending: '正在检查文件…',
+  historyImportProgressLabel: '导入进度',
   historyImportFailed:
     '文件导入失败，可能是文件格式错误或使用了旧版的对话导出 ZIP 文件，请前往 DeepSeek 重新导出历史对话文件后再次导入。',
   historyExportFailed: '导出失败：{message}',
@@ -858,6 +868,7 @@ export const zh = {
   searchPoisonPreview: '预览注入给模型的上下文（{count} 条结果）',
   searchPoisonPreviewEmpty:
     '当前没有可注入的内容；启用后至少填写自定义时间、模型知识截止或一条自定义结果。',
+  settingDialogAsideAttachmentLargeTextOptionLabel: '大文本附件',
   settingDialogAsideAttachmentPoisonOptionLabel: '附件投毒',
   attachmentPoisonEnabled: '启用附件投毒',
   attachmentPoisonEnabledDescription:
@@ -1217,6 +1228,20 @@ export const zh = {
   attachmentsExtsReset: '恢复默认白名单',
   attachmentsExtsCount: '自定义 {count} 个扩展名',
   attachmentsLimitsOff: '当前不校验附件限制，是否成功取决于服务端。',
+  attachmentsLargeText: '大文本附件自动处理',
+  attachmentsLargeTextDescription:
+    '开启后，超过 32768 token 的纯文本附件（txt / md / csv / json / 代码等）选择时就拆分，不再原样上传，避免服务端报 token 过大。',
+  attachmentsLargeTextInline: '实验性：直接塞入 1M 上下文',
+  attachmentsLargeTextInlineDescription:
+    '不拆分也不上传，发送时把正文直接拼进本轮提问；V4.1 Flash 与 V4 Pro 的上下文都是 1M，每轮都会重新带入，费用偏高。',
+  attachmentsLargeTextSplitHint:
+    '当前：拆分模式 · 单个分片不超过 {limit} token，文件名带 .partN，多个分片一起发送。',
+  attachmentsLargeTextInlineHint:
+    '当前：实验性 1M 上下文模式 · 文本不经过文档解析，直接进入 prompt；超过 1M token 会拒绝添加。',
+  attachmentsLargeTextPartsLimited: '附件分片超过单会话上限，只添加了前 {count} 个分片。',
+  attachmentsLargeTextTooLarge:
+    '该文件约 {tokens} token，超过 1M 上下文上限，请改用拆分模式或缩小文件。',
+  attachmentInlineNote: '已放入 1M 上下文',
 
   labRaceImportedResults: '已导入赛跑结果',
   labRaceImportFailed: '导入失败：不是有效的赛跑结果文件',
@@ -1967,6 +1992,14 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2710Title: 'v2.7.10 · 2026-11',
+  changelogV2710LargeText:
+    '设置 → 附件新增「大文本附件自动处理」：超过 32768 token 的纯文本附件（txt / md / csv / json / 代码等）在选择时就拆成 .partN 分片，每个分片都不超过 32768 token，多个分片一起发送，避免服务端报 token 过大',
+  changelogV2710Inline:
+    '实验性模式：不拆分也不上传，发送时把大文本正文直接拼进本轮提问，占用模型的 1M 上下文（V4.1 Flash 与 V4 Pro 均为 1M），超过 1M token 的文件会拒绝添加',
+  changelogV2710ImportProgress:
+    '设置 → 数据管理 → 导入历史对话新增进度条：显示已处理条目 / 总条目、已导入对话数与百分比，导入大备份时不再只有「正在导入」',
+  changelogV2710Apk: '同步构建 2.7.10 APK（versionCode 280），使用 xiaohuangbo.jks 签名',
   changelogV279Title: 'v2.7.9 · 2026-11',
   changelogV279Webvm:
     '修复手机网页端 WebVM 打开输入法准备输入时页面与终端漂移：xterm 隐藏输入框改用 preventScroll 聚焦，并在软键盘弹出后把页面滚回原点',

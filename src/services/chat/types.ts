@@ -30,6 +30,10 @@ export type FileAttachment = {
   poison?: string
   /** 自动生成的伴随文本附件 */
   generated?: boolean
+  /** 实验性 1M 上下文：不走 Files API，正文在发送时直接拼进提问 */
+  inline?: boolean
+  /** 组装请求时读出的正文快照，只存在于请求副本里，不写入会话 */
+  inlineText?: string
 }
 
 /** 本地消息的分支关系；字段缺省时按线性消息列表处理。 */

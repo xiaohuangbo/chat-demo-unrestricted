@@ -316,6 +316,12 @@ export const en = {
   creditDeepChatNote: 'Reference for long-term memory and daily token / cost alerts.',
   creditLibertasLabel: 'L1B3RT4S',
   creditLibertasNote: 'Upstream source for GODMODE, Hall of Fame prompts and jailbreak combos.',
+  creditUnkernelLabel: 'unkernel',
+  creditUnkernelNote:
+    'Compiles the real Linux kernel to WebAssembly and ships the upstream page; the Unkernel VM here is ported from it (MIT / GPL-2.0-only).',
+  creditGoDeepseekLabel: 'go-deepseek',
+  creditGoDeepseekNote:
+    'The pure-Go DeepSeek Harness SDK and terminal client; DSH go is built from it (MIT, the embedded DeepSeek Harness is MIT too).',
   changelogV24Title: 'v2.4.0 · 2026-11',
   changelogV24Techniques:
     'The perturbation engine now carries all 33 techniques from the standalone build, in light / standard / heavy tiers',
@@ -774,6 +780,10 @@ export const en = {
     'Importing chat history replaces all local chats and attachments. Supports ZIP files exported from DeepSeek.',
   historyImportedOne: 'Imported 1 chat',
   historyImported: 'Imported {count} chats',
+  historyImportInProgress: 'Importing… {percent}%',
+  historyImportProgress: 'Processed {done} / {total} entries · {sessions} chats imported',
+  historyImportProgressPending: 'Checking the file…',
+  historyImportProgressLabel: 'Import progress',
   historyImportFailed:
     'File import failed. The file format may be invalid, or the ZIP file may use an older chat export format. Please export your chat history from DeepSeek again and retry the import.',
   historyExportFailed: 'Export failed: {message}',
@@ -935,6 +945,7 @@ export const en = {
   searchPoisonPreview: 'Preview injected model context ({count} results)',
   searchPoisonPreviewEmpty:
     'Nothing to inject yet; set a custom time, a model knowledge cutoff or at least one custom result.',
+  settingDialogAsideAttachmentLargeTextOptionLabel: 'Large text attachments',
   settingDialogAsideAttachmentPoisonOptionLabel: 'Attachment poisoning',
   attachmentPoisonEnabled: 'Enable attachment poisoning',
   attachmentPoisonEnabledDescription:
@@ -1317,6 +1328,21 @@ export const en = {
   attachmentsExtsCount: 'Custom list with {count} extensions',
   attachmentsLimitsOff:
     'Attachment limits are off; uploads succeed only if the server accepts them.',
+  attachmentsLargeText: 'Handle large text attachments',
+  attachmentsLargeTextDescription:
+    'When on, plain-text attachments (txt / md / csv / json / code) above 32768 tokens are split at pick time instead of being uploaded as-is, so the server no longer rejects them for being too large.',
+  attachmentsLargeTextInline: 'Experimental: put it in the 1M context directly',
+  attachmentsLargeTextInlineDescription:
+    'Do not split and do not upload: the text is pasted into this turn, consuming the model 1M context (both V4.1 Flash and V4 Pro). It is re-sent every turn, so it costs more.',
+  attachmentsLargeTextSplitHint:
+    'Current: split mode · each part stays under {limit} tokens, named .partN, and all parts are sent together.',
+  attachmentsLargeTextInlineHint:
+    'Current: experimental 1M context mode · the text skips document parsing and goes straight into the prompt; files above 1M tokens are refused.',
+  attachmentsLargeTextPartsLimited:
+    'The parts exceed the per-session limit, so only the first {count} were added.',
+  attachmentsLargeTextTooLarge:
+    'This file is about {tokens} tokens, beyond the 1M context limit; use split mode or a smaller file.',
+  attachmentInlineNote: 'In the 1M context',
 
   labRaceImportedResults: 'Imported race results',
   labRaceImportFailed: 'Import failed: not a valid race result file',
@@ -2119,6 +2145,14 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2710Title: 'v2.7.10 · 2026-11',
+  changelogV2710LargeText:
+    'Settings → Attachments gains "Handle large text attachments": plain-text files above 32768 tokens (txt / md / csv / json / code) are split into .partN parts at pick time, each part staying under 32768 tokens, and the parts are sent together so the server no longer rejects them for being too large',
+  changelogV2710Inline:
+    'Experimental mode: do not split and do not upload — the text is pasted into this turn and consumes the model 1M context (both V4.1 Flash and V4 Pro); files above 1M tokens are refused',
+  changelogV2710ImportProgress:
+    'Settings → Data → Import chat history now has a progress bar showing processed / total entries, imported chats and the percentage, instead of a single "importing" line',
+  changelogV2710Apk: 'Builds the 2.7.10 APK (versionCode 280), signed with xiaohuangbo.jks',
   changelogV279Title: 'v2.7.9 · 2026-11',
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',

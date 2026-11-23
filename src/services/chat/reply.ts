@@ -7,6 +7,7 @@ import type {
   TextBlockParam,
 } from '../api/types.js'
 import { translate } from '../../i18n/index.js'
+import { inlineAttachmentText } from '../attachmentLargeText.js'
 import { isPoisonToolId } from '../searchPoison.js'
 import type {
   AssistantMessage,
@@ -308,9 +309,23 @@ const isUsableReply = (message: Message): message is AssistantMessage =>
   !message.blocks.some((block) => block.type === 'text' && block.isTemplate) &&
   getReplyText(message) !== ''
 
-/** 有文件时用内容块数组：先文件后文本，文件按 Files API 的 file_id 引用 */
+/** 直接放入上下文的附件：正文以文本块跟在文件块之后，服务端不再解析文档 */
+const toInlineBlocks = (files: FileAttachment[]): TextBlockParam[] =>
+  files.flatMap(({ inline, inlineText, name }) =>
+    inline && inlineText
+      ? [{ type: 'text' as const, text: inlineAttachmentText(name, inlineText) }]
+      : []
+  )
+
+const hasInlineText = (files: FileAttachment[]): boolean =>
+  files.some(({ inline, inlineText }) => inline && inlineText)
+
+/** 有文件时用内容块数组：先文件块、再直接放入上下文的正文，最后是本轮文字 */
 const toUserParam = ({ content, files }: UserMessage): MessageParam => {
-  const blocks = toFileBlocks(files)
+  const blocks: (FileBlockParam | TextBlockParam)[] = [
+    ...toFileBlocks(files),
+    ...toInlineBlocks(files),
+  ]
   return blocks.length === 0
     ? { role: 'user', content }
     : {
@@ -457,8 +472,8 @@ export const toRequestMessages = (
   }
   const lastRound = rounds.length - 1
   rounds.forEach(([user, reply], index) => {
-    // 历史提问没有文字、附件也都没有 serverId 时，提问为空，连同回答一起省略。
-    if (!user.content && toFileBlocks(user.files).length === 0) {
+    // 历史提问没有文字、附件也都没有 serverId 且没有直接放入上下文的正文时，提问为空，连同回答一起省略。
+    if (!user.content && toFileBlocks(user.files).length === 0 && !hasInlineText(user.files)) {
       return
     }
     appendReminder(reply.latestReminder)

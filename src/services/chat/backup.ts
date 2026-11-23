@@ -4,6 +4,9 @@ import { replaceHistory, useChatStore } from './store.js'
 import type { Session } from './types.js'
 
 export { BackupError } from './history/errors.js'
+import type { ImportProgress } from './history/importArchive.js'
+
+export type { ImportProgress }
 
 // 导入、导出与全部删除串行处理，避免读取归档时数据被清空或两个替换事务交错。
 let backupQueue: Promise<unknown> = Promise.resolve()
@@ -42,12 +45,16 @@ export const exportHistory = (): Promise<{ name: string; blob: Blob }> =>
 /**
  * 确认覆盖后调用：先检查 ZIP 格式与版本，校验失败时保留正在生成的回答；
  * 通过后从 ZIP 流式写入暂存，成功才替换原有会话与图片原件。返回导入的会话数。
+ * `onProgress` 汇报已处理的 ZIP 条目数、总数与已写入暂存的会话数，供设置页画进度条。
  */
-export const importHistory = (file: File): Promise<number> =>
+export const importHistory = (
+  file: File,
+  onProgress?: (progress: ImportProgress) => void
+): Promise<number> =>
   enqueueBackup(async () => {
     const { checkArchiveFormat, importArchive } = await import('./history/importArchive.js')
     await checkArchiveFormat(file)
-    return replaceHistory(() => importArchive(file))
+    return replaceHistory(() => importArchive(file, onProgress))
   })
 
 /** 确认删除后调用：以空历史原子替换全部本地会话与附件，保留 API Key 和其他设置。 */

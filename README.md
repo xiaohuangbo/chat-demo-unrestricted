@@ -71,13 +71,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.9.apk` (112 MB, versionCode 279,
-SHA-256 `3690ce386ac26c7483b1a27d65039d07f7025c386fe9a07208d0ef12b38023c4`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.10.apk` (112 MB, versionCode 280,
+SHA-256 `c8851de6b6e428f2afcb40e25e4374e3407617aa3185c13b6158708ab09d7497`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.9, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.10, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -100,6 +100,8 @@ Last regression run (2026-11, v2.7.9, both `compat` and `compat-prod` matrices):
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.10**: Settings → Attachments gains "Handle large text attachments": plain-text files above 32768 tokens are split into `.partN` parts under the same limit at pick time and sent together, plus an experimental switch that pastes the text straight into the turn using the model 1M context; Settings → Data → Import chat history now shows a progress bar with processed / total entries, imported chats and the percentage.
 
 - **2.7.9**: fixes mobile WebVM drift when the soft keyboard opens; ports Unkernel Linux (real Linux 7.x kernel in WebAssembly, Alpine 3.24 and Debian 13.7, SMP multi-CPU, Debian defaulting to 2 GiB memory) with networking, sound, display, persistent disk, import/export, a full-screen page, a `/mnt/workspace` mount shared with the chat workspace, a fully Chinese page UI, file import/export and Restart in a separate Chinese settings section, ten `unkernel_*` Agent tools, a data disk that Settings can grow or reset, a **DSH go** launcher demo (a 24 MiB static Go binary with a Chinese REPL and a `bash` tool, replacing the former DSH + dsh-TUI installer) and `fastfetch` in NanoVM / WebVM; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel.
 
@@ -129,8 +131,7 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 ## Acknowledgements
 
 - **Linux DO community**: <https://linux.do/> — thanks for the discussion, feedback and testing support.
-- **unkernel**: <https://github.com/pithings/unkernel> — the Linux-in-WebAssembly kernel and upstream page, MIT / GPL-2.0-only.
-- **go-deepseek**: <https://github.com/robomotionio/go-deepseek> — the pure-Go embedding of DeepSeek Harness and the `dsh-go` terminal client, MIT (the embedded DeepSeek Harness is MIT too).
+- The acknowledgements for **unkernel** and **go-deepseek** now live at the end of **Settings → Changelog** inside the app.
 - Upstream projects, reference implementations and licensing details are listed in [11. License and credits](docs/en/11-license.md).
 
 ## License

@@ -51,6 +51,7 @@ import { noteDailyUsage } from './dailyUsage.js'
 import { noteLedgerUsage } from './usageLedger.js'
 import { contextWindowFor, useContextUsage } from './contextUsage.js'
 import { showToast } from '../../components/base/toastState.js'
+import { readAttachmentText } from '../attachmentLargeText.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
 import { depthDirective, jailbreakSystemPrompt } from '../unrestricted/prompts.js'
@@ -1222,13 +1223,66 @@ const applyCheckedImageIds = (sessionId: string, checked: ReadonlyMap<string, st
 }
 
 /**
+ * 直接放入 1M 上下文的附件正文：按附件 id 缓存，历史轮次不必每轮重读大文件；
+ * 只保留最近几份，避免长会话把整库文本留在内存里。
+ */
+const inlineTextCache = new Map<string, string>()
+const INLINE_TEXT_CACHE_LIMIT = 4
+
+const inlineTextOf = async (file: FileAttachment): Promise<string | undefined> => {
+  if (!file.inline) {
+    return undefined
+  }
+  const cached = inlineTextCache.get(file.id)
+  if (cached !== undefined) {
+    return cached
+  }
+  const blob = await db.loadFile(file.id).catch(() => undefined)
+  if (!blob) {
+    return undefined
+  }
+  const text = await readAttachmentText(blob).catch(() => undefined)
+  if (text === undefined) {
+    return undefined
+  }
+  if (inlineTextCache.size >= INLINE_TEXT_CACHE_LIMIT) {
+    const oldest = inlineTextCache.keys().next().value
+    if (oldest !== undefined) {
+      inlineTextCache.delete(oldest)
+    }
+  }
+  inlineTextCache.set(file.id, text)
+  return text
+}
+
+/** 给请求副本里的用户消息补上 inlineText；没有直接放入上下文的附件时原样返回 */
+const enrichInlineText = async <T extends UserMessage>(message: T): Promise<T> => {
+  if (!message.files.some((file) => file.inline)) {
+    return message
+  }
+  const files = await Promise.all(
+    message.files.map(async (file) => {
+      const text = await inlineTextOf(file)
+      return text === undefined || file.inlineText === text ? file : { ...file, inlineText: text }
+    })
+  )
+  return files.some((file, index) => file !== message.files[index])
+    ? { ...message, files }
+    : message
+}
+
+/**
  * 附件的服务端 id：已有且投毒指纹匹配时直接用；正在上传的等待同一任务；
  * 否则读取本地原件按当前投毒配置补传。本地没有原件时保留旧 serverId（只展示旧文件）。
+ * 直接放入 1M 上下文的附件不走 Files API，正文由请求组装时读入。
  */
 const ensureServerId = async (
   apiKey: string,
   file: FileAttachment
 ): Promise<UploadedFile | null> => {
+  if (file.inline) {
+    return null
+  }
   const signature = attachmentPoisonSignature(useSettings.getState().attachmentPoison)
   if (file.serverId && (file.poison === signature || file.poison === 'skip')) {
     return { serverId: file.serverId, poison: file.poison }
@@ -1320,7 +1374,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   const pending = new Map<string, FileAttachment>()
   for (const [user] of getContextRounds(request.history).toReversed()) {
     for (const file of user.files) {
-      if (!file.serverId && !serverIds.has(file.id) && !pending.has(file.id)) {
+      if (!file.inline && !file.serverId && !serverIds.has(file.id) && !pending.has(file.id)) {
         pending.set(file.id, file)
       }
     }
@@ -1342,11 +1396,14 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   const session = getSession(sessionId)
   const resolve = <T extends Message>(message: T): T =>
     (session?.messages.find((m) => m.id === message.id) as T | undefined) ?? message
-  return {
-    history: request.history.map(resolve),
-    question: resolve(request.question),
-    prefix: request.prefix,
-  }
+  // 直接放入上下文的附件在请求副本里补上正文快照；会话里不保存，避免存储翻倍
+  const history = await Promise.all(
+    request.history.map(async (message) =>
+      message.role === 'user' ? enrichInlineText(resolve(message as UserMessage)) : resolve(message)
+    )
+  )
+  const question = await enrichInlineText(resolve(request.question))
+  return { history, question, prefix: request.prefix }
 }
 
 /** 本次请求实际会用到的服务端 file_id */

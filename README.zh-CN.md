@@ -69,13 +69,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.9.apk`（112 MB，versionCode 279，
-SHA-256 `3690ce386ac26c7483b1a27d65039d07f7025c386fe9a07208d0ef12b38023c4`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.10.apk`（112 MB，versionCode 280，
+SHA-256 `c8851de6b6e428f2afcb40e25e4374e3407617aa3185c13b6158708ab09d7497`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.9，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.10，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -94,6 +94,8 @@ SHA-256 `3690ce386ac26c7483b1a27d65039d07f7025c386fe9a07208d0ef12b38023c4`），
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.10**：设置 → 附件新增「大文本附件自动处理」——超过 32768 token 的纯文本附件选择时自动拆成 `.partN` 分片（每片仍不超过 32768 token）分别上传、一起发送，另有实验性开关把大文本直接拼进本轮提问、占用模型的 1M 上下文；设置 → 数据管理 → 导入历史对话新增进度条，显示已处理条目 / 总条目、已导入对话数与百分比。
 
 - **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU、Debian 默认 2 GiB 内存），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，数据盘可在设置里扩容或一键重置，启动器内置 **DSH go**（24 MiB 静态 Go 二进制、中文 REPL 与 `bash` 工具，取代原来的 DSH + dsh-TUI 安装入口），NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
 
@@ -123,8 +125,7 @@ SHA-256 `3690ce386ac26c7483b1a27d65039d07f7025c386fe9a07208d0ef12b38023c4`），
 ## 鸣谢
 
 - **Linux DO 社区**：<https://linux.do/> —— 感谢社区提供的交流、反馈与测试支持。
-- **unkernel**：<https://github.com/pithings/unkernel> —— Linux 内核 WebAssembly 化与上游页面，MIT / GPL-2.0-only。
-- **go-deepseek**：<https://github.com/robomotionio/go-deepseek> —— 纯 Go 嵌入的 DeepSeek Harness 与 `dsh-go` 终端客户端，MIT（内嵌的 DeepSeek Harness 也是 MIT）。
+- **unkernel** 与 **go-deepseek** 的鸣谢已移到应用内 **设置 → 更新日志** 的末尾。
 - 上游项目、参考实现与许可信息见 [11. 许可与致谢](docs/zh/11-license.md)。
 
 ## 许可

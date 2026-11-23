@@ -19,6 +19,7 @@ export const FileCard = ({
   onRetry,
   onRemove,
   link,
+  note,
 }: {
   name: string
   size: number
@@ -26,13 +27,15 @@ export const FileCard = ({
   error?: string
   onRetry?: () => void
   onRemove?: () => void
+  /** 替代「扩展名 大小」的说明，用于「已放入 1M 上下文」这类状态 */
+  note?: string
   /** 合法且可下载/预览时给出链接属性，由整张卡片上的 <a> 承担点击 */
   link?: AnchorHTMLAttributes<HTMLAnchorElement>
 }) => {
   const t = useTranslate()
   const ext = getExtension(name)
   let icon: ReactNode = <FileIcon ext={ext} />
-  let description = [ext, formatSize(size)].filter(Boolean).join(' ')
+  let description = note ?? [ext, formatSize(size)].filter(Boolean).join(' ')
   if (status === 'uploading') {
     icon = <span className={styles.spinner} />
     description = t('uploadFileStatusUploading')

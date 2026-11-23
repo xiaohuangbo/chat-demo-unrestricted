@@ -56,7 +56,8 @@ const AttachmentItem = ({
   // 本地模型的附件不进 Files API，没有任务时直接按完成展示
   const localOnly = useSettings((state) => isLocalModel(state.model))
   const resolved =
-    task ?? (localOnly ? { status: 'done' as const, serverId: '', poison: '' } : UPLOADING)
+    task ??
+    (localOnly || item.inline ? { status: 'done' as const, serverId: '', poison: '' } : UPLOADING)
   const status = resolved.status
   const error =
     resolved.status === 'error' ? t(resolved.error.key, resolved.error.params) : undefined
@@ -105,6 +106,7 @@ const AttachmentItem = ({
       error={error}
       onRetry={retry}
       onRemove={onRemove}
+      note={item.inline ? t('attachmentInlineNote') : undefined}
     />
   )
 }

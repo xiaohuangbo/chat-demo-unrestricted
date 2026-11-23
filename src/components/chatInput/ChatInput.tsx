@@ -110,10 +110,15 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     ) {
       return
     }
-    const error = addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '')
-    if (error) {
-      showToast(error)
-    }
+    // 大文本附件要读文件再拆分，所以是异步的；期间用户可以继续输入
+    void addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '').then(
+      (error) => {
+        if (error) {
+          showToast(error)
+        }
+      },
+      () => undefined
+    )
   }
   const retryFile = useCallback(
     (id: string) => {

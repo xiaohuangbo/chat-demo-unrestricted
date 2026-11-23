@@ -34,6 +34,10 @@ declare const styles: {
   readonly importConfirmText: string
   readonly deleteConfirm: string
   readonly deleteActions: string
+  readonly importProgress: string
+  readonly importProgressBar: string
+  readonly importProgressFill: string
+  readonly importProgressText: string
   readonly pipeline: string
   readonly promptPreview: string
   readonly promptPreviewSummary: string

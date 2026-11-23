@@ -28,12 +28,14 @@ import {
   clearHistory,
   exportHistory,
   importHistory,
+  type ImportProgress,
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { modelLabel } from '../../services/api/models.js'
 import { MemorySettings } from './MemorySettings.js'
 import { SearchPoisonSettings } from './SearchPoisonSettings.js'
 import { AttachmentPoisonSettings } from './AttachmentPoisonSettings.js'
+import { LARGE_TEXT_TOKEN_LIMIT } from '../../services/attachmentLargeText.js'
 import { useChatStore } from '../../services/chat/store.js'
 import {
   regionCodes,
@@ -48,6 +50,8 @@ import {
   CUSTOM_COT_MAX_CHARS,
   setAttachmentExts,
   setAutoJailbreak,
+  setAttachmentLargeText,
+  setAttachmentLargeTextInline,
   setAttachmentLimits,
   setAttachmentMaxCount,
   setAttachmentMaxMB,
@@ -778,6 +782,15 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV2710Title',
+      items: [
+        'changelogV2710LargeText',
+        'changelogV2710Inline',
+        'changelogV2710ImportProgress',
+        'changelogV2710Apk',
+      ],
+    },
+    {
       title: 'changelogV279Title',
       items: [
         'changelogV279Webvm',
@@ -1149,6 +1162,16 @@ const ChangelogSetting = () => {
       label: 'creditDeepChatLabel',
       note: 'creditDeepChatNote',
       href: 'https://github.com/YanJiuWeiYuanHui/DeepChat',
+    },
+    {
+      label: 'creditUnkernelLabel',
+      note: 'creditUnkernelNote',
+      href: 'https://github.com/pithings/unkernel',
+    },
+    {
+      label: 'creditGoDeepseekLabel',
+      note: 'creditGoDeepseekNote',
+      href: 'https://github.com/robomotionio/go-deepseek',
     },
   ]
   return (
@@ -1833,6 +1856,8 @@ const AttachmentsSetting = () => {
   const maxMB = useSettings((state) => state.attachmentMaxMB)
   const maxCount = useSettings((state) => state.attachmentMaxCount)
   const exts = useSettings((state) => state.attachmentExts)
+  const largeText = useSettings((state) => state.attachmentLargeText)
+  const largeTextInline = useSettings((state) => state.attachmentLargeTextInline)
   const [draft, setDraft] = useState(exts ? exts.join(', ') : '')
 
   useEffect(() => {
@@ -1926,6 +1951,44 @@ const AttachmentsSetting = () => {
           </Button>
         </div>
       </div>
+
+      <div className={styles.groupTitle}>
+        {t('settingDialogAsideAttachmentLargeTextOptionLabel')}
+      </div>
+      <SettingCell
+        label={t('attachmentsLargeText')}
+        description={t('attachmentsLargeTextDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={largeText}
+            onChange={setAttachmentLargeText}
+            label={t('attachmentsLargeText')}
+          />
+        }
+      />
+      {largeText ? (
+        <>
+          <SettingCell
+            label={t('attachmentsLargeTextInline')}
+            description={t('attachmentsLargeTextInlineDescription')}
+            status={null}
+            action={
+              <Switch
+                checked={largeTextInline}
+                onChange={setAttachmentLargeTextInline}
+                label={t('attachmentsLargeTextInline')}
+              />
+            }
+          />
+          <div className={styles.pipeline}>
+            {t(
+              largeTextInline ? 'attachmentsLargeTextInlineHint' : 'attachmentsLargeTextSplitHint',
+              { limit: LARGE_TEXT_TOKEN_LIMIT }
+            )}
+          </div>
+        </>
+      ) : null}
 
       <div className={styles.groupTitle}>{t('settingDialogAsideAttachmentPoisonOptionLabel')}</div>
       <AttachmentPoisonSettings />
@@ -2060,6 +2123,8 @@ const useHistoryImport = () => {
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<Status>(null)
+  /** 导入进度：已处理条目 / 总条目与已写入暂存的会话数 */
+  const [progress, setProgress] = useState<ImportProgress | null>(null)
   const importing = useRef(false)
 
   const confirm = async () => {
@@ -2070,18 +2135,20 @@ const useHistoryImport = () => {
     setFile(null)
     setBusy(true)
     setStatus(null)
+    setProgress({ done: 0, total: 0, sessions: 0 })
     try {
-      const count = await importHistory(file)
+      const count = await importHistory(file, setProgress)
       setStatus({ key: count === 1 ? 'historyImportedOne' : 'historyImported', params: { count } })
     } catch {
       setStatus({ key: 'historyImportFailed', error: true })
     } finally {
       importing.current = false
       setBusy(false)
+      setProgress(null)
     }
   }
 
-  return { file, busy, status, select: setFile, cancel: () => setFile(null), confirm }
+  return { file, busy, status, progress, select: setFile, cancel: () => setFile(null), confirm }
 }
 
 /** 导入 = 覆盖：用选中文件替换本地全部会话与附件。 */
@@ -2094,40 +2161,74 @@ const ImportHistory = ({
 }) => {
   const t = useTranslate()
   const inputRef = useRef<HTMLInputElement>(null)
+  const { busy, progress } = historyImport
+  const percent =
+    progress && progress.total > 0
+      ? Math.min(100, Math.round((progress.done / progress.total) * 100))
+      : 0
+  // 导入期间把状态换成百分比，并在下面单独画进度条
+  const status = busy
+    ? { key: 'historyImportInProgress' as const, params: { percent } }
+    : historyImport.status
 
   return (
-    <SettingCell
-      label={t('historyImport')}
-      description={t('historyImportDescription')}
-      status={historyImport.status}
-      action={
-        <>
-          <Button
-            variant="outlined"
-            size="m"
-            className={clsx(styles.cellButton, styles.uploadButton)}
-            disabled={disabled}
-            onClick={() => inputRef.current?.click()}
+    <>
+      <SettingCell
+        label={t('historyImport')}
+        description={t('historyImportDescription')}
+        status={status}
+        action={
+          <>
+            <Button
+              variant="outlined"
+              size="m"
+              className={clsx(styles.cellButton, styles.uploadButton)}
+              disabled={disabled}
+              onClick={() => inputRef.current?.click()}
+            >
+              <IconUploadOutline14 />
+              {t('upload')}
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".zip,application/zip,application/x-zip-compressed"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                event.target.value = ''
+                if (file) {
+                  historyImport.select(file)
+                }
+              }}
+            />
+          </>
+        }
+      />
+      {busy ? (
+        <div className={styles.importProgress}>
+          <div
+            className={styles.importProgressBar}
+            role="progressbar"
+            aria-label={t('historyImportProgressLabel')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
           >
-            <IconUploadOutline14 />
-            {t('upload')}
-          </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".zip,application/zip,application/x-zip-compressed"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file) {
-                historyImport.select(file)
-              }
-            }}
-          />
-        </>
-      }
-    />
+            <div className={styles.importProgressFill} style={{ width: `${percent}%` }} />
+          </div>
+          <div className={styles.importProgressText}>
+            {progress && progress.total > 0
+              ? t('historyImportProgress', {
+                  done: progress.done,
+                  total: progress.total,
+                  sessions: progress.sessions,
+                })
+              : t('historyImportProgressPending')}
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 
