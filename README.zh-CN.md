@@ -38,11 +38,14 @@
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术，命中用户输入时本地直接拒答，不请求接口，未填 API Key 也能触发；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
+- **应用内文档**：侧栏 NanoVM Slim 上方内置「文档」页，24 个小节讲清设置、模式、破甲、附件、记忆、虚拟机与术语；左侧目录 + 蓝色页内链接，手机端目录折叠、表格横向滑动，中文 / English 跟随界面语言切换；
 - **安卓端**：APK 构建、应用内更新检测、NanoVM 联网内置代理；WebVM 因 Android WebView 不支持跨源隔离而只能在浏览器里运行，Unkernel 在 WebView 支持 JSPI 时可直接使用。
 
 ## 文档导航
 
 README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；英文文档在 [`docs/en/`](docs/en/README.md)。
+
+> 应用内也内置了同主题的「文档」页（侧栏 **NanoVM Slim** 上方），支持中英文、目录与页内跳转，适合手机端随时查阅。
 
 | 章节                  | 内容                                                    | 文件                                                   |
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
@@ -69,13 +72,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.12.apk`（112 MB，versionCode 282，
-SHA-256 `7ac33c9e1c63163845ff83b8b1c658e1d37be476fa9352af6d8a2e9bedc14e39`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.13.apk`（112 MB，versionCode 283，
+SHA-256 `61155cd288d94f2c48ee63eca99254b0350e9a2050fa89e29129262a2f88dc99`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.12，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.13，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -94,6 +97,8 @@ SHA-256 `7ac33c9e1c63163845ff83b8b1c658e1d37be476fa9352af6d8a2e9bedc14e39`），
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.13**：跟进上游历史归档导入性能优化（ZIP 读窗口与中央目录复用、JSON 流式解码、批量写暂存、只给引用图片的会话回填 MIME；3000 个会话约 1 秒，进度条与校验不变）；主界面 NanoVM Slim 上方新增「文档」——24 个小节的 wiki 式说明（设置总览、角色、工作区、语音、模式、模型参数、关键词拒答、破甲、搜索投毒、附件、记忆、虚拟机、本地模型、Agent、统计、数据、隐私、平台差异、已知限制、FAQ、术语表），左侧目录 + 蓝色页内链接与外部链接；手机端目录折叠、表格横向滑动、滚动后出现「↑ 目录」，中英文跟随界面语言。
 
 - **2.7.12**：修复网状记忆检索对俄语（西里尔）等非拉丁文字的匹配——分词改用 Unicode 字母 / 数字（`\p{L}` / `\p{N}`），中文仍按单字 + 二元词；设置 → 记忆新增「标签关联与图扩展」开关：共享标签的节点自动连边（每节点最多 3 条），检索命中时按标签扩散，搜索调试显示「标签扩展 N」。
 

@@ -851,6 +851,13 @@ export const en = {
   ttsFailed: 'Failed to read aloud. Please try again later.',
   retry: 'Retry',
   labEntry: 'Lab',
+  docsEntry: 'Docs',
+  docsTitle: 'Documentation',
+  docsBack: 'Back to chat',
+  docsToc: 'Contents',
+  docsBackToTop: '↑ Contents',
+  docsFooter:
+    'This documentation follows the release; when it disagrees with the UI or the README, the UI and the repository win.',
   labBack: 'Back to chat',
   labExport: 'Export results',
   labImport: 'Import results',
@@ -2151,6 +2158,12 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2713Title: 'v2.7.13 · 2026-11',
+  changelogV2713ImportPerf:
+    'Follows upstream 5aaa34b / c9e1f33 (perf: streamline history archive imports): reused ZIP read windows and central directory, streamed JSON decoding, batched staging writes and MIME backfill only for sessions that reference recognised images; importing 3000 chats takes about a second while the progress bar and failure checks stay the same',
+  changelogV2713Docs:
+    'New "Docs" entry above NanoVM Slim: a 24-section wiki with a table of contents and blue in-page and external links, covering the settings map, roles, workspace, voice, modes, models, keyword refusal, jailbreak, search poisoning, attachments, memory, VMs, local models, agent tools, stats, data management, privacy, platform differences, known limits, FAQ and a glossary; on phones the TOC collapses, tables scroll sideways and an "↑ Contents" button appears after the first screen, in Chinese or English',
+  changelogV2713Apk: 'Builds the 2.7.13 APK (versionCode 283), signed with xiaohuangbo.jks',
   changelogV2712Title: 'v2.7.12 · 2026-11',
   changelogV2712Tokenizer:
     'Fixes memory-graph retrieval for Russian (Cyrillic) and other non-Latin scripts: the tokenizer now keeps Unicode letters and digits (\\p{L} / \\p{N}), so Cyrillic, Greek, Arabic and Devanagari text is no longer dropped; Chinese still uses single characters plus bigrams, and full-width input is NFKC-normalised first',

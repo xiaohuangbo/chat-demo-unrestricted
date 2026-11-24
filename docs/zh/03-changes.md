@@ -780,3 +780,22 @@ const runs = lower.match(/[\u4e00-\u9fff]+/g)
 - 搜索调试多一个「标签扩展 N」计数，关系图里能看到标签自动关联产生的边。
 
 **涉及文件：** `src/services/chat/memoryBank.ts`、`src/services/settings.ts`、`src/services/chat/savedMemory.ts`、`src/components/settings/MemorySettings.tsx`、`src/i18n/{zh,en}.ts`。
+
+### 3.43 上游归档导入优化与主界面文档（2.7.13）
+
+**跟进上游。** 合并 [5aaa34b](https://github.com/deepseek-ai/chat-demo/commit/5aaa34be44e3b42b8c34420f28de3294e754da6a) / [c9e1f33](https://github.com/deepseek-ai/chat-demo/commit/c9e1f33da981f8a236a2b899ebd374689cfa108d)（`perf: streamline history archive imports`），并按本仓库已有的导入进度条做了适配：
+
+- `zipReader.ts`：新增 512 KiB 读窗口缓存（`WeakMap<File, …>`），中央目录只解析一次并缓存；`readBytes` 的小读请求命中窗口，跨窗口时只补读尾部；data descriptor 校验拆成 `checkDataDescriptor()`，在读正文之后才检查，避免提前跳转；`readEntry()` 支持传入 `detectType` 回调，图片类型在流中识别，不再「整张读成 Blob 再 slice」。
+- `db.ts`：`addStagingSession` 改为 `addStagingSessions` 批量写入；`updateStagingFileTypes` 接收受影响的会话集合，按 id 读取、只回写变化的记录，不再全表游标扫描；空批次直接返回。
+- `importArchive.ts`：会话按 32 个 / 2 MiB 一批、图片按 16 张 / 4 MiB 一批写入；`readJson` 直接对条目流做增量 UTF-8 解码；记录 `fileSessions`（附件 id → 引用它的会话），导入结束只为引用可识别图片的会话回填 MIME；进度回调（已处理条目 / 总数、已导入会话数）保持原样。
+- 实测：3000 个会话、3002 个条目的归档约 1 秒导入完成，进度条从 0% 走到 100%；400 会话归档同样通过；随机字节、截断 ZIP 仍然被拒绝（`BackupError`）。
+
+**主界面「文档」。** 侧栏 NanoVM Slim 上方新增入口（书本图标），与实验台一样占满聊天区：
+
+- 内容按语言两份（`src/components/docs/docsContent.ts`），共 24 个小节：项目概览、设置总览、会话与分支、角色与资料、工作区、语音与朗读、聊天模式、输入栏与深度思考、模型与采样、关键词拒答、破甲、联网搜索与搜索投毒、附件与大文本、长期记忆与网状记忆库、虚拟机与终端、本地模型、Agent 工具与实验台、统计与计费、数据管理、隐私与安全、网页版 / 手机 / APK 差异、已知限制、FAQ、术语表。
+- 左侧固定目录（窄屏折叠成可展开列表），正文按小节滚动时高亮当前项，标题右侧的 `#` 可直接定位。
+- 手机 / APK 适配：目录变成顶部通栏按钮（44px 高、可展开 46vh），正文单列、表格保留列宽并横向滑动，触屏隐藏 `#` 锚点，滚过首屏后右下角出现「↑ 目录」；`env(safe-area-inset-bottom)` 让底部按钮避开手势条。390px 宽度实测无横向溢出。
+- 行内链接支持 `[文字](#小节)` 与 `[文字](https://…)`：页内链接平滑滚动，外部链接新窗口打开，统一使用品牌的蓝色（`--dsw-alias-brand-text`），和 wiki 的阅读习惯一致。
+- 正文用段落、列表、表格、提示块四种块类型；表格覆盖破甲开关、模式能力、记忆参数、虚拟机对比与术语表。
+
+**涉及文件：** `src/services/chat/history/{zipReader,importArchive}.ts`、`src/services/chat/db.ts`、`src/components/docs/`、`src/services/docs/docsStore.ts`、`src/components/sider/Sider.tsx`、`src/app/App.tsx`、`src/components/base/icons.tsx`、i18n。

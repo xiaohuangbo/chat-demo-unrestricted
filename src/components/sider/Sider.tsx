@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
+  IconBookOutline16,
   IconChipOutline16,
   IconGlobeLanguageOutline14,
   IconPanelLeftOutline16,
@@ -20,6 +21,7 @@ import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { closeLab, openLab, useLab } from '../../services/lab/labStore.js'
+import { closeDocs, openDocs, useDocs } from '../../services/docs/docsStore.js'
 import { toggleNanoVM, toggleWebVM, useNanoVM } from '../../services/nanovm/session.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
 import { useWebVMConfig } from '../../services/webvm/config.js'
@@ -34,6 +36,7 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const t = useTranslate()
   const sessions = useChatStore((state) => state.sessions)
   const labOpen = useLab((state) => state.open)
+  const docsOpen = useDocs((state) => state.open)
   const nanoVMEnabled = useNanoVMConfig((state) => state.enabled)
   const webVMEnabled = useWebVMConfig((state) => state.enabled)
   const unkernelEnabled = useUnkernelConfig((state) => state.enabled)
@@ -114,6 +117,26 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         </div>
       </div>
       <div className={styles.bottom}>
+        <button
+          type="button"
+          className={clsx(styles.settings, docsOpen && styles.settingsActive)}
+          onClick={() => {
+            if (docsOpen) {
+              closeDocs()
+            } else {
+              closeLab()
+              openDocs()
+            }
+            if (mobile) {
+              closeMobileSider()
+            }
+          }}
+        >
+          <span className={styles.settingsIcon}>
+            <IconBookOutline16 />
+          </span>
+          <span className={styles.settingsLabel}>{t('docsEntry')}</span>
+        </button>
         {nanoVMEnabled ? (
           <button
             type="button"
@@ -174,7 +197,14 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         <button
           type="button"
           className={clsx(styles.settings, labOpen && styles.settingsActive)}
-          onClick={() => (labOpen ? closeLab() : openLab())}
+          onClick={() => {
+            if (labOpen) {
+              closeLab()
+              return
+            }
+            closeDocs()
+            openLab()
+          }}
         >
           <span className={styles.settingsIcon}>
             <IconThinkOutline16 />

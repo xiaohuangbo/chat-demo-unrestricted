@@ -780,3 +780,22 @@ With the fix, `Москва столица` yields `['москва', 'столи
 - search debug adds a tag-expanded counter, and the graph shows the tag-derived edges.
 
 **Files:** `src/services/chat/memoryBank.ts`, `src/services/settings.ts`, `src/services/chat/savedMemory.ts`, `src/components/settings/MemorySettings.tsx`, `src/i18n/{zh,en}.ts`.
+
+### 3.43 Upstream import performance and an in-app docs page (2.7.13)
+
+**Following upstream.** Merged [5aaa34b](https://github.com/deepseek-ai/chat-demo/commit/5aaa34be44e3b42b8c34420f28de3294e754da6a) / [c9e1f33](https://github.com/deepseek-ai/chat-demo/commit/c9e1f33da981f8a236a2b899ebd374689cfa108d) (`perf: streamline history archive imports`) on top of this fork's existing import progress bar:
+
+- `zipReader.ts`: a 512 KiB read-window cache (`WeakMap<File, …>`) and a cached central directory; `readBytes` serves small reads from the window and only tops up the tail when crossing it; the data-descriptor check moved into `checkDataDescriptor()` and runs after the entry body is read; `readEntry()` accepts a `detectType` callback so image types are detected while streaming instead of reading the whole Blob and slicing it.
+- `db.ts`: `addStagingSession` became batched `addStagingSessions`; `updateStagingFileTypes` takes the affected session ids, reads them by id and only writes back changed records instead of scanning the whole store; empty batches return early.
+- `importArchive.ts`: sessions are flushed in batches of 32 / 2 MiB and images in batches of 16 / 4 MiB; `readJson` decodes UTF-8 incrementally from the entry stream; `fileSessions` (attachment id → referencing sessions) means MIME backfill only touches sessions that reference recognised images; the progress callback (entries processed / total, chats imported) is unchanged.
+- Measured: a 3000-chat, 3002-entry archive imports in about a second and the progress bar runs 0% → 100%; a 400-chat archive also passes; random bytes and truncated ZIPs are still rejected with `BackupError`.
+
+**The Docs page.** A new sidebar entry above NanoVM Slim (book icon) that fills the chat area like the lab:
+
+- Two language versions in `src/components/docs/docsContent.ts`, 24 sections: overview, settings map, chats and branches, roles and profile, workspace, voice, chat modes, composer and thinking depth, models and sampling, keyword refusal, jailbreak, web search and poisoning, attachments and large text, long-term and graph memory, virtual machines, local models, agent tools and the lab, stats and billing, data management, privacy, web / mobile / APK differences, known limits, FAQ and a glossary.
+- A fixed table of contents on the left (collapsible on narrow screens) that highlights the current section while scrolling, and a `#` anchor next to every heading.
+- Mobile / APK: the TOC becomes a full-width 44 px toggle (expands to 46vh), the article is single-column, tables keep their column widths and scroll sideways, `#` anchors are hidden on touch devices, and an “↑ Contents” button appears after the first screen; `env(safe-area-inset-bottom)` keeps it clear of the gesture bar. Measured at 390 px with no horizontal overflow.
+- Inline links support `[text](#section)` and `[text](https://…)`: in-page links scroll smoothly, external links open in a new tab, all in the brand blue (`--dsw-alias-brand-text`) for a wiki-like feel.
+- Four block types (paragraph, list, table, note); tables cover jailbreak switches, mode capabilities, memory parameters, VM comparison and the glossary.
+
+**Files:** `src/services/chat/history/{zipReader,importArchive}.ts`, `src/services/chat/db.ts`, `src/components/docs/`, `src/services/docs/docsStore.ts`, `src/components/sider/Sider.tsx`, `src/app/App.tsx`, `src/components/base/icons.tsx`, i18n.

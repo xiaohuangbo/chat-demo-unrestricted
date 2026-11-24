@@ -40,6 +40,7 @@
 - **Characters and account**: role cards (persona, avatar, auto memory), My profile, a compression threshold and DeepSeek balance plus usage overview, ported from Remember and wired into the existing memory and stats systems;
 - **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match refuses locally without calling the API, even without a key;
 - **Statistics and billing**: usage ledger, context breakdown, per-model pricing and the free server-search switch;
+- **In-app docs**: a built-in Docs page above NanoVM Slim with 24 sections covering settings, modes, jailbreak, attachments, memory, VMs and the glossary; a table of contents plus blue in-page links, a collapsible TOC and horizontally scrolling tables on phones, in Chinese or English following the UI language;
 - **Android**: APK builds, in-app update check and a built-in network proxy for NanoVM; WebVM stays browser-only because Android WebView has no cross-origin isolation, while Unkernel runs in the bundled page when the WebView supports JSPI.
 
 ## Documentation
@@ -71,13 +72,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.12.apk` (112 MB, versionCode 282,
-SHA-256 `7ac33c9e1c63163845ff83b8b1c658e1d37be476fa9352af6d8a2e9bedc14e39`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.13.apk` (112 MB, versionCode 283,
+SHA-256 `61155cd288d94f2c48ee63eca99254b0350e9a2050fa89e29129262a2f88dc99`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.12, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.13, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -100,6 +101,8 @@ Last regression run (2026-11, v2.7.12, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.13**: follows the upstream history-import performance work (reused ZIP read windows and central directory, streamed JSON decoding, batched staging writes, MIME backfill only for sessions with recognised images; 3000 chats import in about a second with the progress bar and checks unchanged), and adds a **Docs** entry above NanoVM Slim: a 24-section wiki (settings map, roles, workspace, voice, modes, models, keyword refusal, jailbreak, search poisoning, attachments, memory, VMs, local models, agent tools, stats, data, privacy, platform differences, known limits, FAQ, glossary) with a table of contents and blue in-page and external links; on phones the TOC collapses, tables scroll sideways and an “↑ Contents” button appears after the first screen, in Chinese or English.
 
 - **2.7.12**: fixes memory-graph retrieval for Russian (Cyrillic) and other non-Latin scripts by tokenizing with Unicode letters/digits (`\p{L}` / `\p{N}`) while keeping Chinese single characters plus bigrams; Settings → Memory gains a "Tag linking & graph expansion" switch that links nodes sharing tags (at most 3 links each) and expands matches through tag neighbours, with a tag-expanded counter in search debug.
 

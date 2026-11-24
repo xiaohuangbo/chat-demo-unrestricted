@@ -20,6 +20,8 @@ import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { ToolApprovalDialog } from '../components/agent/ToolApprovalDialog.js'
 import { StatsDialog } from '../components/session/StatsDialog.js'
 import { LabView } from '../components/lab/LabView.js'
+import { DocsView } from '../components/docs/DocsView.js'
+import { useDocs } from '../services/docs/docsStore.js'
 import { ErrorBoundary } from '../components/base/ErrorBoundary.js'
 import { closeLab, useLab } from '../services/lab/labStore.js'
 import { Toast } from '../components/base/Toast.js'
@@ -66,6 +68,7 @@ export const App = () => {
   )
   const activeId = useChatStore((state) => state.activeId)
   const labOpen = useLab((state) => state.open)
+  const docsOpen = useDocs((state) => state.open)
   const mobileSiderOpen = useMobileSider((state) => state.open) && isMobile
   const mainRef = useRef<HTMLElement>(null)
   const gestureRef = useRef<{
@@ -250,7 +253,9 @@ export const App = () => {
           <div className={styles.workspace}>
             <div className={styles.content}>
               {siderCollapsed ? <CollapsedSider /> : null}
-              {labOpen ? (
+              {docsOpen ? (
+                <DocsView />
+              ) : labOpen ? (
                 <ErrorBoundary
                   fallback={(error) => (
                     <div className={styles.labFallback}>

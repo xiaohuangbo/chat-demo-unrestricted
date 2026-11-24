@@ -775,6 +775,12 @@ export const zh = {
   ttsFailed: '朗读失败，请稍后再试',
   retry: '重试',
   labEntry: '实验台',
+  docsEntry: '文档',
+  docsTitle: '项目文档',
+  docsBack: '返回聊天',
+  docsToc: '目录',
+  docsBackToTop: '↑ 目录',
+  docsFooter: '文档随版本更新；如果与界面或 README 不一致，以实际界面与仓库说明为准。',
   labBack: '返回聊天',
   labExport: '导出结果',
   labImport: '导入结果',
@@ -1998,6 +2004,12 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2713Title: 'v2.7.13 · 2026-11',
+  changelogV2713ImportPerf:
+    '跟进上游 5aaa34b / c9e1f33（perf: streamline history archive imports）：ZIP 读取复用窗口与中央目录、会话 JSON 流式解码、暂存批量写入、只给引用了可识别图片的会话回填 MIME；导入 3000 个会话约 1 秒，进度条与失败校验不变',
+  changelogV2713Docs:
+    '主界面 NanoVM Slim 上方新增「文档」：24 个小节的 wiki 式说明，左侧目录、蓝色页内链接与外部链接，覆盖设置总览 / 角色 / 工作区 / 语音 / 模式 / 模型参数 / 关键词拒答 / 破甲 / 搜索投毒 / 附件 / 记忆 / 虚拟机 / 本地模型 / Agent / 统计 / 数据管理 / 隐私 / 平台差异 / 已知限制 / FAQ / 术语表；手机端目录折叠、表格横向滑动、滚动后出现「↑ 目录」，中英文跟随界面语言',
+  changelogV2713Apk: '同步构建 2.7.13 APK（versionCode 283），使用 xiaohuangbo.jks 签名',
   changelogV2712Title: 'v2.7.12 · 2026-11',
   changelogV2712Tokenizer:
     '修复网状记忆检索对俄语（西里尔）等非拉丁文字的匹配：分词改为 Unicode 字母 / 数字（\\p{L} / \\p{N}），俄语、希腊语、阿拉伯语、天城文等不再被整段丢掉；中文仍按单字 + 二元词，全角内容先做 NFKC 归一化',
