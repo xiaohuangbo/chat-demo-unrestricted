@@ -539,6 +539,9 @@ export const zh = {
   memoryBankEnabledLabel: '启用网状记忆检索',
   memoryBankEnabledDesc:
     '按关键词 / 标签 / 向量 / 关联边检索，结果注入 system；与长期记忆配合使用。',
+  memoryBankTagExpansionLabel: '标签关联与图扩展',
+  memoryBankTagExpansionDesc:
+    '开启后共享标签的记忆节点自动连边（每个节点最多 3 条），检索命中一个节点时按标签把相关记忆一起扩散进来；关闭时只走向量自动连的边。',
   memoryBankLimitLabel: '每次注入条数',
   memoryBankThresholdLabel: '相关度阈值',
   memoryBankDimensionLabel: '向量维度',
@@ -577,6 +580,7 @@ export const zh = {
   memorySearchButton: '检索',
   memoryDebugScope: '节点 {nodes} · 关联 {edges}',
   memoryDebugMatches: '关键词 {keyword} · 标签 {tag} · 向量 {vector} · 扩散 {edges}',
+  memoryDebugTagExpanded: '标签扩展 {count}',
   memoryDebugTitle: '标题',
   memoryDebugKeyword: '关键词',
   memoryDebugTag: '标签',
@@ -1994,6 +1998,14 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2712Title: 'v2.7.12 · 2026-11',
+  changelogV2712Tokenizer:
+    '修复网状记忆检索对俄语（西里尔）等非拉丁文字的匹配：分词改为 Unicode 字母 / 数字（\\p{L} / \\p{N}），俄语、希腊语、阿拉伯语、天城文等不再被整段丢掉；中文仍按单字 + 二元词，全角内容先做 NFKC 归一化',
+  changelogV2712TagExpansion:
+    '设置 → 记忆新增「标签关联与图扩展」开关：共享标签的记忆节点自动连边（每个节点最多 3 条），检索命中一个节点时按标签把相关记忆扩散进来；关闭时仍只走向量自动连的边',
+  changelogV2712Debug:
+    '搜索调试新增「标签扩展 N」计数，非拉丁文字的查询词不再显示为 0；关系图会显示标签自动关联产生的边',
+  changelogV2712Apk: '同步构建 2.7.12 APK（versionCode 282），使用 xiaohuangbo.jks 签名',
   changelogV2711Title: 'v2.7.11 · 2026-11',
   changelogV2711RootCause:
     '修好附件「token 过大」的真正原因：请求里只要带 tools / safety_check / title 任一 DeepSeek 扩展字段，服务端就把用户输入限制在 32768 token（`user input too long, N tokens exceeds max 32768 tokens`）；现在本轮用户输入超过 32768 token 时自动去掉这三项，走纯 Anthropic 兼容路径直读附件，一直到 1M 上下文；估算偏小被服务端拒绝时也会去掉后自动重试一次',

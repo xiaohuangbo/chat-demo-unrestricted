@@ -748,3 +748,35 @@ In other words: **whenever a request carries any of the DeepSeek extension field
 Small inputs are unaffected: below the threshold the request still carries the safety check, server tools and title request.
 
 **Files:** `src/services/chat/store.ts`, `src/services/api/types.ts` (`tools` is now optional), `src/i18n/{zh,en}.ts`.
+
+### 3.42 Non-Latin memory retrieval and tag graph expansion (2.7.12)
+
+**Problem.** After 2.7.10, memory-graph retrieval never matched Russian (Cyrillic) or other non-Latin text: typing a word that appears verbatim in a node's title, content and tags still showed `query tokens 0`, `top score 0.00` and zero injected memories in Settings → Memory → Search debug.
+
+**Cause.** `tokenizeMemory()` only recognised two scripts:
+
+```ts
+const words = lower.match(/[a-z0-9_.-]{2,}/g)
+const runs = lower.match(/[\u4e00-\u9fff]+/g)
+```
+
+Latin went through the first pattern and Han through the second; everything else (Cyrillic, Greek, Arabic, Devanagari, kana, …) matched neither and was dropped, so both the query and the index produced zero tokens and nothing could ever match.
+
+**Fix.** Tokenisation now uses Unicode rules:
+
+- Han keeps the single-character plus bigram rules so Chinese recall is unchanged;
+- every other script is kept word-wise with `[\p{L}\p{N}]+(?:[_.'’-][\p{L}\p{N}]+)*/u`;
+- input is NFKC-normalised and lower-cased first, so full-width forms and input-method differences no longer break matching;
+- Han runs are blanked before word matching so a character is not counted twice;
+- the English / Chinese stop-word lists still apply.
+
+With the fix, `Москва столица` yields `['москва', 'столица']`, one keyword match and a non-zero score; Chinese behaviour is unchanged.
+
+**Tag linking & graph expansion (new switch).** Settings → Memory → "Tag linking & graph expansion", off by default:
+
+- when on, nodes sharing tags are linked automatically on add/update with `type: 'tag'`, weight `0.2 + shared / larger tag set × 0.6` (capped at 0.9), at most 3 links per node so a large tag cluster cannot blow up the edge count;
+- search keeps the vector-edge expansion and adds dynamic tag expansion: seed nodes pass a share of their score to nodes sharing tags, so neighbours added later by tag edits or archive imports are still pulled in;
+- when off, `type: 'tag'` edges are ignored during expansion and retrieval behaves exactly as before;
+- search debug adds a tag-expanded counter, and the graph shows the tag-derived edges.
+
+**Files:** `src/services/chat/memoryBank.ts`, `src/services/settings.ts`, `src/services/chat/savedMemory.ts`, `src/components/settings/MemorySettings.tsx`, `src/i18n/{zh,en}.ts`.

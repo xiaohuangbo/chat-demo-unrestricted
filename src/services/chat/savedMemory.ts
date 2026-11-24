@@ -64,7 +64,8 @@ export const useSavedMemories = create<{ items: SavedMemoryItem[] }>(() => ({
 
 const syncToBank = (item: SavedMemoryItem) => {
   if (item.enabled) {
-    upsertSavedMemoryNode(item.id, item.content, useSettings.getState().memoryBankDimension)
+    const { memoryBankDimension, memoryBankTagExpansion } = useSettings.getState()
+    upsertSavedMemoryNode(item.id, item.content, memoryBankDimension, memoryBankTagExpansion)
   } else {
     removeSavedMemoryNode(item.id)
   }

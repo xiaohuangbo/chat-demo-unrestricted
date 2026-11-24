@@ -71,13 +71,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.11.apk` (112 MB, versionCode 281,
-SHA-256 `a816e584883066dc1d3b496aa183c033260c46eced3c582309b936dacf71f5da`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.12.apk` (112 MB, versionCode 282,
+SHA-256 `7ac33c9e1c63163845ff83b8b1c658e1d37be476fa9352af6d8a2e9bedc14e39`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.11, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.12, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -100,6 +100,8 @@ Last regression run (2026-11, v2.7.11, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.12**: fixes memory-graph retrieval for Russian (Cyrillic) and other non-Latin scripts by tokenizing with Unicode letters/digits (`\p{L}` / `\p{N}`) while keeping Chinese single characters plus bigrams; Settings → Memory gains a "Tag linking & graph expansion" switch that links nodes sharing tags (at most 3 links each) and expands matches through tag neighbours, with a tag-expanded counter in search debug.
 
 - **2.7.11**: fixes the real cause of the "token too large" attachment failure — any DeepSeek extension field (`tools` / `safety_check` / `title`) makes the server cap user input at 32768 tokens; turns above that now drop the three fields and read attachments through the plain Anthropic-compatible path up to 1M, retrying once without them if the estimate was too low. A first large turn falls back to the first 24 characters as the title and usage is still recorded.
 

@@ -45,6 +45,8 @@ export type MemorySearchConfig = {
   tagWeight: number
   vectorWeight: number
   edgeWeight: number
+  /** 共享标签自动连边 + 检索时按标签做图扩展（设置里的开关） */
+  tagExpansion?: boolean
 }
 
 export type MemorySearchCandidate = {
@@ -68,6 +70,8 @@ export type MemorySearchDebug = {
   tagMatches: number
   vectorMatches: number
   edgesTraversed: number
+  /** 按共享标签动态扩展到的邻居数（仅开关开启时统计） */
+  tagExpanded: number
   candidates: MemorySearchCandidate[]
   results: MemoryNode[]
 }
@@ -154,19 +158,26 @@ const STOP_WORDS = new Set([
   '能',
 ])
 
-/** 中英混合分词：英文按词，中文按单字 + 二元词组 */
+/** 汉字区段：基本区、扩展 A、兼容区；日文假名等其它文字走通用词切分 */
+const CJK_RUN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g
+
+/**
+ * 通用词切分：拉丁、西里尔、希腊、阿拉伯、天城文等所有 Unicode 文字都按词保留。
+ * 用 \p{L} / \p{N} 而不是 [a-z0-9]，否则俄语、希腊语等非拉丁文字会被整段丢掉
+ * （2.7.10 的检索对这些语言一直命中 0 个查询词）。
+ */
+const WORD_RUN = /[\p{L}\p{N}]+(?:[_.'’-][\p{L}\p{N}]+)*/gu
+
+/**
+ * 多语言分词：
+ * - 汉字按单字 + 二元词组，保持中文检索的召回；
+ * - 其它文字（含俄语、希腊语、阿拉伯语、天城文等）按 Unicode 词切分；
+ * - 统一 NFKC 归一化并转小写，全角与半角、连字等写法不因输入法差异而失配。
+ */
 export const tokenizeMemory = (text: string): string[] => {
   const tokens = new Set<string>()
-  const lower = text.toLowerCase()
-  const words = lower.match(/[a-z0-9_.-]{2,}/g)
-  if (words) {
-    for (const word of words) {
-      if (!STOP_WORDS.has(word)) {
-        tokens.add(word)
-      }
-    }
-  }
-  const runs = lower.match(/[\u4e00-\u9fff]+/g)
+  const lower = text.normalize('NFKC').toLowerCase()
+  const runs = lower.match(CJK_RUN)
   if (runs) {
     for (const run of runs) {
       for (let i = 0; i < run.length; i++) {
@@ -180,6 +191,16 @@ export const tokenizeMemory = (text: string): string[] => {
             tokens.add(bigram)
           }
         }
+      }
+    }
+  }
+  // 去掉汉字区段后再按词切分，避免同一个字被两种规则重复计入
+  const words = lower.replace(CJK_RUN, ' ').match(WORD_RUN)
+  if (words) {
+    for (const raw of words) {
+      const word = raw.replace(/^[_.'’-]+|[_.'’-]+$/g, '')
+      if (word.length >= 2 && !STOP_WORDS.has(word)) {
+        tokens.add(word)
       }
     }
   }
@@ -351,6 +372,86 @@ const autoLink = (
   return [...edges, ...added]
 }
 
+/** 标签归一化：去空白、NFKC、小写；「Moscow」「москва」各自按原样比较 */
+const normalizeTag = (tag: string): string => tag.normalize('NFKC').trim().toLowerCase()
+
+/** 两个节点的标签相似度：共享标签越多权重越高，最多 0.9 */
+const sharedTagWeight = (left: MemoryNode, right: MemoryNode): number => {
+  const leftTags = new Set(left.tags.map(normalizeTag).filter(Boolean))
+  const rightTags = new Set(right.tags.map(normalizeTag).filter(Boolean))
+  if (leftTags.size === 0 || rightTags.size === 0) {
+    return 0
+  }
+  let shared = 0
+  for (const tag of leftTags) {
+    if (rightTags.has(tag)) {
+      shared += 1
+    }
+  }
+  if (shared === 0) {
+    return 0
+  }
+  return Math.min(0.9, 0.2 + (shared / Math.max(leftTags.size, rightTags.size)) * 0.6)
+}
+
+/**
+ * 共享标签自动连边：每个节点最多连 3 条，避免同一个标签簇把边数撑爆。
+ * 只在设置里开启「标签关联与图扩展」时调用。
+ */
+const autoLinkByTags = (
+  node: MemoryNode,
+  nodes: MemoryNode[],
+  edges: MemoryEdge[]
+): MemoryEdge[] => {
+  const scored = nodes
+    .filter((item) => item.id !== node.id)
+    .map((item) => ({ item, weight: sharedTagWeight(node, item) }))
+    .filter((entry) => entry.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3)
+  const added: MemoryEdge[] = []
+  for (const { item, weight } of scored) {
+    const duplicate = edges.some(
+      (edge) =>
+        (edge.sourceId === node.id && edge.targetId === item.id) ||
+        (edge.sourceId === item.id && edge.targetId === node.id)
+    )
+    if (duplicate) {
+      continue
+    }
+    added.push({
+      id: createId(),
+      sourceId: node.id,
+      targetId: item.id,
+      type: 'tag',
+      weight,
+      description: '共享标签自动关联',
+    })
+  }
+  return [...edges, ...added]
+}
+
+/** 开关打开时回填：为已有节点按共享标签补边（每个节点最多 3 条，受 MAX_EDGES 限制） */
+export const linkMemoryBankByTags = (): void => {
+  const { nodes, edges } = useMemoryBank.getState()
+  let next = edges
+  for (const node of nodes) {
+    next = autoLinkByTags(node, nodes, next)
+  }
+  if (next.length !== edges.length) {
+    commit({ nodes, edges: next })
+  }
+}
+
+/** 开关关闭时清掉标签边：关系图与检索行为保持一致，重新打开会重新补边 */
+export const unlinkMemoryBankByTags = (): void => {
+  const { nodes, edges } = useMemoryBank.getState()
+  const next = edges.filter((edge) => edge.type !== 'tag')
+  if (next.length !== edges.length) {
+    commit({ nodes, edges: next })
+  }
+}
+
 export const addMemoryNode = (
   input: {
     title?: string
@@ -359,7 +460,8 @@ export const addMemoryNode = (
     importance?: number
     credibility?: number
   },
-  dimension = 256
+  dimension = 256,
+  tagExpansion = false
 ): MemoryNode | null => {
   const content = input.content.trim()
   if (!content) {
@@ -371,7 +473,8 @@ export const addMemoryNode = (
     return duplicate
   }
   const node = makeNode({ ...input, content }, 'manual')
-  const edges = autoLink(node, current.nodes, current.edges, dimension)
+  const linked = autoLink(node, current.nodes, current.edges, dimension)
+  const edges = tagExpansion ? autoLinkByTags(node, current.nodes, linked) : linked
   commit({ nodes: [node, ...current.nodes], edges })
   return node
 }
@@ -380,7 +483,8 @@ export const addMemoryNode = (
 export const upsertSavedMemoryNode = (
   savedMemoryId: string,
   content: string,
-  dimension = 256
+  dimension = 256,
+  tagExpansion = false
 ): void => {
   const text = content.trim()
   if (!text) {
@@ -402,7 +506,8 @@ export const upsertSavedMemoryNode = (
     return
   }
   const node = makeNode({ content: text }, 'saved', savedMemoryId)
-  const edges = autoLink(node, current.nodes, current.edges, dimension)
+  const linked = autoLink(node, current.nodes, current.edges, dimension)
+  const edges = tagExpansion ? autoLinkByTags(node, current.nodes, linked) : linked
   commit({ nodes: [node, ...current.nodes], edges })
 }
 
@@ -422,19 +527,35 @@ export const removeSavedMemoryNode = (savedMemoryId: string) => {
 
 export const updateMemoryNode = (
   id: string,
-  patch: Partial<Pick<MemoryNode, 'title' | 'content' | 'tags' | 'importance' | 'credibility'>>
+  patch: Partial<Pick<MemoryNode, 'title' | 'content' | 'tags' | 'importance' | 'credibility'>>,
+  tagExpansion = false
 ) => {
   const current = useMemoryBank.getState()
   const node = current.nodes.find((item) => item.id === id)
   if (!node) {
     return
   }
-  commit({
-    nodes: current.nodes.map((item) =>
-      item.id === id ? { ...item, ...patch, updatedAt: Date.now() } : item
-    ),
-    edges: current.edges,
-  })
+  const nodes = current.nodes.map((item) =>
+    item.id === id ? { ...item, ...patch, updatedAt: Date.now() } : item
+  )
+  if (!tagExpansion) {
+    commit({ nodes, edges: current.edges })
+    return
+  }
+  // 标签可能被改过：先摘掉这个节点旧的标签边，再按新标签重新连
+  const updated = nodes.find((item) => item.id === id)
+  if (!updated) {
+    commit({ nodes, edges: current.edges })
+    return
+  }
+  const edges = autoLinkByTags(
+    updated,
+    nodes,
+    current.edges.filter(
+      (edge) => edge.type !== 'tag' || (edge.sourceId !== id && edge.targetId !== id)
+    )
+  )
+  commit({ nodes, edges })
 }
 
 export const deleteMemoryNode = (id: string) => {
@@ -521,12 +642,19 @@ export const searchMemoryBank = (query: string, config: MemorySearchConfig): Mem
     })
   }
 
+  const nodeMap = new Map(state.nodes.map((node) => [node.id, node]))
+  const tagExpansion = config.tagExpansion === true
   // 边扩散：高分节点把一部分分数传给相邻节点，最多遍历 8 个种子
   let edgesTraversed = 0
+  let tagExpanded = 0
   const seeds = [...base.values()].sort((a, b) => b.total - a.total).slice(0, 8)
   for (const seed of seeds) {
     for (const edge of state.edges) {
       if (edge.sourceId !== seed.nodeId && edge.targetId !== seed.nodeId) {
+        continue
+      }
+      // 标签边只在开关开启时参与；关闭时图扩展只看向量自动连的边
+      if (edge.type === 'tag' && !tagExpansion) {
         continue
       }
       const neighborId = edge.sourceId === seed.nodeId ? edge.targetId : edge.sourceId
@@ -536,6 +664,33 @@ export const searchMemoryBank = (query: string, config: MemorySearchConfig): Mem
       }
       edgesTraversed += 1
       neighbor.edge = Math.max(neighbor.edge, seed.total * edge.weight)
+    }
+    // 动态标签扩展：不依赖已存的边，命中节点把分数传给共享标签的节点，
+    // 标签是后来补上或从归档导入的节点也能被拉进来。
+    if (!tagExpansion || seed.total <= 0) {
+      continue
+    }
+    const seedNode = nodeMap.get(seed.nodeId)
+    if (!seedNode) {
+      continue
+    }
+    for (const node of state.nodes) {
+      if (node.id === seed.nodeId) {
+        continue
+      }
+      const weight = sharedTagWeight(seedNode, node)
+      if (weight === 0) {
+        continue
+      }
+      const neighbor = base.get(node.id)
+      if (!neighbor) {
+        continue
+      }
+      const score = seed.total * weight
+      if (score > neighbor.edge) {
+        neighbor.edge = score
+        tagExpanded += 1
+      }
     }
   }
 
@@ -551,7 +706,6 @@ export const searchMemoryBank = (query: string, config: MemorySearchConfig): Mem
   }
   candidates.sort((a, b) => b.total - a.total)
   const passed = candidates.filter((candidate) => candidate.passed).slice(0, config.limit)
-  const nodeMap = new Map(state.nodes.map((node) => [node.id, node]))
   return {
     query,
     tokens,
@@ -562,6 +716,7 @@ export const searchMemoryBank = (query: string, config: MemorySearchConfig): Mem
     tagMatches: candidates.filter((candidate) => candidate.tag > 0).length,
     vectorMatches: candidates.filter((candidate) => candidate.vector > 0.05).length,
     edgesTraversed,
+    tagExpanded,
     candidates,
     results: passed
       .map((candidate) => nodeMap.get(candidate.nodeId))

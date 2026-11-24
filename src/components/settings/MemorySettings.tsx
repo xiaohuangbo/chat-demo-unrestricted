@@ -13,7 +13,9 @@ import {
   addMemoryNode,
   clearMemoryBank,
   deleteMemoryNode,
+  linkMemoryBankByTags,
   searchMemoryBank,
+  unlinkMemoryBankByTags,
   memoryBankStats,
   useMemoryBank,
   type MemoryEdge,
@@ -33,6 +35,7 @@ import {
   setMemoryUpdateNotice,
   setMemoryBankDimension,
   setMemoryBankEnabled,
+  setMemoryBankTagExpansion,
   setMemoryBankLimit,
   setMemoryBankThreshold,
   setMemoryBankWeight,
@@ -249,6 +252,7 @@ export const MemorySettings = () => {
       tagWeight: settings.memoryBankTagWeight,
       vectorWeight: settings.memoryBankVectorWeight,
       edgeWeight: settings.memoryBankEdgeWeight,
+      tagExpansion: settings.memoryBankTagExpansion,
     }),
     [
       settings.memoryBankDimension,
@@ -258,6 +262,7 @@ export const MemorySettings = () => {
       settings.memoryBankTagWeight,
       settings.memoryBankVectorWeight,
       settings.memoryBankEdgeWeight,
+      settings.memoryBankTagExpansion,
     ]
   )
 
@@ -275,7 +280,8 @@ export const MemorySettings = () => {
           content: nodeContent,
           tags: nodeTags.split(/[,，]/),
         },
-        settings.memoryBankDimension
+        settings.memoryBankDimension,
+        settings.memoryBankTagExpansion
       )
     ) {
       setNodeTitle('')
@@ -505,6 +511,26 @@ export const MemorySettings = () => {
           checked={settings.memoryBankEnabled}
           onChange={setMemoryBankEnabled}
           label={t('memoryBankEnabledLabel')}
+        />
+      </div>
+
+      <div className={styles.toggleRow}>
+        <div className={styles.text}>
+          <div className={styles.label}>{t('memoryBankTagExpansionLabel')}</div>
+          <div className={styles.desc}>{t('memoryBankTagExpansionDesc')}</div>
+        </div>
+        <Switch
+          checked={settings.memoryBankTagExpansion}
+          onChange={(enabled) => {
+            setMemoryBankTagExpansion(enabled)
+            // 打开时给已有节点补标签边，关闭时清掉，关系图与检索行为保持一致
+            if (enabled) {
+              linkMemoryBankByTags()
+            } else {
+              unlinkMemoryBankByTags()
+            }
+          }}
+          label={t('memoryBankTagExpansionLabel')}
         />
       </div>
 
@@ -753,6 +779,9 @@ export const MemorySettings = () => {
               tokens: debug.tokens.length,
               top: debug.candidates[0]?.total.toFixed(2) ?? '0.00',
             })}
+            {debug.config.tagExpansion
+              ? ` · ${t('memoryDebugTagExpanded', { count: debug.tagExpanded })}`
+              : ''}
           </div>
           {debug.candidates.length === 0 ? (
             <div className={styles.empty}>{t('memoryDebugEmpty')}</div>
@@ -804,6 +833,10 @@ export const MemorySettings = () => {
                 size="m"
                 onClick={() => {
                   applyMemoryArchive(pendingArchive, 'merge' satisfies ImportMode)
+                  // 导入的归档可能没有标签边：开关打开时按标签补一次，关系图与检索保持一致
+                  if (settings.memoryBankTagExpansion) {
+                    linkMemoryBankByTags()
+                  }
                   setPendingArchive(null)
                   showToast({ key: 'memoryImported' })
                 }}
@@ -815,6 +848,9 @@ export const MemorySettings = () => {
                 size="m"
                 onClick={() => {
                   applyMemoryArchive(pendingArchive, 'replace' satisfies ImportMode)
+                  if (settings.memoryBankTagExpansion) {
+                    linkMemoryBankByTags()
+                  }
                   setPendingArchive(null)
                   showToast({ key: 'memoryImported' })
                 }}

@@ -606,6 +606,9 @@ export const en = {
   memoryBankEnabledLabel: 'Enable memory-graph retrieval',
   memoryBankEnabledDesc:
     'Retrieves by keyword / tag / vector / edges and injects the result into system; works with long-term memory.',
+  memoryBankTagExpansionLabel: 'Tag linking & graph expansion',
+  memoryBankTagExpansionDesc:
+    'When on, memory nodes sharing tags are linked automatically (at most 3 links per node) and a matched node expands to its tag neighbours during search; when off only vector-derived edges are traversed.',
   memoryBankLimitLabel: 'Results to inject',
   memoryBankThresholdLabel: 'Relevance threshold',
   memoryBankDimensionLabel: 'Vector dimension',
@@ -644,6 +647,7 @@ export const en = {
   memorySearchButton: 'Search',
   memoryDebugScope: 'Nodes {nodes} · Edges {edges}',
   memoryDebugMatches: 'Keyword {keyword} · Tag {tag} · Vector {vector} · Expanded {edges}',
+  memoryDebugTagExpanded: 'tag-expanded {count}',
   memoryDebugTitle: 'Title',
   memoryDebugKeyword: 'Keyword',
   memoryDebugTag: 'Tag',
@@ -2147,6 +2151,14 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2712Title: 'v2.7.12 · 2026-11',
+  changelogV2712Tokenizer:
+    'Fixes memory-graph retrieval for Russian (Cyrillic) and other non-Latin scripts: the tokenizer now keeps Unicode letters and digits (\\p{L} / \\p{N}), so Cyrillic, Greek, Arabic and Devanagari text is no longer dropped; Chinese still uses single characters plus bigrams, and full-width input is NFKC-normalised first',
+  changelogV2712TagExpansion:
+    'Settings → Memory gains a "Tag linking & graph expansion" switch: nodes sharing tags are linked automatically (at most 3 links each) and a matched node expands to its tag neighbours during search; when off only vector-derived edges are used',
+  changelogV2712Debug:
+    'Search debug gains a tag-expanded counter, non-Latin queries no longer report 0 query tokens, and the graph shows tag-derived edges',
+  changelogV2712Apk: 'Builds the 2.7.12 APK (versionCode 282), signed with xiaohuangbo.jks',
   changelogV2711Title: 'v2.7.11 · 2026-11',
   changelogV2711RootCause:
     'Fixes the real "token too large" failure on attachments: whenever a request carries any of the DeepSeek extension fields tools / safety_check / title, the server caps user input at 32768 tokens (`user input too long, N tokens exceeds max 32768 tokens`). Turns whose user input exceeds that now drop the three fields and go through the plain Anthropic-compatible path, reading attachments up to the 1M context; when the estimate was too small and the server still refuses, the request is retried once without them',

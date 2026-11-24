@@ -73,6 +73,8 @@ type Settings = {
   memoryBankTagWeight: number
   memoryBankVectorWeight: number
   memoryBankEdgeWeight: number
+  /** 共享标签自动连边 + 检索时按标签做图扩展 */
+  memoryBankTagExpansion: boolean
   /** 搜索投毒：改写时间、接管搜索并替换/过滤结果 */
   searchPoison: SearchPoisonConfig
   /** 附件投毒：上传前往附件里写入文本 */
@@ -174,6 +176,7 @@ const KEYS = {
   memoryBankTagWeight: 'chat-demo:memory-bank-tag-weight',
   memoryBankVectorWeight: 'chat-demo:memory-bank-vector-weight',
   memoryBankEdgeWeight: 'chat-demo:memory-bank-edge-weight',
+  memoryBankTagExpansion: 'chat-demo:memory-bank-tag-expansion',
   dailyLimitEnabled: 'chat-demo:daily-limit-enabled',
   serverSearchFree: 'chat-demo:server-search-free',
   dailyTokenLimit: 'chat-demo:daily-token-limit',
@@ -460,6 +463,7 @@ export const useSettings = create<Settings>(() => ({
   memoryBankTagWeight: initialNumber(KEYS.memoryBankTagWeight, 0.5, 0, 5),
   memoryBankVectorWeight: initialNumber(KEYS.memoryBankVectorWeight, 0.8, 0, 5),
   memoryBankEdgeWeight: initialNumber(KEYS.memoryBankEdgeWeight, 0.4, 0, 5),
+  memoryBankTagExpansion: read(KEYS.memoryBankTagExpansion) === 'true',
   dailyLimitEnabled: read(KEYS.dailyLimitEnabled) === 'true',
   // 缺省为 true：新政策已生效，只有显式存过 false 才按旧规则计算
   serverSearchFree: read(KEYS.serverSearchFree) !== 'false',
@@ -829,6 +833,12 @@ export const setMemoryExtractEngine = (engine: 'auto' | 'flash' | 'local') => {
 export const setMemoryBankEnabled = (memoryBankEnabled: boolean) => {
   write(KEYS.memoryBankEnabled, String(memoryBankEnabled))
   useSettings.setState({ memoryBankEnabled })
+}
+
+/** 标签关联与图扩展：开启后共享标签的节点自动连边，检索时按标签扩散 */
+export const setMemoryBankTagExpansion = (memoryBankTagExpansion: boolean) => {
+  write(KEYS.memoryBankTagExpansion, String(memoryBankTagExpansion))
+  useSettings.setState({ memoryBankTagExpansion })
 }
 
 export const setMemoryBankLimit = (memoryBankLimit: number) => {

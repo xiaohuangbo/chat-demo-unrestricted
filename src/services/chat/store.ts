@@ -1638,6 +1638,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           memoryBankTagWeight,
           memoryBankVectorWeight,
           memoryBankEdgeWeight,
+          memoryBankTagExpansion,
         } = useSettings.getState()
         // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
         const baseSystemText =
@@ -1661,6 +1662,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                     tagWeight: memoryBankTagWeight,
                     vectorWeight: memoryBankVectorWeight,
                     edgeWeight: memoryBankEdgeWeight,
+                    tagExpansion: memoryBankTagExpansion,
                   })
                 : '',
             ]
