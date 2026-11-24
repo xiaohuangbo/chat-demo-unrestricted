@@ -1647,27 +1647,27 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           (autoJailbreak
             ? `${jailbreakSystemPrompt(translateJailbreakZh)}${depthDirective(translateJailbreakZh)}`
             : composeSystemPrompt(unrestricted, systemPrompt, promptPreset, translateJailbreakZh))
-        // 长期记忆与网状记忆库检索结果追加到 system；标题请求不需要
+        // 长期记忆与网状记忆库检索结果追加到 system。
+        // 新会话的首轮同时承担服务端标题生成（titleRequests），但这一轮也是真正要回答用户的一轮，
+        // 不能因为「标题请求」把记忆整段跳过——否则新聊天第一条消息永远拿不到记忆。
         const poisonContext = formatSearchPoisonContext(poisonConfig)
-        const memoryContext = titleRequests.has(controller)
-          ? ''
-          : [
-              savedMemoryEnabled ? formatSavedMemories() : '',
-              memoryBankEnabled
-                ? formatMemoryBankContext(prepared.question.content, {
-                    dimension: memoryBankDimension,
-                    limit: memoryBankLimit,
-                    threshold: memoryBankThreshold,
-                    keywordWeight: memoryBankKeywordWeight,
-                    tagWeight: memoryBankTagWeight,
-                    vectorWeight: memoryBankVectorWeight,
-                    edgeWeight: memoryBankEdgeWeight,
-                    tagExpansion: memoryBankTagExpansion,
-                  })
-                : '',
-            ]
-              .filter(Boolean)
-              .join('\n\n')
+        const memoryContext = [
+          savedMemoryEnabled ? formatSavedMemories() : '',
+          memoryBankEnabled
+            ? formatMemoryBankContext(prepared.question.content, {
+                dimension: memoryBankDimension,
+                limit: memoryBankLimit,
+                threshold: memoryBankThreshold,
+                keywordWeight: memoryBankKeywordWeight,
+                tagWeight: memoryBankTagWeight,
+                vectorWeight: memoryBankVectorWeight,
+                edgeWeight: memoryBankEdgeWeight,
+                tagExpansion: memoryBankTagExpansion,
+              })
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n')
         const mode = modePolicy()
         const role = getRole(getSession(sessionId)?.roleId)
         const profileName = useProfile.getState().name

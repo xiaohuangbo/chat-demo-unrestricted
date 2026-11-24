@@ -80,6 +80,8 @@ const renderBlock = (block: DocsBlock, jumpTo: (id: string) => void) => {
           <code>{block.text}</code>
         </pre>
       )
+    case 'h3':
+      return <h3 className={styles.subheading}>{block.text}</h3>
   }
 }
 

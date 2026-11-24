@@ -799,3 +799,54 @@ With the fix, `Москва столица` yields `['москва', 'столи
 - Four block types (paragraph, list, table, note); tables cover jailbreak switches, mode capabilities, memory parameters, VM comparison and the glossary.
 
 **Files:** `src/services/chat/history/{zipReader,importArchive}.ts`, `src/services/chat/db.ts`, `src/components/docs/`, `src/services/docs/docsStore.ts`, `src/components/sider/Sider.tsx`, `src/app/App.tsx`, `src/components/base/icons.tsx`, i18n.
+
+### 3.44 Memory missing on the first message of a new chat (2.7.14)
+
+**Problem.** In a brand-new chat the first message never reached memory: `Last injected` could show a hit, yet the model knew nothing from the memory graph and even went looking through the workspace.
+
+**Cause.** The first reply of a new chat also asks the server for a title: `streamReply` adds the turn's controller to `titleRequests` when `serverTitle && !session.title`. When assembling system, the code did:
+
+```ts
+const memoryContext = titleRequests.has(controller)
+  ? ''
+  : [savedMemoryEnabled ? formatSavedMemories() : '', memoryBankEnabled ? formatMemoryBankContext(...) : '']
+      .filter(Boolean)
+      .join('\n\n')
+```
+
+The intent was "a title request does not need memory", but the title and the real answer share one request, so the whole first turn skipped both saved memories and graph retrieval. From the second message on, a title exists and memory worked again — hence "the first message never has memory".
+
+**Fix.** Removed the `titleRequests` gate so memory is retrieved and injected every turn:
+
+- the first turn now calls `formatSavedMemories()` and `formatMemoryBankContext()` and puts the result into system;
+- `useMemorySearchStats` updates on the first turn too, so `Last injected` matches what was really sent;
+- the injected block now says these are facts the user confirmed and must be used directly, instead of "cite naturally when useful", which reduces "I do not know" replies despite memory being present.
+
+**Verification.** Reproduced with a real key:
+
+| Case | Before | After |
+| --- | --- | --- |
+| `system` of a new chat's first request | persona and mode note only | includes "Here are relevant memories retrieved from the user’s memory graph…" and the matched node |
+| First question "Какой мой любимый цвет?" (node: бирюзовый) | said it did not know | answered "бирюзовый (teal)" |
+| Hit statistics | not updated on the first turn | updated on the first turn |
+
+**Files:** `src/services/chat/store.ts`, `src/i18n/{zh,en}.ts`, `src/components/docs/docsContent.ts`.
+
+### 3.45 Documenting the parameters and the token economy (2.7.14)
+
+**Why.** The docs only had a default-values table under "Models and sampling"; they never explained what temperature or top_p actually do, nor how tokens, cache and compression affect cost.
+
+**Two new sections (bilingual; docs grows from 24 to 26 sections).**
+
+- **Decoding and sampling**: starts from "the model scores every token and the sampler picks one", then explains:
+  - temperature: divide by T before softmax, T<1 sharper / T>1 flatter, 0 close to greedy, thinking mode pinned to 1 by the server, plus suggested ranges and reasons for facts / chat / creative / above 1.5;
+  - top_p: cumulative-probability nucleus, how it differs from temperature (reshaping vs cutting the tail), adjusting only one, what to tweak first when repetition appears, 0.85–0.95 for strict formats;
+  - max_tokens: includes thinking tokens, empty means server default, range 1–65536, stop_reason=max_tokens when it is reached;
+  - thinking depth: 0–4 mapped to reasoning_effort low/medium/high/max and budget_tokens 1024/4096/12000/32000, plus the automatic fallback when the server rejects them;
+  - frequency / presence / repetition penalties: AutoTune computes them, but the Anthropic-compatible endpoint does not accept them, so only temperature and top_p are sent;
+  - streaming and a preset cheat sheet (code / chat / creative / JSON / unsure).
+- **Tokens, context, cache and compression**: token estimation (about one token per Chinese character, one per four English characters, digits and code split finer), the 1M window and the 32768 extension-field limit, prefix cache and hit prices (Flash 0.02/1, Pro 0.15/4.5), auto compression at 80% with 64k headroom, peak / off-peak billing and estimate caveats.
+
+**Implementation.** The renderer gained an `h3` block (`DocsView.tsx` and a `.subheading` style) so parameters can be expanded individually; the glossary grew from 15 to 28 entries (logits, greedy decoding, nucleus sampling, stop_reason, SSE, prefix cache, context window, input/output tokens, hash vector, cosine similarity, relevance threshold, retrieval weights and more); the models table links to the new decoding section.
+
+**Verified.** TOC grows from 24 to 26 items; no horizontal overflow on desktop or a 390px viewport; the temperature / top_p subheadings, preset table and glossary render correctly; `pnpm type`, `pnpm lint` and `pnpm build` pass.

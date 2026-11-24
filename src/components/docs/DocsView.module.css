@@ -167,6 +167,14 @@
   margin: 0 0 10px;
 }
 
+.subheading {
+  margin: 16px 0 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
 .paragraph {
   margin: 0 0 10px;
   color: var(--dsw-alias-label-secondary);
@@ -409,6 +417,11 @@
     margin-bottom: 8px;
     font-size: 17px;
     line-height: 1.45;
+  }
+
+  .subheading {
+    margin: 14px 0 6px;
+    font-size: 15px;
   }
 
   .sectionIndex {

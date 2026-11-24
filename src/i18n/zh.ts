@@ -503,7 +503,8 @@ export const zh = {
   toolApprovalRemember: '本次会话都允许该工具',
   settingDialogAsideMemoryOptionLabel: '记忆',
   memorySavedHeader: '以下是关于用户的长期记忆（个人事实、偏好与要求，请在回答时自然遵循）：',
-  memoryBankHeader: '以下是从用户网状记忆库检索到的相关记忆（按相关度排序，回答时按需自然引用）：',
+  memoryBankHeader:
+    '以下是从用户网状记忆库检索到的相关记忆（按相关度排序）。这些是用户此前确认过的资料：回答相关问题时直接引用其中的事实，不要声称不知道，也不要让用户重新提供：',
   memoryStatsTitle: '记忆库',
   memoryStatsNodes: '节点',
   memoryStatsEdges: '关联',
@@ -2004,6 +2005,14 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2714Title: 'v2.7.14 · 2026-11',
+  changelogV2714Docs:
+    '应用内文档扩充到 26 个小节：新增「解码与采样参数」逐项解释温度、Top P、max_tokens、思考预算与惩罚项并给出组合速查，「Token、上下文、缓存与压缩」讲清 token 估算、1M 窗口、前缀缓存、自动压缩与费用，术语表补充 logits / 贪心解码 / 核采样 / 前缀缓存 / 哈希向量等 13 条',
+  changelogV2714FirstTurnMemory:
+    '修复新会话第一条消息永远拿不到记忆的问题：首轮同时承担服务端标题生成，代码把整轮当成「标题请求」把长期记忆与网状记忆库整段跳过，导致检索结果不进 system；现在首轮照常检索并注入，Last injected 也会在首轮更新',
+  changelogV2714MemoryHeader:
+    '记忆注入说明加强：明确告诉模型这些是用户确认过的资料，回答相关问题时直接引用，不要声称不知道或让用户重新提供',
+  changelogV2714Apk: '同步构建 2.7.14 APK（versionCode 284），使用 xiaohuangbo.jks 签名',
   changelogV2713Title: 'v2.7.13 · 2026-11',
   changelogV2713ImportPerf:
     '跟进上游 5aaa34b / c9e1f33（perf: streamline history archive imports）：ZIP 读取复用窗口与中央目录、会话 JSON 流式解码、暂存批量写入、只给引用了可识别图片的会话回填 MIME；导入 3000 个会话约 1 秒，进度条与失败校验不变',

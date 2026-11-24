@@ -40,7 +40,7 @@
 - **Characters and account**: role cards (persona, avatar, auto memory), My profile, a compression threshold and DeepSeek balance plus usage overview, ported from Remember and wired into the existing memory and stats systems;
 - **Keyword refusal**: configure keywords, case sensitivity and a custom message under Settings → Model; a match refuses locally without calling the API, even without a key;
 - **Statistics and billing**: usage ledger, context breakdown, per-model pricing and the free server-search switch;
-- **In-app docs**: a built-in Docs page above NanoVM Slim with 24 sections covering settings, modes, jailbreak, attachments, memory, VMs and the glossary; a table of contents plus blue in-page links, a collapsible TOC and horizontally scrolling tables on phones, in Chinese or English following the UI language;
+- **In-app docs**: a built-in Docs page above NanoVM Slim with 26 sections covering settings, modes, jailbreak, attachments, memory, VMs and the glossary, including a per-parameter deep dive into temperature, top_p, max_tokens, thinking budgets and penalties plus a section on tokens, context, cache and compression; a table of contents plus blue in-page links, a collapsible TOC and horizontally scrolling tables on phones, in Chinese or English following the UI language;
 - **Android**: APK builds, in-app update check and a built-in network proxy for NanoVM; WebVM stays browser-only because Android WebView has no cross-origin isolation, while Unkernel runs in the bundled page when the WebView supports JSPI.
 
 ## Documentation
@@ -72,13 +72,13 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.13.apk` (112 MB, versionCode 283,
-SHA-256 `61155cd288d94f2c48ee63eca99254b0350e9a2050fa89e29129262a2f88dc99`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.14.apk` (112 MB, versionCode 284,
+SHA-256 `6a944ea7eee19cb9c24b74a3d7535e257866b3e2a499298d97f85a05065cef62`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
 
-Last regression run (2026-11, v2.7.13, both `compat` and `compat-prod` matrices):
+Last regression run (2026-11, v2.7.14, both `compat` and `compat-prod` matrices):
 
 | Area             | Coverage                                                 | Result |
 | ---------------- | -------------------------------------------------------- | ------ |
@@ -101,6 +101,8 @@ Last regression run (2026-11, v2.7.13, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.14**: expands the in-app docs to 26 sections with a decoding/sampling deep dive (temperature, top_p, max_tokens, thinking budgets, penalties, streaming and presets) and a tokens/context/cache/compression section, and grows the glossary to 28 entries; fixes memory never reaching the first message of a new chat — the first turn also generates the server title and was treated as a title request, so saved memories and graph retrieval were skipped and never reached the system prompt. The first turn now retrieves and injects normally, Last injected updates on it, and the memory block tells the model to use those facts directly instead of claiming not to know.
 
 - **2.7.13**: follows the upstream history-import performance work (reused ZIP read windows and central directory, streamed JSON decoding, batched staging writes, MIME backfill only for sessions with recognised images; 3000 chats import in about a second with the progress bar and checks unchanged), and adds a **Docs** entry above NanoVM Slim: a 24-section wiki (settings map, roles, workspace, voice, modes, models, keyword refusal, jailbreak, search poisoning, attachments, memory, VMs, local models, agent tools, stats, data, privacy, platform differences, known limits, FAQ, glossary) with a table of contents and blue in-page and external links; on phones the TOC collapses, tables scroll sideways and an “↑ Contents” button appears after the first screen, in Chinese or English.
 

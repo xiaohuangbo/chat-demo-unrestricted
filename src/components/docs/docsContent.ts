@@ -12,6 +12,7 @@ export type DocsBlock =
   | { type: 'table'; head: string[]; rows: string[][] }
   | { type: 'note'; text: string }
   | { type: 'code'; text: string }
+  | { type: 'h3'; text: string }
 
 export type DocsSection = { id: string; title: string; blocks: DocsBlock[] }
 
@@ -259,7 +260,126 @@ const zh: DocsDoc = {
         },
         {
           type: 'p',
-          text: '采样参数可以在「模型」页设置全局默认，也可以用自动调参按每轮上下文动态选择；两者都只改变下发给服务端的参数，不会改写历史。',
+          text: '采样参数可以在「模型」页设置全局默认，也可以用自动调参按每轮上下文动态选择；两者都只改变下发给服务端的参数，不会改写历史。温度、Top P 等参数的含义与推荐值见 [解码与采样参数](#decoding)。',
+        },
+      ],
+    },
+    {
+      id: 'decoding',
+      title: '解码与采样参数（温度、Top P 等）',
+      blocks: [
+        {
+          type: 'p',
+          text: '模型每一步都在给词表里的每个 token 打分，再按概率挑一个。采样参数就是控制「怎么从这些概率里挑」——它们不改变模型的知识，只改变输出的随机性与多样性。本页按参数逐个解释，最后给几组可直接照抄的组合。',
+        },
+        { type: 'h3', text: '温度 temperature：控制随机程度' },
+        {
+          type: 'p',
+          text: '温度 T 会先把分数除以 T 再做 softmax：T < 1 让高概率的词更突出（更确定、更保守），T > 1 让分布更平坦（更随机、更发散）。T = 0 等价于每次取概率最高的词（贪心解码），但服务端实现仍可能带一点随机性，不保证逐字复现。',
+        },
+        {
+          type: 'ul',
+          items: [
+            '范围 0–2，步进 0.05，默认 1。',
+            '思考模式下服务端通常固定按 1 处理温度，它主要影响最终正文的写法。',
+            '温度不改变事实正确性本身：调低只会减少「胡说」的概率，不会让模型知道更多。',
+            '同一个问题、同一温度也可能得到不同答案，这是采样的正常现象。',
+          ],
+        },
+        {
+          type: 'table',
+          head: ['场景', '建议温度', '原因'],
+          rows: [
+            ['事实问答、代码、翻译、结构化输出', '0.2–0.5', '减少漂移与编造，格式更稳'],
+            ['普通聊天、总结、解释', '0.7–1.0', '平衡准确与自然'],
+            ['创意写作、起名、头脑风暴', '1.0–1.4', '更多用词与思路变化'],
+            ['高于 1.5', '不建议', '容易重复、跑题、语言混杂'],
+          ],
+        },
+        { type: 'h3', text: 'Top P（核采样）：控制候选范围' },
+        {
+          type: 'p',
+          text: 'Top P 先按概率从高到低排序，只保留累计概率达到 P 的最小词集合（nucleus），再在这个集合里按归一化后的概率采样。P = 1 表示不裁剪；P 越小，候选越少、输出越稳。它和温度都控制随机性，但作用方式不同：温度改变分布形状，Top P 直接砍掉长尾。',
+        },
+        {
+          type: 'ul',
+          items: [
+            '范围 0.01–1，默认 1。',
+            '通常只调一个：要么用温度，要么用 Top P；两个同时压低会过度保守、容易复读。',
+            '出现重复时，先略升温度或略降 Top P（一次只改一个），再观察 2–3 轮。',
+            '代码、JSON 等严格格式任务，0.85–0.95 配合低温度通常最稳。',
+          ],
+        },
+        { type: 'h3', text: '最大输出 max_tokens：一次能写多少' },
+        {
+          type: 'p',
+          text: 'max_tokens 是本次回复的输出上限，包含思考 token。留空表示由服务端决定；范围 1–65536。触到上限时 stop_reason 为 max_tokens，界面会显示「达到输出上限」，长文建议分段续写而不是一次拉满。',
+        },
+        { type: 'h3', text: '思考深度与预算（reasoning effort / budget_tokens）' },
+        {
+          type: 'p',
+          text: '输入栏的深度思考有 0–4 档：0 关闭，1–4 分别对应 reasoning_effort 的 low / medium / high / max，以及 budget_tokens 1024 / 4096 / 12000 / 32000。档位越高，模型在回答前思考得越久，也更慢更贵；服务端不支持这两个字段时会自动去掉强度重试一次。',
+        },
+        {
+          type: 'p',
+          text: '历史里的思考默认不回传（服务端也会丢弃）；开启「历史思维链伪装」后才会把上一轮思考并入助手正文，用于续写连贯性。',
+        },
+        { type: 'h3', text: '频率 / 存在 / 重复惩罚' },
+        {
+          type: 'p',
+          text: '自动调参会计算 frequency_penalty（按出现次数惩罚）、presence_penalty（出现过就惩罚，鼓励新话题）与 repetition_penalty（直接压低重复 token）。但 Anthropic 兼容接口不接受这些参数，最终请求只下发 temperature 与 top_p，所以它们只体现在调参策略的选择上。',
+        },
+        { type: 'h3', text: '流式输出' },
+        {
+          type: 'p',
+          text: '开启后用 SSE 逐字渲染，首 token 更快、能随时中断；关闭时等完整回复再显示，适合网络不稳或不想看中间状态的场景。两种方式计费相同。',
+        },
+        { type: 'h3', text: '参数组合速查' },
+        {
+          type: 'table',
+          head: ['场景', '温度', 'Top P', '思考'],
+          rows: [
+            ['代码 / 事实 / 翻译', '0.3', '0.9', '按需'],
+            ['日常对话', '0.8', '0.95', '开'],
+            ['创意写作', '1.1', '1', '开'],
+            ['严格 JSON / 格式', '0.2', '0.85', '关'],
+            ['不确定时', '0.7', '1', '开'],
+          ],
+        },
+        {
+          type: 'note',
+          text: '一次只改一个参数，观察 2–3 轮再决定；同时改温度和 Top P 很难判断是哪一个起了作用。',
+        },
+      ],
+    },
+    {
+      id: 'tokens',
+      title: 'Token、上下文、缓存与压缩',
+      blocks: [
+        { type: 'h3', text: '什么是 token' },
+        {
+          type: 'p',
+          text: '模型按 token 计费与限长，一个 token 大约是一个词或半个词。中文通常 1 个字约 1 token，英文约 4 个字符约 1 token；数字、代码和标点会被拆得更碎，所以「字符数 ÷ 4」只是粗估。应用里的分片阈值、成本预估都用这个粗略口径，真实用量以服务端返回的 usage 为准。',
+        },
+        { type: 'h3', text: '上下文窗口' },
+        {
+          type: 'p',
+          text: '当前模型上下文为 1,048,576 token（1M），包含 system、历史消息、附件解析结果与本次输出。超过会直接报错。另有一条服务端限制：请求带 DeepSeek 扩展字段时用户输入上限 32768 token，应用在输入过大时会自动去掉这些字段。',
+        },
+        { type: 'h3', text: '前缀缓存（cache hit）' },
+        {
+          type: 'p',
+          text: '服务端会缓存重复的前缀（system、较长的历史），命中部分按更低价格计费：Flash 每百万 token 0.02 对 1，Pro 0.15 对 4.5（以设置页价格表为准）。保持 system 稳定、少改提示词与破甲开关，能让更多前缀命中缓存。',
+        },
+        { type: 'h3', text: '自动压缩' },
+        {
+          type: 'p',
+          text: '开启后，当上下文占用达到窗口的 80%（并留出输出预留与 64k 余量）时，把较早的历史替换成结构化摘要，摘要以 latest_reminder 或折进 system 的方式下发。压缩会丢细节，重要事实建议写进长期记忆或记忆库。默认关闭。',
+        },
+        { type: 'h3', text: '费用估算' },
+        {
+          type: 'p',
+          text: '按官方价格区分高峰（工作日 9:00–12:00、14:00–18:00 北京时间）与空闲时段；搜索、文档解析、语音朗读单独计价。界面里的费用是估算，实际以账单为准。',
         },
       ],
     },
@@ -407,6 +527,10 @@ const zh: DocsDoc = {
             ['向量维度', '本地哈希向量的维度，默认 256；越高越细也越慢'],
             ['检索权重', '关键词 / 标签 / 向量 / 关联边各自的权重，默认 1 / 0.5 / 0.8 / 0.4'],
           ],
+        },
+        {
+          type: 'note',
+          text: '记忆在每条消息上都会检索并注入，包括新会话的第一条消息（这一轮同时生成会话标题）。注入块会要求模型直接引用这些事实，不要声称不知道或让你重新提供。',
         },
         {
           type: 'p',
@@ -708,6 +832,18 @@ const zh: DocsDoc = {
             ['边扩散', '检索时把高分节点的分数按边权重传给邻居'],
             ['标签扩展', '按共享标签把邻居拉进候选，开启「标签关联与图扩展」后生效'],
             ['user_data', 'Files API 的上传用途之一，文本 / 代码类文件走它'],
+            ['logits', '模型在每一步给词表里每个 token 的原始分数，softmax 之前的值'],
+            ['贪心解码（greedy）', '每一步都取概率最高的 token；温度 0 接近这种效果'],
+            ['核采样（nucleus / top-p）', '只保留累计概率达到 P 的最小候选集合再采样'],
+            ['stop_reason', '回复结束的原因：end_turn / max_tokens / refusal / tool_use 等'],
+            ['SSE', 'Server-Sent Events，流式输出用的 HTTP 协议'],
+            ['前缀缓存（cache hit）', '服务端复用重复前缀，命中部分按更低价格计费'],
+            ['上下文窗口', '一次请求能容纳的 token 总数，当前模型为 1,048,576'],
+            ['输入 / 输出 token', '分别对应 prompt（含历史与附件）和本次生成的内容'],
+            ['哈希向量', '把 token 哈希到固定维度得到的确定性向量，不是训练出来的语义 embedding'],
+            ['余弦相似度', '两个向量夹角的余弦值，用来衡量方向相似度'],
+            ['相关度阈值', '检索总分低于该值就不注入记忆，默认 0.15'],
+            ['检索权重', '关键词 / 标签 / 向量 / 关联边在总分里的系数'],
           ],
         },
       ],
@@ -993,7 +1129,134 @@ const en: DocsDoc = {
         },
         {
           type: 'p',
-          text: 'Set global defaults on the Model page, or let AutoTune pick parameters per turn; both only change the request, never the stored history.',
+          text: 'Set global defaults on the Model page, or let AutoTune pick parameters per turn; both only change the request, never the stored history. See [Decoding and sampling](#decoding) for what temperature, top_p and the rest actually do.',
+        },
+      ],
+    },
+    {
+      id: 'decoding',
+      title: 'Decoding and sampling (temperature, top_p and more)',
+      blocks: [
+        {
+          type: 'p',
+          text: 'At every step the model scores every token in the vocabulary and then picks one according to those probabilities. Sampling parameters control how that pick happens; they do not add knowledge, they change randomness and diversity. This page explains each parameter and ends with a few copyable presets.',
+        },
+        { type: 'h3', text: 'temperature: how random the output is' },
+        {
+          type: 'p',
+          text: 'Temperature divides the scores by T before softmax: T < 1 sharpens the distribution (more deterministic, more conservative) and T > 1 flattens it (more random, more varied). T = 0 means always taking the highest-probability token (greedy decoding), though server implementations may still vary slightly, so identical output is not guaranteed.',
+        },
+        {
+          type: 'ul',
+          items: [
+            'Range 0–2, step 0.05, default 1.',
+            'In thinking mode the server usually pins temperature to 1; it then mainly shapes the final answer.',
+            'Lower temperature reduces the chance of made-up details; it does not make the model know more.',
+            'The same question at the same temperature can still produce different answers — that is normal sampling.',
+          ],
+        },
+        {
+          type: 'table',
+          head: ['Use case', 'Suggested temperature', 'Why'],
+          rows: [
+            [
+              'Facts, code, translation, structured output',
+              '0.2–0.5',
+              'Less drift and invention, steadier formats',
+            ],
+            ['Chat, summaries, explanations', '0.7–1.0', 'Balances accuracy and naturalness'],
+            [
+              'Creative writing, naming, brainstorming',
+              '1.0–1.4',
+              'More variation in wording and ideas',
+            ],
+            ['Above 1.5', 'Not recommended', 'Repetition, topic drift, mixed languages'],
+          ],
+        },
+        { type: 'h3', text: 'top_p (nucleus sampling): how wide the candidate set is' },
+        {
+          type: 'p',
+          text: 'Top P sorts tokens by probability and keeps only the smallest set whose cumulative probability reaches P (the nucleus), then samples from that set with renormalised probabilities. P = 1 keeps everything; smaller P means fewer candidates and steadier output. It controls randomness differently from temperature: temperature reshapes the distribution, top_p cuts off the long tail.',
+        },
+        {
+          type: 'ul',
+          items: [
+            'Range 0.01–1, default 1.',
+            'Usually adjust only one of temperature and top_p; lowering both makes output overly conservative and repetitive.',
+            'When repetition appears, nudge one parameter at a time and check two or three turns.',
+            'For strict formats such as code or JSON, 0.85–0.95 with a low temperature is usually safest.',
+          ],
+        },
+        { type: 'h3', text: 'max_tokens: how much a single reply may write' },
+        {
+          type: 'p',
+          text: 'max_tokens is the output cap for one reply, thinking tokens included. Empty means the server decides; the range is 1–65536. When the cap is hit, stop_reason is max_tokens and the UI says the output limit was reached; for long text, continuing in segments is more reliable than one huge cap.',
+        },
+        { type: 'h3', text: 'Thinking depth (reasoning_effort / budget_tokens)' },
+        {
+          type: 'p',
+          text: 'The composer has thinking depth 0–4: 0 is off, and 1–4 map to reasoning_effort low / medium / high / max and budget_tokens 1024 / 4096 / 12000 / 32000. Higher levels think longer before answering and cost more; if the server rejects these fields the request retries once without the strength hint.',
+        },
+        {
+          type: 'p',
+          text: 'Thinking from earlier turns is not sent back by default (the server drops it too); enabling disguise-history-thinking folds the previous turn’s thinking into the assistant body for continuity.',
+        },
+        { type: 'h3', text: 'Frequency, presence and repetition penalties' },
+        {
+          type: 'p',
+          text: 'AutoTune computes frequency_penalty (penalise tokens by how often they appeared), presence_penalty (penalise any token that appeared, encouraging new topics) and repetition_penalty (directly suppress repeated tokens). The Anthropic-compatible endpoint does not accept them, so the final request only sends temperature and top_p; they only influence which AutoTune strategy is chosen.',
+        },
+        { type: 'h3', text: 'Streaming' },
+        {
+          type: 'p',
+          text: 'With streaming on, the reply renders token by token over SSE: the first token appears sooner and you can stop midway. With it off, the whole reply appears at once, which suits unstable networks or when you do not want intermediate states. Billing is identical.',
+        },
+        { type: 'h3', text: 'Preset cheat sheet' },
+        {
+          type: 'table',
+          head: ['Use case', 'Temperature', 'Top P', 'Thinking'],
+          rows: [
+            ['Code / facts / translation', '0.3', '0.9', 'as needed'],
+            ['Everyday chat', '0.8', '0.95', 'on'],
+            ['Creative writing', '1.1', '1', 'on'],
+            ['Strict JSON / formats', '0.2', '0.85', 'off'],
+            ['Unsure', '0.7', '1', 'on'],
+          ],
+        },
+        {
+          type: 'note',
+          text: 'Change one parameter at a time and observe two or three turns; adjusting temperature and top_p together makes it hard to tell which one mattered.',
+        },
+      ],
+    },
+    {
+      id: 'tokens',
+      title: 'Tokens, context, cache and compression',
+      blocks: [
+        { type: 'h3', text: 'What a token is' },
+        {
+          type: 'p',
+          text: 'Models bill and limit by tokens, roughly a word or part of a word. Chinese is about one token per character, English about one token per four characters; digits, code and punctuation split more finely, so “characters ÷ 4” is only an estimate. Splitting thresholds and cost previews use this rough rule; real usage comes from the server usage block.',
+        },
+        { type: 'h3', text: 'Context window' },
+        {
+          type: 'p',
+          text: 'The current context window is 1,048,576 tokens (1M), covering system, history, parsed attachments and the current output. Exceeding it fails the request. There is also a server limit: requests carrying DeepSeek extension fields cap user input at 32768 tokens, and the app drops those fields when input is large.',
+        },
+        { type: 'h3', text: 'Prefix cache (cache hit)' },
+        {
+          type: 'p',
+          text: 'The server caches repeated prefixes (system and long history) and bills cache hits cheaper: 0.02 vs 1 per million tokens for Flash, 0.15 vs 4.5 for Pro (see the price sheet in Settings). Keeping system stable and changing prompts or jailbreak switches less often improves the hit rate.',
+        },
+        { type: 'h3', text: 'Auto compression' },
+        {
+          type: 'p',
+          text: 'When enabled, once context usage reaches 80% of the window (leaving output reserve and 64k headroom) older history is replaced by a structured summary, sent as latest_reminder or folded into system. Compression loses detail, so put important facts into long-term memory or the graph. Off by default.',
+        },
+        { type: 'h3', text: 'Cost estimates' },
+        {
+          type: 'p',
+          text: 'Prices follow the official peak (weekdays 9:00–12:00 and 14:00–18:00 Beijing time) and off-peak rates; search, document parsing and read-aloud are billed separately. The number in the UI is an estimate, the invoice is authoritative.',
         },
       ],
     },
@@ -1180,6 +1443,10 @@ const en: DocsDoc = {
             ],
             ['Weights', 'Keyword / tag / vector / edge weights, 1 / 0.5 / 0.8 / 0.4 by default'],
           ],
+        },
+        {
+          type: 'note',
+          text: 'Memory is retrieved and injected on every message, including the first message of a new chat (that turn also generates the chat title). The block tells the model to use these facts directly instead of claiming not to know or asking you to repeat them.',
         },
         {
           type: 'p',
@@ -1503,6 +1770,45 @@ const en: DocsDoc = {
               'Pulling tag neighbours into the candidates; active when tag linking is on',
             ],
             ['user_data', 'One Files API upload purpose, used for text and code files'],
+            ['logits', 'Raw per-token scores from the model before softmax'],
+            [
+              'Greedy decoding',
+              'Always taking the most likely token; temperature 0 approximates it',
+            ],
+            [
+              'Nucleus (top-p) sampling',
+              'Sampling from the smallest set whose cumulative probability reaches P',
+            ],
+            [
+              'stop_reason',
+              'Why a reply ended: end_turn / max_tokens / refusal / tool_use and so on',
+            ],
+            ['SSE', 'Server-Sent Events, the HTTP protocol used for streaming'],
+            [
+              'Prefix cache (cache hit)',
+              'The server reuses repeated prefixes and bills the hits cheaper',
+            ],
+            [
+              'Context window',
+              'Total tokens one request may hold; 1,048,576 for the current models',
+            ],
+            [
+              'Input / output tokens',
+              'Prompt tokens (history and attachments) and generated tokens',
+            ],
+            [
+              'Hash vector',
+              'A deterministic vector from hashed tokens, not a trained semantic embedding',
+            ],
+            [
+              'Cosine similarity',
+              'Cosine of the angle between two vectors, a direction-similarity score',
+            ],
+            ['Relevance threshold', 'Memories scoring below it are not injected; 0.15 by default'],
+            [
+              'Retrieval weights',
+              'Coefficients for keyword / tag / vector / edge in the total score',
+            ],
           ],
         },
       ],

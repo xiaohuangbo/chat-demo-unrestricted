@@ -799,3 +799,54 @@ const runs = lower.match(/[\u4e00-\u9fff]+/g)
 - 正文用段落、列表、表格、提示块四种块类型；表格覆盖破甲开关、模式能力、记忆参数、虚拟机对比与术语表。
 
 **涉及文件：** `src/services/chat/history/{zipReader,importArchive}.ts`、`src/services/chat/db.ts`、`src/components/docs/`、`src/services/docs/docsStore.ts`、`src/components/sider/Sider.tsx`、`src/app/App.tsx`、`src/components/base/icons.tsx`、i18n。
+
+### 3.44 新会话首条消息不注入记忆（2.7.14）
+
+**问题。** 用户在一个全新会话里发第一条消息，`Last injected` 有时显示有命中，但模型完全不知道记忆库里的内容，甚至去调用 `list_workspace` 翻工作区。
+
+**原因。** 新会话的第一轮回复同时承担服务端标题生成：`streamReply` 在 `serverTitle && !session.title` 时把本轮 controller 放进 `titleRequests`。组装 system 时有一段：
+
+```ts
+const memoryContext = titleRequests.has(controller)
+  ? ''
+  : [savedMemoryEnabled ? formatSavedMemories() : '', memoryBankEnabled ? formatMemoryBankContext(...) : '']
+      .filter(Boolean)
+      .join('\n\n')
+```
+
+本意是「标题请求不需要记忆」，但标题与真正的回答是同一条请求：首轮被整段跳过，长期记忆和网状记忆库都没进 system。第二条消息标题已生成，才恢复正常——所以表现为「第一条永远没记忆」。
+
+**修复。** 去掉 `titleRequests` 门控，记忆每轮都检索并注入：
+
+- 首轮同样调用 `formatSavedMemories()` 与 `formatMemoryBankContext()`，检索结果进入 system；
+- `useMemorySearchStats` 也会在首轮更新，`Last injected` 与真实注入一致；
+- 注入块文案从「按需自然引用」改为「这些是用户此前确认过的资料：回答相关问题时直接引用其中的事实，不要声称不知道，也不要让用户重新提供」，减少模型明明拿到记忆却说没有的情况。
+
+**验证。** 用真实密钥复现：
+
+| 场景 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 新会话首轮请求的 `system` | 只有人格与模式说明 | 包含「以下是从用户网状记忆库检索到的相关记忆…」及命中节点 |
+| 首轮提问「Какой мой любимый цвет?」（节点：бирюзовый） | 回答不知道 | 回答「бирюзовый (teal)」 |
+| 命中统计 | 首轮不更新 | 首轮更新 |
+
+**涉及文件：** `src/services/chat/store.ts`、`src/i18n/{zh,en}.ts`、`src/components/docs/docsContent.ts`。
+
+### 3.45 应用内文档补参数与计量说明（2.7.14）
+
+**为什么改。** 原文档只在「模型与采样参数」里列了一张默认值表，读不出温度、Top P 这些参数到底在做什么，也不解释 token、缓存与压缩怎么算钱。
+
+**新增两节（中英双语，文档从 24 节增至 26 节）。**
+
+- **解码与采样参数**：先讲「模型给每个 token 打分，采样参数决定怎么挑」的总模型，再逐项解释：
+  - 温度：除以 T 再 softmax、T<1 更确定 / T>1 更发散、0 接近贪心、思考模式服务端通常按 1 处理，并给出事实 / 日常 / 创意 / >1.5 四档建议值与理由；
+  - Top P：累计概率截断成 nucleus、与温度的区别（一个改形状一个砍长尾）、通常只调一个、重复时的调整顺序、严格格式的 0.85–0.95；
+  - max_tokens：含思考 token、留空由服务端决定、1–65536、触顶时 stop_reason=max_tokens；
+  - 思考深度：0–4 档与 reasoning_effort low/medium/high/max、budget_tokens 1024/4096/12000/32000 的对应关系，以及服务端拒绝时自动降级；
+  - 频率 / 存在 / 重复惩罚：说明自动调参会计算它们，但 Anthropic 兼容接口不接受，最终只下发 temperature 与 top_p；
+  - 流式输出与「参数组合速查」表（代码 / 日常 / 创意 / JSON / 不确定五组）。
+- **Token、上下文、缓存与压缩**：token 的估算口径（中文 1 字≈1 token、英文 4 字符≈1 token、数字与代码更碎）、1M 上下文与 32768 的扩展字段限制、前缀缓存与命中价（Flash 0.02/1、Pro 0.15/4.5）、自动压缩的 80% 与 64k 余量、高峰 / 空闲计费与估算说明。
+
+**实现细节。** 渲染器新增 `h3` 块类型（`DocsView.tsx` + `.subheading` 样式），小节内可以分参数展开；术语表从 15 条补到 28 条，新增 logits、贪心解码、核采样、stop_reason、SSE、前缀缓存、上下文窗口、输入 / 输出 token、哈希向量、余弦相似度、相关度阈值、检索权重等；「模型与采样参数」表后加了跳转到「解码与采样参数」的页内链接。
+
+**验证。** 目录从 24 项变为 26 项；桌面与 390px 手机视口均无横向溢出；温度 / Top P 的 h3 小节、组合速查表与术语表表格正常渲染；`pnpm type` / `pnpm lint` / `pnpm build` 通过。

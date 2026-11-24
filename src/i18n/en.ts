@@ -569,7 +569,7 @@ export const en = {
   memorySavedHeader:
     'Here is the user’s long-term memory (personal facts, preferences and requirements; follow them naturally):',
   memoryBankHeader:
-    'Here are relevant memories retrieved from the user’s memory graph (ranked by relevance; cite naturally when useful):',
+    'Here are relevant memories retrieved from the user’s memory graph (ranked by relevance). These are facts the user confirmed earlier: use them directly when answering, do not claim you do not know, and do not ask the user to repeat them:',
   memoryStatsTitle: 'Memory graph',
   memoryStatsNodes: 'Nodes',
   memoryStatsEdges: 'Edges',
@@ -2158,6 +2158,14 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2714Title: 'v2.7.14 · 2026-11',
+  changelogV2714Docs:
+    'The in-app docs grow to 26 sections: a decoding and sampling deep dive covering temperature, top_p, max_tokens, thinking budgets and penalties with presets, a tokens / context / cache / compression section explaining token estimates, the 1M window, prefix cache, auto compression and cost, and 13 new glossary entries such as logits, greedy decoding, nucleus sampling, prefix cache and hash vector',
+  changelogV2714FirstTurnMemory:
+    'Fixes memory never reaching the first message of a new chat: the first turn also asks the server for a title, and the code treated the whole turn as a title request, skipping saved memories and graph retrieval so nothing reached system. The first turn now retrieves and injects as usual, and Last injected updates on it too',
+  changelogV2714MemoryHeader:
+    'The memory block now tells the model these are facts the user confirmed: use them directly instead of claiming not to know or asking the user to repeat them',
+  changelogV2714Apk: 'Builds the 2.7.14 APK (versionCode 284), signed with xiaohuangbo.jks',
   changelogV2713Title: 'v2.7.13 · 2026-11',
   changelogV2713ImportPerf:
     'Follows upstream 5aaa34b / c9e1f33 (perf: streamline history archive imports): reused ZIP read windows and central directory, streamed JSON decoding, batched staging writes and MIME backfill only for sessions that reference recognised images; importing 3000 chats takes about a second while the progress bar and failure checks stay the same',
