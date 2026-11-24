@@ -30,7 +30,7 @@
 ## What this fork adds
 
 - **Unrestricted mode and prompt engineering**: jailbreak mode, system-prompt presets, per-round injection, Chinese jailbreak prompts and custom chain of thought;
-- **Browser agent tools** (off by default, per-tool switches): date & time, location, weather, notifications, clipboard, page fetch, file generation, open link and visualization widgets;
+- **Browser agent tools** (off by default, per-tool switches): date & time, location, weather, notifications, clipboard, page fetch, file generation, open link and visualization widgets, GenUI (JSON-declared interfaces rendered natively as stat cards, tables and charts);
 - **Virtual workspace**: a local file store with any-format import/export, the OPFS file system, and app storage on Android;
 - **NanoVM Slim**: a built-in WASM Shell Engine with 130 busybox commands, single-file import (device / workspace, zip and binaries included, `nanovm_import` agent tool) and a PyBot toolchain (640k lines of pure-Python rules, no weights), docked right on desktop and a bottom panel on phones; Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git install on demand, and a virtual network inside the VM runs Node and Python HTTP / WebSocket services;
 - **WebVM (CheerpX)**: a second terminal running a real x86 Debian 10 with bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim; it runs alongside NanoVM with free switching, import/export and model tools, and keeps disk changes in an IndexedDB overlay;
@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.14.apk` (112 MB, versionCode 284,
-SHA-256 `6a944ea7eee19cb9c24b74a3d7535e257866b3e2a499298d97f85a05065cef62`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.15.apk` (112 MB, versionCode 285,
+SHA-256 `7412f9322cd74e43526040af1aedd0c33efdc70c15aca6817ced206a2aac4f60`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -93,6 +93,7 @@ Last regression run (2026-11, v2.7.14, both `compat` and `compat-prod` matrices)
 | Local extras    | Text attachment read into the prompt, server search pre-pass injected, role prompt applied, Chat-only mode enforced, local memory extraction with zero Flash calls | pass |
 | Characters / account | Character create/edit/select, profile name, compression threshold, balance query (`/user/balance`) and stats shortcut | pass |
 | Upstream 0.1.3  | Oversized upload image resize and stale `file_id` re-upload path | pass (typecheck + build) |
+| Upstream 0.1.4  | Archive attachments imported with their chats, per-chat progress, older-browser AbortSignal / toSorted / 100dvh support | pass (3000-chat import, archive with an image, legacy-engine build) |
 | Chat modes       | Tool groups and round limits for all four modes          | 10/10  |
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
@@ -101,6 +102,8 @@ Last regression run (2026-11, v2.7.14, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.15**: adds a **GenUI** browser tool — the model declares an interface in JSON (stat cards, sortable tables, line/bar charts, progress, callouts, grid cards) and the client renders it with whitelisted native components without executing HTML; icon and syntax follow [dsh-genui](https://github.com/omdsh-dev/dsh-genui) (MIT), credited at the end of the in-app changelog. Also merges upstream chat-demo 0.1.4 (`5477ea6` / `6da0786` / `ea0d208` / `cdf9617`) — history import now pairs attachments with their chat, reading the session JSON first and then its own files, so images no longer have to sit after the index; cross-chat deduplication uses ZIP offsets and the read cache holds two windows; import progress is counted in chats; and older engines are supported (AbortSignal.reason / throwIfAborted fallbacks, toSorted / toReversed replacements, 100dvh → 100vh).
 
 - **2.7.14**: expands the in-app docs to 26 sections with a decoding/sampling deep dive (temperature, top_p, max_tokens, thinking budgets, penalties, streaming and presets) and a tokens/context/cache/compression section, and grows the glossary to 28 entries; fixes memory never reaching the first message of a new chat — the first turn also generates the server title and was treated as a title request, so saved memories and graph retrieval were skipped and never reached the system prompt. The first turn now retrieves and injects normally, Last injected updates on it, and the memory block tells the model to use those facts directly instead of claiming not to know.
 

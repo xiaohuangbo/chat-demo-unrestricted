@@ -4,6 +4,7 @@ import { useTranslate, type TranslationKey } from '../../i18n/index.js'
 import type { ToolArtifact } from '../../services/agent/tools.js'
 import { summarizeToolInput, toolDuration, type ChatToolCall } from '../../services/agent/types.js'
 import { IconCheckOutline16, IconWarningOutline16, IconDownloadOutline16 } from '../base/icons.js'
+import { GenuiCard } from './GenuiCard.js'
 import styles from './ToolCallCards.module.css'
 
 /**
@@ -53,6 +54,16 @@ const ArtifactCard = ({ artifact }: { artifact: ToolArtifact }) => {
           srcDoc={artifact.text}
           loading="lazy"
         />
+        <div className={styles.widgetActions}>
+          <DownloadButton artifact={artifact} />
+        </div>
+      </div>
+    )
+  }
+  if (artifact.kind === 'genui') {
+    return (
+      <div className={styles.genui}>
+        <GenuiCard text={artifact.text} title={artifact.name.replace(/\.genui\.json$/, '')} />
         <div className={styles.widgetActions}>
           <DownloadButton artifact={artifact} />
         </div>

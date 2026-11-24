@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getAbortReason, throwIfAborted } from '../../utils/abort.js'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
@@ -1364,7 +1365,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   const serverIds = new Map<string, UploadedFile>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId
   const aborted = new Promise<never>((_, reject) => {
-    signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+    signal.addEventListener('abort', () => reject(getAbortReason(signal)), { once: true })
   })
   // 旧图片超限时先清除 ID，交给下方已有的附件补传流程。
   const imageFiles = [
@@ -1396,7 +1397,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   }
 
   const pending = new Map<string, FileAttachment>()
-  for (const [user] of getContextRounds(request.history).toReversed()) {
+  for (const [user] of getContextRounds(request.history).reverse()) {
     for (const file of user.files) {
       if (!file.inline && !file.serverId && !serverIds.has(file.id) && !pending.has(file.id)) {
         pending.set(file.id, file)
@@ -1404,7 +1405,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
     }
   }
   for (const file of pending.values()) {
-    signal.throwIfAborted()
+    throwIfAborted(signal)
     try {
       const uploaded = await Promise.race([ensureServerId(apiKey, file), aborted])
       if (uploaded) {
@@ -1412,7 +1413,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
         saveServerIds(sessionId, new Map([[file.id, uploaded]]))
       }
     } catch {
-      signal.throwIfAborted()
+      throwIfAborted(signal)
     }
   }
 

@@ -13,6 +13,7 @@ import { WORKSPACE_TOOLS } from '../../services/agent/workspaceTools.js'
 import { setWorkspaceEnabled, useWorkspace } from '../../services/workspace/store.js'
 import { useSettings } from '../../services/settings.js'
 import { Switch } from '../base/Switch.js'
+import { IconGenuiOutline16 } from '../base/icons.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
 import settingsStyles from './Settings.module.css'
@@ -144,6 +145,11 @@ export const AgentToolsSetting = () => {
             >
               <div className={styles.toolText}>
                 <div className={styles.toolHead}>
+                  {tool.id === 'show_genui' ? (
+                    <span className={styles.toolIcon} aria-hidden>
+                      <IconGenuiOutline16 />
+                    </span>
+                  ) : null}
                   <span className={styles.toolLabel}>{label}</span>
                   {tool.requiresApproval ? (
                     <span className={styles.chip} data-tone="confirm">

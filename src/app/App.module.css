@@ -68,6 +68,13 @@
     height: var(--app-viewport-height, 100dvh);
     background-color: var(--dsw-specific-sidebar-fill);
   }
+
+  /* 老浏览器没有 dvh：退回 vh，避免整屏高度塌陷 */
+  @supports not (height: 100dvh) {
+    .frame {
+      --app-viewport-height: 100vh;
+    }
+  }
 }
 
 /* 移动端：侧边栏在下面，主内容整体右移露出抽屉；拖动时由 JS 直接写 transform */

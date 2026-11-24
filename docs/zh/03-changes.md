@@ -850,3 +850,51 @@ const memoryContext = titleRequests.has(controller)
 **实现细节。** 渲染器新增 `h3` 块类型（`DocsView.tsx` + `.subheading` 样式），小节内可以分参数展开；术语表从 15 条补到 28 条，新增 logits、贪心解码、核采样、stop_reason、SSE、前缀缓存、上下文窗口、输入 / 输出 token、哈希向量、余弦相似度、相关度阈值、检索权重等；「模型与采样参数」表后加了跳转到「解码与采样参数」的页内链接。
 
 **验证。** 目录从 24 项变为 26 项；桌面与 390px 手机视口均无横向溢出；温度 / Top P 的 h3 小节、组合速查表与术语表表格正常渲染；`pnpm type` / `pnpm lint` / `pnpm build` 通过。
+
+### 3.46 合并上游 chat-demo 0.1.4（2.7.15）
+
+上游 0.1.4（`cdf9617`）包含四处改动，其中 0.1.3→0.1.4 的提交为：`5aaa34b` / `c9e1f33`（导入性能，2.7.13 已合并）、`ea0d208`（导入进度）、`5477ea6`（附件随会话导入）、`6da0786`（旧浏览器兼容）、`cdf9617`（发布）。本次合并后两项，并把进度条改成上游的「按会话」口径。
+
+**1. 附件随会话导入（`5477ea6`）。** 旧实现要求图片排在 `chat_session_index.json` 之后，导入时先读全部会话、再统一读图片；新实现先把归档条目枚举成 `filesBySession`（`chat_sessions/<id>_files/` 归到对应会话），处理某个会话 JSON 时立刻读它自己的文件：
+
+- `readArchive` 不再要求「读完当前条目才能取下一个」，每个条目的 `stream` 在真正迭代时才定位并校验；`ArchiveEntry` 增加 `offset`，用于跨会话图片去重（同一 id 只保留物理位置最早的副本）。
+- 读窗口从单窗口升级为双窗口缓存：会话 JSON 与它的附件通常分处两段，来回读时各留一个窗口，避免反复 `slice`。
+- 结尾的附件条目只做归属校验，不重复读正文；`flushSessions` 会先 `flushImages`，保证附件与聊天一起进暂存。
+
+**2. 导入进度按对话（`ea0d208`）。** 我们的进度条沿用 2.7.10 的 UI，但数据源改成上游口径：
+
+```ts
+export type ImportProgress = { done: number; total: number }
+onProgress?.({ done: 0, total: totalSessions })
+```
+
+- 第一遍枚举条目后才知道总对话数，之前显示「正在检查文件…」；
+- 每批会话写入后回调 `已处理 x / y 个对话`，不会超过总数；
+- 导入结束再回调一次 `y / y`，进度条走到 100%。
+
+**3. 旧浏览器兼容（`6da0786`）。**
+
+- 新增 `src/utils/abort.ts`：`getAbortReason()` 在没有 `AbortSignal.reason` 时回退 `DOMException(AbortError)`，`throwIfAborted()` 自己判断 `aborted`；`attachments.ts`、`store.ts`、`resizeUploadImage.ts` 全部改用它们。
+- `toSorted` / `toReversed` 换成 `[...arr].sort()` / `[...arr].reverse()`（`toLocal.ts`、`NanoVMConsole.tsx`、`store.ts` 分别处理）。
+- `100dvh` 在 `@supports not (height: 100dvh)` 时退回 `100vh`（`App.module.css`、`ChatInput.module.css`），`Settings.module.css` 的删除确认框用两行 `max-height` 兜底。
+
+**验证。**
+
+| 场景 | 结果 |
+| --- | --- |
+| 400 会话归档导入 | 通过，进度「已处理 400 / 400 个对话」 |
+| 3000 会话归档导入 | 通过，进度 1504 / 3000 → 3000 / 3000 |
+| 带 1 张 PNG 的归档（图片排在 index 之后） | 通过，会话导入、`files` 里得到 70 字节 `image/png`，MIME 已回填 |
+| 随机字节 / 截断 ZIP | 仍被拒绝（`BackupError`） |
+| 旧内核构建 | `toSorted` / `AbortSignal.reason` 不再出现在产物，构建通过 |
+
+**涉及文件：** `src/services/chat/history/{zipReader,importArchive}.ts`、`src/services/chat/backup.ts`、`src/components/settings/SettingsDialog.tsx`、`src/i18n/{zh,en}.ts`、`src/utils/{abort,resizeUploadImage}.ts`、`src/services/{attachments,chat/store}.ts`、`src/services/chat/history/toLocal.ts`、`src/components/nanovm/NanoVMConsole.tsx`、`src/app/App.module.css`、`src/components/chatInput/ChatInput.module.css`、`src/components/settings/Settings.module.css`。
+
+
+**4. GenUI 工具（同版本补充）。** 设置 → 浏览器工具新增「生成 GenUI 界面」（`show_genui`）：
+
+- 模型输入一段 JSON：`{"title":"…","blocks":[…]}`，块类型包括 text / heading / divider / stat / progress / table / chart / list / keyValue / callout / card / grid；
+- 客户端用白名单 React 组件原生渲染：表格点表头排序，折线 / 柱状图用内联 SVG，不执行任意 HTML，也不走 iframe；
+- 语法与项目图标移植自 [dsh-genui](https://github.com/omdsh-dev/dsh-genui)（MIT），图标用在工具行与卡片标题；鸣谢追加到更新日志的鸣谢区（unkernel / go-deepseek 之后）与 11-license；
+- 解析器 `src/services/agent/genui.ts` 做长度、层级、行数与系列数限制，坏块只丢弃自己，未知类型忽略；单测覆盖合法 spec、空 blocks、坏 JSON、未知块；
+- 真机验证：模型实际调用 `show_genui`，会话里 `toolCalls[0]` 状态 done、产物 kind=genui，回复中渲染出「本月概览 / ¥128,430 / 表格 / 柱状图」，设置页工具行显示 GenUI 图标。

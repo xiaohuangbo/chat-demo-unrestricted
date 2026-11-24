@@ -188,3 +188,10 @@
   font-size: 11px;
   line-height: 17px;
 }
+
+/* GenUI 工具行：移植 dsh-genui 的项目图标 */
+.toolIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-right: 6px;
+}

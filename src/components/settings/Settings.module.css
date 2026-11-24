@@ -457,6 +457,8 @@
 }
 
 .deleteConfirm {
+  /* 不支持 dvh 的浏览器用第一行兜底 */
+  max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }

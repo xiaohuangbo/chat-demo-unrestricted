@@ -75,7 +75,7 @@ const zh: DocsDoc = {
             ['搜索投毒', '时间与知识截止、接管搜索、关键字 / 正则替换、黑名单、强制结果、白名单'],
             ['记忆', '长期记忆、自动提炼、记忆更新提示、网状记忆库、导入导出、关系图、搜索调试'],
             ['附件', '附件限制、大小与数量、扩展名白名单、大文本附件、附件投毒'],
-            ['浏览器工具', '一个主开关 + 十项能力开关、通知权限、风险标签'],
+            ['浏览器工具', '一个主开关 + 十一项能力开关（含 GenUI）、通知权限、风险标签'],
             ['工作区', '浏览器本地文件库：新建 / 编辑 / 删除、导入导出'],
             ['虚拟机', 'NanoVM Slim / WebVM 的开关、工具链、网络、内存与配额'],
             ['Unkernel Linux', '内存、超时、联网、声音、显示、数据盘、Worker、CPU、Wisp'],
@@ -636,7 +636,8 @@ const zh: DocsDoc = {
             ['fetch_webpage', '抓取网页正文', '联网'],
             ['create_file', '生成文件并下载 / 存入工作区', '写入 · 需确认'],
             ['open_url', '在浏览器打开链接', '写入'],
-            ['show_widget', '生成可视化卡片', '只读'],
+            ['show_widget', '生成可视化卡片（沙箱 iframe）', '只读'],
+            ['show_genui', '用 JSON 声明原生界面：指标卡、表格、图表、进度、提示块', '只读'],
           ],
         },
         {
@@ -678,7 +679,7 @@ const zh: DocsDoc = {
       blocks: [
         {
           type: 'p',
-          text: '「数据管理」页负责 API Key、导入、导出、恢复默认与删除全部对话。导入会覆盖现有会话与附件，导入前会二次确认；导入时显示进度条（已处理条目 / 总数、已导入对话数与百分比）。',
+          text: '「数据管理」页负责 API Key、导入、导出、恢复默认与删除全部对话。导入会覆盖现有会话与附件，导入前会二次确认；导入时按对话数显示进度条（已处理 x / y 个对话、百分比）；同一对话的附件会和聊天一起读取，不再要求图片排在 index 之后。',
         },
         {
           type: 'ul',
@@ -920,7 +921,7 @@ const en: DocsDoc = {
             ['Attachments', 'Limits, size and count, extension whitelist, large text, poisoning'],
             [
               'Browser tools',
-              'One master switch plus ten capability switches, notification permission, risk tags',
+              'One master switch plus eleven capability switches including GenUI, notification permission, risk tags',
             ],
             ['Workspace', 'Local file library: create, edit, delete, import and export'],
             [
@@ -1556,7 +1557,12 @@ const en: DocsDoc = {
             ['fetch_webpage', 'Fetch a page body', 'network'],
             ['create_file', 'Generate a file download / workspace entry', 'write · confirm'],
             ['open_url', 'Open a link in the browser', 'write'],
-            ['show_widget', 'Render an inline widget', 'read-only'],
+            ['show_widget', 'Render an inline widget (sandboxed iframe)', 'read-only'],
+            [
+              'show_genui',
+              'Declare a native interface in JSON: stats, tables, charts, progress, callouts',
+              'read-only',
+            ],
           ],
         },
         {
@@ -1598,7 +1604,7 @@ const en: DocsDoc = {
       blocks: [
         {
           type: 'p',
-          text: 'Data management handles the API key, import, export, resetting settings and deleting all chats. Import replaces existing chats and attachments after a confirmation, and shows a progress bar (processed entries / total, chats imported and percentage).',
+          text: 'Data management handles the API key, import, export, resetting settings and deleting all chats. Import replaces existing chats and attachments after a confirmation, and shows progress by chat (processed x / y chats and percentage); a chat’s attachments are read together with it, so images no longer need to sit after the index.',
         },
         {
           type: 'ul',

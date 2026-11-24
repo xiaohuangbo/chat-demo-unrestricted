@@ -322,6 +322,9 @@ export const en = {
   creditGoDeepseekLabel: 'go-deepseek',
   creditGoDeepseekNote:
     'The pure-Go DeepSeek Harness SDK and terminal client; DSH go is built from it (MIT, the embedded DeepSeek Harness is MIT too).',
+  creditDshGenuiLabel: 'dsh-genui',
+  creditDshGenuiNote:
+    'Inline generative-UI component syntax and project icon; the GenUI tool here is ported from it (MIT).',
   changelogV24Title: 'v2.4.0 · 2026-11',
   changelogV24Techniques:
     'The perturbation engine now carries all 33 techniques from the standalone build, in light / standard / heavy tiers',
@@ -516,6 +519,8 @@ export const en = {
     'Estimated from the official price page: weekdays 09:00–12:00 and 14:00–18:00 are peak with double rates; everything else is off-peak. Unknown models fall back to Flash pricing.',
   settingDialogAsideAgentToolsOptionLabel: 'Browser tools',
   agentToolsSectionTitle: 'Browser agent tools',
+  genuiUntitled: 'GenUI',
+  genuiRenderError: 'GenUI render failed: {message}',
   agentToolsMasterLabel: 'Enable browser tools',
   agentToolsMasterDesc:
     'When on, the checked capabilities are declared to the model and executed here in the browser; when off, no tool is sent. Ported from DeepSeek-Agent browser capabilities, without MCP, subagents or workspace tools.',
@@ -785,7 +790,7 @@ export const en = {
   historyImportedOne: 'Imported 1 chat',
   historyImported: 'Imported {count} chats',
   historyImportInProgress: 'Importing… {percent}%',
-  historyImportProgress: 'Processed {done} / {total} entries · {sessions} chats imported',
+  historyImportProgress: 'Processed {done} / {total} chats · {percent}%',
   historyImportProgressPending: 'Checking the file…',
   historyImportProgressLabel: 'Import progress',
   historyImportFailed:
@@ -2158,6 +2163,17 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2715Title: 'v2.7.15 · 2026-11',
+  changelogV2715Genui:
+    'Settings → Browser tools gains "GenUI": the model declares an interface in JSON (text, stat cards, sortable tables, line/bar charts, progress, callouts, grid cards) and the client renders it with whitelisted native components, never executing HTML; syntax and icon follow dsh-genui (MIT), with the credit added at the end of the changelog',
+
+  changelogV2715Attachments:
+    'Merges upstream chat-demo 0.1.4: history import now pairs attachments with their chat, reading the session JSON first and then its own files, so images no longer have to sit after the index; duplicate images across chats are deduplicated by ZIP offset, the read cache holds two windows, and attachment bytes land together with the chat',
+  changelogV2715Progress:
+    'Import progress now counts chats: "Processed x / y chats · percent", with "Checking the file…" before the first session; entry enumeration is decoupled from progress and attachments are read with their chat',
+  changelogV2715Compat:
+    'Older browser support: AbortSignal.reason / throwIfAborted fallbacks in utils/abort.ts, toSorted / toReversed replaced with copied sort / reverse, and 100dvh falls back to 100vh so imports, uploads and layout no longer break on old engines',
+  changelogV2715Apk: 'Builds the 2.7.15 APK (versionCode 285), signed with xiaohuangbo.jks',
   changelogV2714Title: 'v2.7.14 · 2026-11',
   changelogV2714Docs:
     'The in-app docs grow to 26 sections: a decoding and sampling deep dive covering temperature, top_p, max_tokens, thinking budgets and penalties with presets, a tokens / context / cache / compression section explaining token estimates, the 1M window, prefix cache, auto compression and cost, and 13 new glossary entries such as logits, greedy decoding, nucleus sampling, prefix cache and hash vector',

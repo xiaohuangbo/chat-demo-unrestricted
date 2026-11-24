@@ -287,6 +287,9 @@ export const zh = {
   creditGoDeepseekLabel: 'go-deepseek',
   creditGoDeepseekNote:
     '纯 Go 嵌入 DeepSeek Harness 的 SDK 与终端客户端；DSH go 由它构建（MIT，内嵌的 DeepSeek Harness 也是 MIT）。',
+  creditDshGenuiLabel: 'dsh-genui',
+  creditDshGenuiNote:
+    '内联生成式界面的组件语法与项目图标来源；本作的「生成 GenUI 界面」工具移植自它（MIT）。',
   changelogV24Title: 'v2.4.0 · 2026-11',
   changelogV24Techniques: '扰动引擎补齐单文件版的 33 种技术，按轻量 / 标准 / 重度三档',
   changelogV24Variants: '实验台新增变体赛跑：批量改写并发请求，按综合分选优',
@@ -453,6 +456,8 @@ export const zh = {
     '按官方定价页估算：工作日 9:00–12:00、14:00–18:00 为高峰，费用翻倍；其余时段按空闲价。未知模型按 Flash 单价兜底。',
   settingDialogAsideAgentToolsOptionLabel: '浏览器工具',
   agentToolsSectionTitle: '浏览器 Agent 工具',
+  genuiUntitled: 'GenUI 界面',
+  genuiRenderError: 'GenUI 渲染失败：{message}',
   agentToolsMasterLabel: '启用浏览器工具',
   agentToolsMasterDesc:
     '打开后把已勾选的能力声明给模型，由本页在浏览器里执行；关闭时一个工具都不下发。移植自 DeepSeek-Agent 的浏览器能力，不含 MCP、子 Agent 与工作区工具。',
@@ -712,7 +717,7 @@ export const zh = {
   historyImportedOne: '已导入 1 个对话',
   historyImported: '已导入 {count} 个对话',
   historyImportInProgress: '正在导入… {percent}%',
-  historyImportProgress: '已处理 {done} / {total} 个条目 · 已导入 {sessions} 个对话',
+  historyImportProgress: '已处理 {done} / {total} 个对话 · {percent}%',
   historyImportProgressPending: '正在检查文件…',
   historyImportProgressLabel: '导入进度',
   historyImportFailed:
@@ -2005,6 +2010,17 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2715Title: 'v2.7.15 · 2026-11',
+  changelogV2715Genui:
+    '设置 → 浏览器工具新增「生成 GenUI 界面」：模型用 JSON 声明界面（文本 / 指标卡 / 可排序表格 / 折线柱状图 / 进度 / 提示 / 网格卡片），客户端用白名单组件原生渲染，不执行 HTML；语法与图标参考 dsh-genui（MIT），鸣谢已补在更新日志末尾',
+
+  changelogV2715Attachments:
+    '合并上游 chat-demo 0.1.4：导入历史时按会话配对读取附件，先读会话 JSON 再读它自己的文件，不再要求图片在 index 之后；同一图片跨会话去重改用 ZIP 偏移，读窗口升级为双窗口缓存，附件正文与聊天一起落库',
+  changelogV2715Progress:
+    '导入进度改为按对话数统计：显示「已处理 x / y 个对话 · 百分比」，第一条会话前显示「正在检查文件…」；条目枚举与进度回调解耦，附件随会话一起读',
+  changelogV2715Compat:
+    '兼容旧内核：AbortSignal.reason / throwIfAborted 增加兜底（utils/abort.ts），toSorted / toReversed 换成 sort / reverse 拷贝，100dvh 在旧浏览器回退 100vh，旧浏览器导入与上传不再抛错或高度塌陷',
+  changelogV2715Apk: '同步构建 2.7.15 APK（versionCode 285），使用 xiaohuangbo.jks 签名',
   changelogV2714Title: 'v2.7.14 · 2026-11',
   changelogV2714Docs:
     '应用内文档扩充到 26 个小节：新增「解码与采样参数」逐项解释温度、Top P、max_tokens、思考预算与惩罚项并给出组合速查，「Token、上下文、缓存与压缩」讲清 token 估算、1M 窗口、前缀缓存、自动压缩与费用，术语表补充 logits / 贪心解码 / 核采样 / 前缀缓存 / 哈希向量等 13 条',

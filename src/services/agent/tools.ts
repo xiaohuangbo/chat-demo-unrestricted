@@ -1,4 +1,5 @@
 import type { JsonSchema } from '../api/types.js'
+import { normalizeGenuiSpec, parseGenuiSpec } from './genui.js'
 
 /**
  * 浏览器 Agent 工具（移植自 DeepSeek-Agent 的 browser / widget 工具）。
@@ -16,8 +17,8 @@ export type ToolArtifact = {
   id: string
   name: string
   mime: string
-  /** file 走下载 / 预览，widget 在沙箱 iframe 里直接渲染 */
-  kind: 'file' | 'widget'
+  /** file 走下载 / 预览，widget 在沙箱 iframe 里渲染，genui 用白名单组件原生渲染 */
+  kind: 'file' | 'widget' | 'genui'
   text: string
   size: number
   createdAt: number
@@ -695,7 +696,7 @@ const createArtifact = (
   name: string,
   text: string,
   mime: string,
-  kind: 'file' | 'widget'
+  kind: 'file' | 'widget' | 'genui'
 ): ToolArtifact => ({
   id: artifactId(),
   name,
@@ -817,6 +818,64 @@ const widgetTool: AgentTool = {
   },
 }
 
+const MAX_GENUI_SPEC_CHARS = 60_000
+
+const genuiTool: AgentTool = {
+  id: 'show_genui',
+  label: '生成 GenUI 界面',
+  labelEn: 'GenUI',
+  summary: '用 JSON 声明界面：指标卡、表格、图表、进度与提示块。',
+  summaryEn: 'Declare an interface in JSON: stats, tables, charts, progress and callouts.',
+  description:
+    '用一段 JSON 在对话里渲染原生界面（参考 dsh-genui 的声明式组件树）。\n' +
+    '输入 spec 是 JSON 字符串，结构为 {"title":"可选标题","blocks":[...]}，支持的块：\n' +
+    '- text/heading：{type:"text",text:"…"}；divider：分割线\n' +
+    '- stat：{type:"stat",label:"收入",value:"¥128,430",delta:"+12.4%",hint:"可选"}\n' +
+    '- progress：{type:"progress",label:"完成度",value:0.72}（0–1）\n' +
+    '- table：{type:"table",columns:["列1","列2"],rows:[["a","1"],["b","2"]],caption:"可选"}（表头可点击排序）\n' +
+    '- chart：{type:"chart",kind:"line"|"bar",labels:["周一","周二"],series:[{name:"订单",data:[3,5]}],caption:"可选"}\n' +
+    '- list：{type:"list",items:["…"]}；keyValue：{type:"keyValue",items:[{key:"系统",value:"Linux"}]}\n' +
+    '- callout：{type:"callout",tone:"info"|"success"|"warn"|"error",title:"可选",text:"…"}\n' +
+    '- card：{type:"card",title:"可选",blocks:[…]}；grid：{type:"grid",columns:2,items:[…]}（最多嵌套 3 层）\n' +
+    '适合：数据摘要、对比、进度、迷你仪表盘。纯文本能说清时不要调用；不要用它替代普通回答。',
+  inputSchema: objectSchema(
+    {
+      title: { type: 'string', description: '界面标题，显示在卡片顶部' },
+      spec: {
+        type: 'string',
+        description:
+          'GenUI 的 JSON 字符串，例如 {"title":"本月概览","blocks":[{"type":"stat","label":"收入","value":"¥128,430"}]}',
+      },
+      note: { type: 'string', description: '可选：一句话说明这个界面展示了什么' },
+    },
+    ['spec']
+  ),
+  risk: 'safe',
+  run: async (input) => {
+    const raw = str(input, 'spec')
+    if (raw.length > MAX_GENUI_SPEC_CHARS) {
+      return fail(`spec 过长（${raw.length} 字符），请压缩到 ${MAX_GENUI_SPEC_CHARS} 字符以内`)
+    }
+    const parsed = parseGenuiSpec(raw)
+    if ('error' in parsed) {
+      return fail(parsed.error)
+    }
+    const title = str(input, 'title').trim() || parsed.spec.title || 'GenUI'
+    const text = normalizeGenuiSpec(parsed.spec)
+    const slug =
+      title
+        .replace(/[\\/:*?"<>|\s]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40) || 'genui'
+    const artifact = createArtifact(`${slug}.genui.json`, text, 'application/json', 'genui')
+    const note = str(input, 'note').trim()
+    return ok(
+      `已生成 GenUI 界面《${title}》，共 ${parsed.spec.blocks.length} 个块，用户可以直接查看、排序表格。${note ? `\n界面内容：${note}` : ''}`,
+      { artifacts: [artifact] }
+    )
+  },
+}
+
 /** 浏览器工具；顺序即设置页展示顺序 */
 export const AGENT_TOOLS: AgentTool[] = [
   timeTool,
@@ -829,6 +888,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   createFileTool,
   openUrlTool,
   widgetTool,
+  genuiTool,
 ]
 
 export const AGENT_TOOL_IDS = AGENT_TOOLS.map((tool) => tool.id)

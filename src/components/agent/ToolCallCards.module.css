@@ -245,3 +245,10 @@
     height: 300px;
   }
 }
+
+/* GenUI 产物：原生组件渲染，外面只留下载按钮 */
+.genui {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

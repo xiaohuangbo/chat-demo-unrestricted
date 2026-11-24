@@ -30,7 +30,7 @@
 ## 本仓库新增了什么
 
 - **解除限制与提示词工程**：越狱模式、系统提示词预设、每轮注入、中文越狱提示词、自定义思维链；
-- **浏览器 Agent 工具**（默认关闭，逐项开关）：时间、定位、天气、通知、剪贴板、抓网页、生成文件、打开链接、可视化组件；
+- **浏览器 Agent 工具**（默认关闭，逐项开关）：时间、定位、天气、通知、剪贴板、抓网页、生成文件、打开链接、可视化组件、GenUI 界面（JSON 声明，原生渲染指标卡 / 表格 / 图表）；
 - **虚拟工作区**：浏览器本地文件库，任意格式导入导出、OPFS 真文件系统、安卓端为应用存储；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制，另有 `nanovm_import` Agent 工具），并新增 PyBot 工具链（64 万行纯 Python 规则聊天机器人，无模型权重），桌面端右侧停靠、手机端底部面板，Python / Node / Lua / SQLite / esbuild / tsc / Sass / Terser / Prettier / make / Git 按需安装，虚拟机内自带虚拟网络（Node 与 Python 的 HTTP / WebSocket 服务）；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，自带 bash / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
@@ -72,8 +72,8 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.14.apk`（112 MB，versionCode 284，
-SHA-256 `6a944ea7eee19cb9c24b74a3d7535e257866b3e2a499298d97f85a05065cef62`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.15.apk`（112 MB，versionCode 285，
+SHA-256 `7412f9322cd74e43526040af1aedd0c33efdc70c15aca6817ced206a2aac4f60`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -93,10 +93,13 @@ SHA-256 `6a944ea7eee19cb9c24b74a3d7535e257866b3e2a499298d97f85a05065cef62`），
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、Alpine / Debian shell、2 CPU SMP、工作区挂载/写回、文件导入/导出、窗口缩放、设置页 | 通过  |
+| Upstream 0.1.4  | 归档附件随会话导入、按对话计进度、旧浏览器 AbortSignal / toSorted / 100dvh 兼容 | 通过（真机导入 3000 会话、带图归档、旧内核构建验证） |
 
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.15**：设置 → 浏览器工具新增「生成 GenUI 界面」——模型用 JSON 声明界面（指标卡 / 可排序表格 / 折线柱状图 / 进度 / 提示 / 网格卡片），客户端用白名单组件原生渲染，不执行 HTML；图标与语法参考 [dsh-genui](https://github.com/omdsh-dev/dsh-genui)（MIT），鸣谢已加到更新日志末尾。同时合并上游 chat-demo 0.1.4（`5477ea6` / `6da0786` / `ea0d208` / `cdf9617`）——导入历史时按会话配对读取附件，先读会话 JSON 再读它自己的文件，不再要求图片排在 index 之后；跨会话去重改用 ZIP 偏移、读窗口升级为双缓存；导入进度改为按对话数显示；同时兼容旧内核（AbortSignal.reason / throwIfAborted 兜底、toSorted / toReversed 替换、100dvh 回退 100vh）。
 
 - **2.7.14**：应用内文档扩充到 26 小节，新增「解码与采样参数」（温度 / Top P / max_tokens / 思考预算 / 惩罚项 / 流式与组合速查）与「Token、上下文、缓存与压缩」，术语表补到 28 条；修复新会话第一条消息拿不到记忆的 bug——首轮同时生成服务端标题，代码误把整轮当成「标题请求」把长期记忆与网状记忆库整段跳过，检索结果从未进入 system；现在首轮照常检索并注入，`Last injected` 也会在首轮更新；同时加强记忆注入说明，要求模型直接引用这些事实、不要声称不知道。
 

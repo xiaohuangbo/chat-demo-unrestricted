@@ -850,3 +850,51 @@ The intent was "a title request does not need memory", but the title and the rea
 **Implementation.** The renderer gained an `h3` block (`DocsView.tsx` and a `.subheading` style) so parameters can be expanded individually; the glossary grew from 15 to 28 entries (logits, greedy decoding, nucleus sampling, stop_reason, SSE, prefix cache, context window, input/output tokens, hash vector, cosine similarity, relevance threshold, retrieval weights and more); the models table links to the new decoding section.
 
 **Verified.** TOC grows from 24 to 26 items; no horizontal overflow on desktop or a 390px viewport; the temperature / top_p subheadings, preset table and glossary render correctly; `pnpm type`, `pnpm lint` and `pnpm build` pass.
+
+### 3.46 Merging upstream chat-demo 0.1.4 (2.7.15)
+
+Upstream 0.1.4 (`cdf9617`) contains four changes since 0.1.3: `5aaa34b` / `c9e1f33` (import performance, already merged in 2.7.13), `ea0d208` (import progress), `5477ea6` (attachments imported with their chats), `6da0786` (older-browser support) and `cdf9617` (release). This merge ports the latter two and switches our progress bar to upstream's per-chat accounting.
+
+**1. Attachments imported with their chats (`5477ea6`).** The old implementation required images to appear after `chat_session_index.json`: it read every session first and all images afterwards. The new one enumerates the archive into `filesBySession` (`chat_sessions/<id>_files/` belongs to that session) and reads a session's files as soon as its JSON is processed:
+
+- `readArchive` no longer requires consuming the current entry before advancing; each `stream` locates and verifies its entry when iterated. `ArchiveEntry` gains `offset`, used to deduplicate the same image across sessions (the physically earliest copy wins).
+- The read cache goes from one window to two: session JSON and its attachments usually sit in different regions, so each gets a window to avoid repeated `slice` calls.
+- Trailing attachment entries are only checked for ownership, not re-read; `flushSessions` flushes images first so attachments land together with their chat.
+
+**2. Import progress by chat (`ea0d208`).** The UI stays the 2.7.10 progress bar, but the data now comes from upstream's shape:
+
+```ts
+export type ImportProgress = { done: number; total: number }
+onProgress?.({ done: 0, total: totalSessions })
+```
+
+- The total is known after the first enumeration pass; until then the UI shows "Checking the file…".
+- Each session batch reports `processed x / y chats`, never exceeding the total.
+- A final `y / y` callback drives the bar to 100%.
+
+**3. Older-browser support (`6da0786`).**
+
+- New `src/utils/abort.ts`: `getAbortReason()` falls back to `DOMException(AbortError)` when `AbortSignal.reason` is missing and `throwIfAborted()` checks `aborted` itself; `attachments.ts`, `store.ts` and `resizeUploadImage.ts` use them.
+- `toSorted` / `toReversed` replaced with `[...arr].sort()` / `[...arr].reverse()` (`toLocal.ts`, `NanoVMConsole.tsx`, `store.ts`).
+- `100dvh` falls back to `100vh` under `@supports not (height: 100dvh)` (`App.module.css`, `ChatInput.module.css`), and the delete confirmation in `Settings.module.css` gets a two-line `max-height` fallback.
+
+**Verification.**
+
+| Case | Result |
+| --- | --- |
+| 400-chat archive | passes, "processed 400 / 400 chats" |
+| 3000-chat archive | passes, 1504 / 3000 → 3000 / 3000 |
+| Archive with one PNG placed after the index | passes; the chat imports and `files` holds a 70-byte `image/png` with MIME backfilled |
+| Random bytes / truncated ZIP | still rejected (`BackupError`) |
+| Legacy-engine build | `toSorted` / `AbortSignal.reason` no longer in the bundle; build passes |
+
+**Files:** `src/services/chat/history/{zipReader,importArchive}.ts`, `src/services/chat/backup.ts`, `src/components/settings/SettingsDialog.tsx`, `src/i18n/{zh,en}.ts`, `src/utils/{abort,resizeUploadImage}.ts`, `src/services/{attachments,chat/store}.ts`, `src/services/chat/history/toLocal.ts`, `src/components/nanovm/NanoVMConsole.tsx`, `src/app/App.module.css`, `src/components/chatInput/ChatInput.module.css`, `src/components/settings/Settings.module.css`.
+
+
+**4. The GenUI tool (added in the same version).** Settings → Browser tools gains "GenUI" (`show_genui`):
+
+- The model sends a JSON spec `{"title":"…","blocks":[…]}` with text / heading / divider / stat / progress / table / chart / list / keyValue / callout / card / grid blocks;
+- The client renders it with whitelisted React components: tables sort by clicking a header, line and bar charts use inline SVG, no arbitrary HTML and no iframe;
+- Syntax and the project icon are ported from [dsh-genui](https://github.com/omdsh-dev/dsh-genui) (MIT); the icon appears on the tool row and the card title, and the credit is appended to the in-app changelog credits (after unkernel / go-deepseek) and 11-license;
+- The parser in `src/services/agent/genui.ts` limits text length, nesting, rows and series; bad blocks are dropped individually and unknown types ignored. Unit tests cover a valid spec, empty blocks, malformed JSON and unknown blocks;
+- Verified end to end: the model actually called `show_genui`, the stored `toolCalls[0]` finished with an artifact of kind `genui`, the reply rendered "本月概览 / ¥128,430 / table / bar chart", and the settings row shows the GenUI icon.

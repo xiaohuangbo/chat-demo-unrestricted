@@ -782,6 +782,16 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV2715Title',
+      items: [
+        'changelogV2715Genui',
+        'changelogV2715Attachments',
+        'changelogV2715Progress',
+        'changelogV2715Compat',
+        'changelogV2715Apk',
+      ],
+    },
+    {
       title: 'changelogV2714Title',
       items: [
         'changelogV2714Docs',
@@ -1198,6 +1208,11 @@ const ChangelogSetting = () => {
       label: 'creditGoDeepseekLabel',
       note: 'creditGoDeepseekNote',
       href: 'https://github.com/robomotionio/go-deepseek',
+    },
+    {
+      label: 'creditDshGenuiLabel',
+      note: 'creditDshGenuiNote',
+      href: 'https://github.com/omdsh-dev/dsh-genui',
     },
   ]
   return (
@@ -2161,7 +2176,7 @@ const useHistoryImport = () => {
     setFile(null)
     setBusy(true)
     setStatus(null)
-    setProgress({ done: 0, total: 0, sessions: 0 })
+    setProgress({ done: 0, total: 0 })
     try {
       const count = await importHistory(file, setProgress)
       setStatus({ key: count === 1 ? 'historyImportedOne' : 'historyImported', params: { count } })
@@ -2248,7 +2263,7 @@ const ImportHistory = ({
               ? t('historyImportProgress', {
                   done: progress.done,
                   total: progress.total,
-                  sessions: progress.sessions,
+                  percent,
                 })
               : t('historyImportProgressPending')}
           </div>

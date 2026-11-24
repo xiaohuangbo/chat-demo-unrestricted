@@ -528,7 +528,12 @@ export const NanoVMConsole = () => {
       showToast({
         key: 'nanovmFileImportFailed',
         params: {
-          reason: error instanceof VmImportError ? error.message : error instanceof Error ? error.message : String(error),
+          reason:
+            error instanceof VmImportError
+              ? error.message
+              : error instanceof Error
+                ? error.message
+                : String(error),
         },
         type: 'error',
       })
@@ -557,7 +562,12 @@ export const NanoVMConsole = () => {
       showToast({
         key: 'nanovmFileImportFailed',
         params: {
-          reason: error instanceof VmImportError ? error.message : error instanceof Error ? error.message : String(error),
+          reason:
+            error instanceof VmImportError
+              ? error.message
+              : error instanceof Error
+                ? error.message
+                : String(error),
         },
         type: 'error',
       })
@@ -739,7 +749,11 @@ export const NanoVMConsole = () => {
           </label>
           <div className={styles.fileImportToggle}>
             <span>{t('nanovmImportOverwrite')}</span>
-            <Switch checked={overwrite} onChange={setOverwrite} label={t('nanovmImportOverwrite')} />
+            <Switch
+              checked={overwrite}
+              onChange={setOverwrite}
+              label={t('nanovmImportOverwrite')}
+            />
           </div>
         </div>
         <div className={styles.hint}>
@@ -906,7 +920,8 @@ export const NanoVMConsole = () => {
           ) : (
             <div className={styles.workspaceList}>
               {Object.values(workspaceFiles)
-                .toSorted((left, right) => right.updatedAt - left.updatedAt)
+                .slice()
+                .sort((left, right) => right.updatedAt - left.updatedAt)
                 .map((file) => (
                   <button
                     key={file.path}

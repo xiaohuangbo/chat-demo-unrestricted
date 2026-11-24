@@ -225,6 +225,12 @@
     max-height: calc(var(--app-viewport-height, 100dvh) - 120px);
   }
 
+  @supports not (height: 100dvh) {
+    .wrapper {
+      max-height: calc(100vh - 120px);
+    }
+  }
+
   .textareaWrapper {
     min-height: 0;
   }
