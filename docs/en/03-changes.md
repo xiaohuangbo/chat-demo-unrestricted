@@ -1012,3 +1012,52 @@ Each node card gains an edit button that expands into title / body / tags fields
 | 390px viewport: filter bar, tag buttons and edit card without horizontal overflow | pass |
 
 **Files:** `src/services/chat/latestReminder.ts`, `src/services/chat/store.ts`, `src/components/settings/{MemorySettings.tsx,MemorySettings.module.css}`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.
+
+### 3.49 latest_reminder ordering fix (2.7.17)
+
+Fixes a regression introduced in 2.7.16: requests carrying history were rejected with
+
+```
+messages.23: a `latest_reminder` message must be immediately followed by a `user` message
+```
+
+**Root cause.** 2.7.16 rewrote the round loop in `toRequestMessages` to restore history as tool calls for the custom prompt-injection tool. To keep `tool_use` and `tool_result` adjacent, the reminder insertion was split into two paths:
+
+```ts
+const reminderFirst = pendingToolUseId !== null || toolUse !== null
+if (reminderFirst) appendReminder(reply.latestReminder)
+messages.push(toUserParam(user))
+if (toolUse) { ... } else {
+  if (!reminderFirst) appendReminder(reply.latestReminder)   // ← inserted after the question
+  messages.push(toAssistantParam(reply))
+}
+```
+
+Plain rounds (`reminderFirst === false`) therefore produced `user → latest_reminder → assistant`, while the server requires a `user` message immediately after `latest_reminder`. A first turn has no history, so 2.7.16's acceptance run did not catch it; from the second turn on, any historical reminder snapshot that differs from the previous one triggers it, which is what surfaced as `messages.N` in longer chats.
+
+**Fix.** Reminders are always inserted before the question — the `reminderFirst` branch is gone — and two further server constraints were verified against the live API and handled:
+
+| Shape | Server |
+| --- | --- |
+| `user → latest_reminder → assistant` | 400 `a latest_reminder message must be immediately followed by a user message` |
+| `latest_reminder → latest_reminder → user` | 400 (`latest_reminder must have at least …`) |
+| `latest_reminder → user → assistant` | 200 |
+| `assistant(tool_use) → latest_reminder → user(tool_result)` | 400 `tool_use ids were found without tool_result blocks immediately after` |
+| `latest_reminder → user → assistant(tool_use) → user(tool_result)` | 200 |
+
+That led to two more changes:
+
+1. **Compression summary and round reminder are merged.** The summary itself is sent as `latest_reminder`; a following round with a changed reminder would create two reminders in a row. `appendReminder` now detects a preceding reminder and appends the new text to it (`summary\n\nreminder`) instead of pushing a second message.
+2. **History restoration for the injection tool yields to reminders.** If the question after a restored `tool_use` needs a new reminder (day change, different location), the reminder would sit between `tool_use` and `tool_result` and be rejected. `toRequestMessages` rehearses the reminder positions first (`reminderFlags`) and drops that round's restoration when it collides; history goes back to plain text there, while rounds with unchanged reminders are still restored.
+
+**Verified.**
+
+| Case | Result |
+| --- | --- |
+| Unit: 2 / 3 rounds, duplicate reminders, compression summary, compression with rounds left, continuation prefix, skipped empty question, no reminders | all satisfy “reminder followed by user, no adjacent reminders, tool_use followed by tool_result” |
+| Unit: compression summary plus the first round reminder merge into one message containing both, zero adjacent reminders | pass |
+| Unit: injection-tool restoration — unchanged reminders still restore, a changed reminder drops that round's restoration | pass |
+| Live API, three-turn chat (deepseek-flash): all three requests 200, role sequence `latest_reminder,user,assistant,user,assistant,user`, all replies `done` | pass |
+| Live API with the injection tool: second turn is `latest_reminder,user,assistant(tool_use),user(tool_result)`; after changing the location the next turn puts the new reminder before the question, the previous round is not restored, and the request is still 200 | pass |
+
+**Files:** `src/services/chat/reply.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.

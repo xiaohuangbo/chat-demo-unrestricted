@@ -495,6 +495,13 @@ export const toRequestMessages = (
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
+  /**
+   * 插入一条 latest_reminder 快照。
+   *
+   * 服务端约束（实测）：`latest_reminder` 后面必须紧跟一条 user 消息，连续两条
+   * latest_reminder 也会被拒绝。压缩摘要本身以 latest_reminder 下发，所以摘要之后
+   * 若还有轮次提醒，这里把两者合并成一条，绝不产生相邻的两条提醒。
+   */
   const appendReminder = (reminder: string | undefined) => {
     // V4 Pro 不接受 latest_reminder 角色，提醒由调用方折进 system
     if (omitReminders) {
@@ -502,7 +509,15 @@ export const toRequestMessages = (
     }
     // 仅在当前分支首次出现或内容变化时插入快照；缺少快照的消息保持原有内容。
     if (reminder && reminder !== previousReminder) {
-      messages.push({ role: 'latest_reminder', content: reminder })
+      const last = messages.at(-1)
+      if (last?.role === 'latest_reminder') {
+        messages[messages.length - 1] = {
+          role: 'latest_reminder',
+          content: `${last.content}\n\n${reminder}`,
+        }
+      } else {
+        messages.push({ role: 'latest_reminder', content: reminder })
+      }
       previousReminder = reminder
     }
   }
@@ -520,6 +535,30 @@ export const toRequestMessages = (
     }
   }
   const lastRound = rounds.length - 1
+  /**
+   * 预演一遍提醒的插入位置：第 i 轮的提醒属于 reply_i，会插在 user_i 之前。
+   * 还原 tool_use 时要知道紧随其后的那条提问前会不会插提醒——插了的话
+   * `tool_use` 与 `tool_result` 之间就夹了别的角色，服务端会直接拒绝。
+   */
+  const reminderFlags = rounds.map(() => false)
+  {
+    let previous: string | undefined
+    rounds.forEach(([user, reply], index) => {
+      if (!userHasBody(user)) {
+        return
+      }
+      if (!omitReminders && reply.latestReminder && reply.latestReminder !== previous) {
+        reminderFlags[index] = true
+        previous = reply.latestReminder
+      }
+    })
+    previousReminder = previous
+  }
+  const questionReminder =
+    !omitReminders && latestReminder !== undefined && latestReminder !== previousReminder
+  // 预演只用于决策，正式插入时重新按实际顺序判断（压缩摘要会与第一条提醒合并）
+  previousReminder = undefined
+
   /** 上一条被还原成 tool_use 的回复：下一次提问要作为它的 tool_result 回传 */
   let pendingToolUseId: string | null = null
   rounds.forEach(([user, reply], index) => {
@@ -529,19 +568,24 @@ export const toRequestMessages = (
     }
     // 助手回复能否还原，取决于紧随其后的那条提问是否也按 tool_result 回传（协议要求成对出现）
     const nextUser = rounds[index + 1]?.[0] ?? question
+    const nextUserHasBody = index + 1 < rounds.length ? userHasBody(nextUser) : true
+    // 下一条提问前面要插提醒时不能还原：提醒会夹在 tool_use 与 tool_result 之间
+    const nextReminder =
+      index + 1 < rounds.length ? reminderFlags[index + 1] && nextUserHasBody : questionReminder
     const toolUse =
       customPlan &&
+      !nextReminder &&
       customPlan.convertAssistant(reply) &&
       customPlan.convertUser(nextUser) &&
       // 用户消息整条被省略时不能还原：tool_use 后面必须跟得上 tool_result
       userHasBody(nextUser)
         ? toCustomToolUse(reply, customPlan.config)
         : null
-    // tool_use 与 tool_result 之间不能夹其它角色：这类轮次的系统提醒改放到提问之前
-    const reminderFirst = pendingToolUseId !== null || toolUse !== null
-    if (reminderFirst) {
-      appendReminder(reply.latestReminder)
-    }
+    /**
+     * 服务端要求 latest_reminder 后面必须紧跟一条 user 消息，所以提醒一律放在本轮提问之前。
+     * 同理，tool_use 与它的 tool_result 之间也不能夹其它角色：这种轮次里提醒同样在提问之前。
+     */
+    appendReminder(reply.latestReminder)
     messages.push(
       toUserParam(
         user,
@@ -555,9 +599,6 @@ export const toRequestMessages = (
       messages.push({ role: 'assistant', content: [toolUse] })
       pendingToolUseId = toolUse.id
     } else {
-      if (!reminderFirst) {
-        appendReminder(reply.latestReminder)
-      }
       messages.push(
         toAssistantParam(reply, false, thinking, disguiseThinking && index === lastRound)
       )

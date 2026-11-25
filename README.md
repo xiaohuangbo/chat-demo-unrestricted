@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.16.apk` (112 MB, versionCode 286,
-SHA-256 `8a92d9c613928c1e0d9bffe15dc972332730dfa2e77bef67e906162cccbf1329`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.17.apk` (112 MB, versionCode 287,
+SHA-256 `5edfbeed97fcb50f9228a9c4b5520632616f6b81c2f512732059c4277e55208f`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -102,6 +102,8 @@ Last regression run (2026-11, v2.7.14, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.17**: fixes the 400 “a `latest_reminder` message must be immediately followed by a `user` message” that hit any request carrying history — 2.7.16 inserted the historical reminder snapshot after the question (`user → latest_reminder → assistant`), and reminders are now always placed before the question. The compression summary and the first round reminder are merged into one message (two reminders in a row are rejected too), and the injection tool's history restoration yields when a new reminder must go before the next question, so a reminder never lands between `tool_use` and `tool_result`.
 
 - **2.7.16**: Settings → Browser tools gains a **custom prompt-injection tool** — you define the tool name, description and argument name, and state in the description that the answer body goes into that argument. With forced tool choice the request sets `tool_choice` to it, so the model can only answer as a single tool call; the client then restores the argument as plain text, so the reply card, copy and history all look like a normal answer. History is restored as tool calls by rule (assistant → `tool_use`: only from this tool / every answer / never; the following question → `tool_result`: all / only marked, marker stripped), keeping multi-turn context in this round's shape while attachments and reminders move out of the way. Forced mode handles the API limits automatically: thinking off, no title request, and the safety check field plus server tools dropped — any of them alongside `tool_choice` is rejected as thinking mode.; patch in the same version: fixes the 400 from “inject the system prompt every round” (the server splits latest_reminder on commas, so commas in the prompt pushed the rest into the platform/language field; the prompt now goes to the end of system and commas or newlines in a location are flattened), and adds memory node tools — a filter bar (keyword over title/body/tags, multi-select tag buttons intersected with the keyword, non-matching nodes dimmed in the graph) plus inline editing of a node’s title, body and tags, with tag changes rebuilding tag edges.
 

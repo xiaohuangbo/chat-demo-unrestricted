@@ -2217,6 +2217,14 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2717Title: 'v2.7.17 · 2026-11',
+  changelogV2717ReminderOrder:
+    'Fixes the 400 “a `latest_reminder` message must be immediately followed by a `user` message”: 2.7.16 inserted the historical reminder snapshot after the question (user → latest_reminder → assistant), which the server rejects; reminders are now always inserted before the question so no turn can leave a reminder without a following user message',
+  changelogV2717ReminderMerge:
+    'The compression summary and the first round reminder are merged into a single latest_reminder: two reminders in a row are rejected as well (verified), so the first reminder after a summary is appended to the summary text',
+  changelogV2717InjectSkip:
+    'History restoration for the custom prompt-injection tool yields to reminders: when a new reminder must be inserted before the next question (day change, different location), the previous answer is no longer restored as tool_use, so the reminder never lands between tool_use and tool_result (that shape is rejected, verified); rounds with unchanged reminders are still restored',
+  changelogV2717Apk: 'Builds the 2.7.17 APK (versionCode 287), signed with xiaohuangbo.jks',
   changelogV2716Title: 'v2.7.16 · 2026-11',
   changelogV2716CustomTool:
     'Settings → Browser tools gains a custom prompt-injection tool: define the tool name, description and argument name, and state in the description that the answer body goes into that argument. With forced tool choice the request sets tool_choice to it, so the model can only answer through the argument; the client restores the argument as plain text, so the UI and history show a regular answer',

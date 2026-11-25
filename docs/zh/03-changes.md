@@ -1012,3 +1012,52 @@ const requestReminder = injectPromptEveryTurn
 | 390px 视口：筛选栏、标签按钮、编辑卡片均无横向溢出 | 通过 |
 
 **涉及文件：** `src/services/chat/latestReminder.ts`、`src/services/chat/store.ts`、`src/components/settings/{MemorySettings.tsx,MemorySettings.module.css}`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。
+
+### 3.49 latest_reminder 顺序修复（2.7.17）
+
+修 2.7.16 引入的回归：带历史的请求会被服务端拒绝，报
+
+```
+messages.23: a `latest_reminder` message must be immediately followed by a `user` message
+```
+
+**根因。** 2.7.16 为了支持「自定义提示词注入工具」的历史还原，重写了 `toRequestMessages` 的轮次循环。为了让 `tool_use` 与 `tool_result` 之间不夹角色，代码把「插提醒」拆成了两条路径：
+
+```ts
+const reminderFirst = pendingToolUseId !== null || toolUse !== null
+if (reminderFirst) appendReminder(reply.latestReminder)
+messages.push(toUserParam(user))
+if (toolUse) { ... } else {
+  if (!reminderFirst) appendReminder(reply.latestReminder)   // ← 插到了提问之后
+  messages.push(toAssistantParam(reply))
+}
+```
+
+普通轮次（`reminderFirst === false`）于是生成 `user → latest_reminder → assistant`，而服务端要求 `latest_reminder` 后面必须紧跟 `user`。首轮没有历史，所以 2.7.16 的验收没暴露；第二轮起只要历史轮次的提醒快照与上一条不同就会触发，长会话里就表现为 `messages.N`。
+
+**修复。** 提醒一律在提问之前插入，`reminderFirst` 这个分支直接删掉；同时补上两处服务端约束（都用真实接口验证过）：
+
+| 形状 | 服务端 |
+| --- | --- |
+| `user → latest_reminder → assistant` | 400 `a latest_reminder message must be immediately followed by a user message` |
+| `latest_reminder → latest_reminder → user` | 400（`latest_reminder must have at least …`） |
+| `latest_reminder → user → assistant` | 200 |
+| `assistant(tool_use) → latest_reminder → user(tool_result)` | 400 `tool_use ids were found without tool_result blocks immediately after` |
+| `latest_reminder → user → assistant(tool_use) → user(tool_result)` | 200 |
+
+由此还改了两处：
+
+1. **压缩摘要与轮次提醒合并。** 压缩摘要本身以 `latest_reminder` 下发，后面若还有「提醒变化」的轮次，会出现连续两条提醒。`appendReminder` 现在检测到上一条已是提醒时，把新提醒拼进原有内容（`摘要\n\n提醒`），不再新增第二条。
+2. **注入工具的历史还原让位。** 还原 `tool_use` 时，如果紧随其后的提问前需要插入新提醒（跨天、换定位导致快照变化），提醒就会被夹在 `tool_use` 与 `tool_result` 之间而被拒绝。`toRequestMessages` 先预演一遍提醒的插入位置（`reminderFlags`），遇到这种情况就放弃这一轮的还原，历史仍按纯文本回传；提醒没变化的轮次照常还原。
+
+**验证。**
+
+| 场景 | 结果 |
+| --- | --- |
+| 单测：2 / 3 轮历史、重复提醒、压缩摘要、压缩后仍有轮次、续写前缀、空提问跳过、无提醒 | 全部满足「提醒后紧跟 user、无相邻提醒、tool_use 后紧跟 tool_result」 |
+| 单测：压缩摘要 + 首条轮次提醒合并成一条（内容含两者）、相邻提醒数为 0 | 通过 |
+| 单测：注入工具还原路径——提醒不变时照常还原；提醒变化时该轮放弃还原 | 通过 |
+| 真实接口三轮对话（deepseek-flash）：三次请求全部 200，角色序列 `latest_reminder,user,assistant,user,assistant,user`，三条回复 `done` | 通过 |
+| 真实接口 + 注入工具：第二轮 `latest_reminder,user,assistant(tool_use),user(tool_result)`；改定位后再发一轮，最后一个提醒插在提问前、上一轮不再还原，请求仍 200 | 通过 |
+
+**涉及文件：** `src/services/chat/reply.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。

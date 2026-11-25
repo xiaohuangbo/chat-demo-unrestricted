@@ -2059,6 +2059,14 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2717Title: 'v2.7.17 · 2026-11',
+  changelogV2717ReminderOrder:
+    '修复 400「a `latest_reminder` message must be immediately followed by a `user` message」：2.7.16 把历史轮次的提醒快照插到了提问之后（user → latest_reminder → assistant），服务端因此拒绝；现在提醒一律插在提问之前，任何轮次都不会出现「提醒后面不是 user」的形状',
+  changelogV2717ReminderMerge:
+    '压缩摘要与轮次提醒合并成同一条 latest_reminder：连续两条 latest_reminder 同样会被服务端拒绝（实测），摘要后面紧跟的第一条轮次提醒改为拼接进摘要文本',
+  changelogV2717InjectSkip:
+    '自定义提示词注入工具的历史还原让位给提醒：下一条提问前需要插入新提醒时（跨天、换定位），不再把上一条回答还原成 tool_use，避免提醒夹在 tool_use 与 tool_result 之间（该形状实测会被拒绝）；提醒不变的轮次照常还原',
+  changelogV2717Apk: '同步构建 2.7.17 APK（versionCode 287），使用 xiaohuangbo.jks 签名',
   changelogV2716Title: 'v2.7.16 · 2026-11',
   changelogV2716CustomTool:
     '设置 → 浏览器工具新增「提示词注入工具（自定义）」：自己定义工具名、描述与参数名，描述里写明把回答正文写进该参数；开启强制工具调用时请求带 tool_choice 指向它，模型只能把正文写成参数，收到回应后客户端再把参数还原成普通正文，界面与历史里都是正常回答',
