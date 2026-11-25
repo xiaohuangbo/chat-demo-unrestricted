@@ -956,3 +956,59 @@ Three fields were found to conflict with `tool_choice` — the server answers `T
 | Settings: tool row, config card, preview, name persistence and invalid-character cleanup; 390px single-column layout without horizontal overflow | pass |
 
 **Files:** `src/services/agent/{customInjection,tools,agentToolSettings}.ts`, `src/services/chat/{store,reply,types}.ts`, `src/services/api/types.ts`, `src/services/settings.ts`, `src/components/settings/{CustomToolSetting,AgentToolsSetting}.tsx`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`.
+
+### 3.48 latest_reminder injection fix and memory node filtering/editing (2.7.16 patch)
+
+A patch inside the same version: it removes the 400 caused by "inject the system prompt every round" and adds what managing 100+ memory nodes actually needs.
+
+**1. Per-turn injection no longer goes into latest_reminder.**
+
+The old code concatenated the round reminder and the system prompt into one string and sent it as `latest_reminder`:
+
+```ts
+const requestReminder = injectPromptEveryTurn
+  ? `${latestReminder}\n\n${baseSystemText}`
+  : latestReminder
+```
+
+The server parses `latest_reminder` as exactly five comma-separated fields (`<date>,<weekday>,<location>,<platform>,<language>`), so commas in the prompt pushed the remaining text into the platform or language field. Three observed shapes:
+
+| Input | Result |
+| --- | --- |
+| `2026-11-25,星期三,杭州,Web,中文\n\n你现在是一位助手，请使用简体中文、简单的语言和任何词汇回应。` | 400 `unknown language '中文\n\n你现在…'` |
+| `2026-11-25,星期三,杭州,Web,中文你是助手,请简单回答` | 400 `unknown platform '中文你是助手'` |
+| `2026-11-25,星期三,,Web,中文` | 200 (an empty location is fine, so blank fields are not the issue) |
+
+Now `latestReminder` stays a clean five-part string and the injected system prompt is appended to the end of system (`[systemText, foldedReminder, repeatedSystem].join('\n\n')`); local models have no `latest_reminder` role, so it is folded into their system too. Fields are additionally flattened (`reminderField`) so a location like "Hangzhou, Zhejiang" cannot trigger the same error.
+
+**2. Memory node filtering.**
+
+`MemorySettings.tsx` gains a filter block above the node list:
+
+- The search box filters by title / body / tags with `NFKC` + lowercase normalisation, so Cyrillic and other scripts match;
+- Tag buttons are aggregated from node tags (normalised, sorted by frequency, with counts), multi-selectable, intersected with the keyword and toggled off by clicking again;
+- A "showing x of y nodes" line tracks the count and an empty state appears when nothing matches;
+- The graph gains `highlight`: while filtering, non-matching nodes fade to 0.22 so the overall shape stays readable.
+
+**3. Inline memory node editing.**
+
+Each node card gains an edit button that expands into title / body / tags fields backed by `nodeDraft`:
+
+- Saving calls the existing `updateMemoryNode(id, { title, content, tags }, tagExpansion)`; a blank title falls back to the first 40 characters of the body and tags are split on commas or newlines, capped at 8;
+- With "tag linking & graph expansion" on, `updateMemoryNode` drops the node's old tag edges before relinking from the new tags, so no dangling edges remain;
+- An empty body disables Save with a toast, and Cancel writes nothing.
+
+**Verified.**
+
+| Case | Result |
+| --- | --- |
+| Unit: `createLatestReminder` five parts, location with half/full-width commas and newlines flattened, empty location still five parts | pass |
+| Live API (pre-fix reproduction): prompt concatenated into latest_reminder → 400 unknown platform / unknown language | reproduced |
+| In-app E2E (live API, system prompt with commas and newlines + per-turn injection): `latest_reminder` is exactly five parts with no newline and a valid language; the prompt appears twice in system and ends the block; the reply is done and the stored reminder snapshot is clean | pass |
+| In-app E2E (V4 Pro folded path): no `latest_reminder` role, the reminder folds into system, the prompt repeats twice and the reply works | pass |
+| 40-node list: keyword (including Cyrillic), tag, tag+keyword filters, clear, counts and 37 dimmed graph nodes | pass |
+| Inline edit: prefill, title/body/tag changes, persistence, other nodes untouched, `updatedAt` bumped, empty body blocks save, cancel writes nothing, edited body is searchable | pass |
+| Tag edge maintenance: adding a shared tag creates a `tag` edge, removing it deletes the edge | pass |
+| 390px viewport: filter bar, tag buttons and edit card without horizontal overflow | pass |
+
+**Files:** `src/services/chat/latestReminder.ts`, `src/services/chat/store.ts`, `src/components/settings/{MemorySettings.tsx,MemorySettings.module.css}`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.

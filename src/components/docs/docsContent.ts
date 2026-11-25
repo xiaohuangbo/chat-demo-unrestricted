@@ -428,7 +428,10 @@ const zh: DocsDoc = {
             ['提示词预设', '切换整套系统提示词：默认 v4.1 文档，也可选 GODMODE 等预设'],
             ['自动越狱', '被拒绝时自动换 L1B3RT4S 组合重试，最多若干次'],
             ['中文越狱提示词', '把内置英文提示词换成中文翻译，可能降低效果'],
-            ['每轮注入系统提示词', '每轮在 latest_reminder 里重申设定，长对话不漂移'],
+            [
+              '每轮注入系统提示词',
+              '每轮把系统提示词再次追加到 system 末尾重申设定，长对话不漂移（不能拼进 latest_reminder：服务端按逗号把它切成五个字段）',
+            ],
             ['历史思维链伪装', '把上一轮思考并入助手正文下发，避免整段历史重复放大 token'],
             ['防撤回', '保留模型已撤回的正文与思维链，后续轮次继续使用'],
             ['跳过安全审核', '请求不再带 safety_check 字段'],
@@ -526,6 +529,14 @@ const zh: DocsDoc = {
             ['相关度阈值', '总分低于阈值不注入，默认 0.15'],
             ['向量维度', '本地哈希向量的维度，默认 256；越高越细也越慢'],
             ['检索权重', '关键词 / 标签 / 向量 / 关联边各自的权重，默认 1 / 0.5 / 0.8 / 0.4'],
+            [
+              '节点筛选',
+              '节点列表上方的搜索框按标题 / 正文 / 标签过滤（支持 Unicode，俄语等非拉丁文字同样可用），标签按钮可多选、与关键字取交集；关系图会把未命中的节点淡出',
+            ],
+            [
+              '就地编辑',
+              '每个节点卡片上有编辑按钮，可直接改标题、正文与标签；标签改动会同步重算标签边，保存后列表与关系图立刻更新',
+            ],
           ],
         },
         {
@@ -1344,7 +1355,7 @@ const en: DocsDoc = {
             ],
             [
               'Inject system prompt every turn',
-              'Repeats the setup in latest_reminder so long chats stay on track',
+              'Appends the system prompt to the end of system again every turn so long chats stay on track (it cannot go into latest_reminder: the server splits that string on commas into five fields)',
             ],
             [
               'Disguise history thinking',
@@ -1462,6 +1473,14 @@ const en: DocsDoc = {
               'Local hash vector size, 256 by default; higher is finer but slower',
             ],
             ['Weights', 'Keyword / tag / vector / edge weights, 1 / 0.5 / 0.8 / 0.4 by default'],
+            [
+              'Node filter',
+              'The search box above the node list filters by title / body / tags (Unicode-aware, so Cyrillic works too); tag buttons can be multi-selected and intersect with the keyword; the graph dims nodes that do not match',
+            ],
+            [
+              'Inline editing',
+              'Every node card has an edit button to change its title, body and tags in place; tag changes rebuild tag edges and the list plus graph update immediately',
+            ],
           ],
         },
         {

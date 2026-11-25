@@ -16,6 +16,7 @@ import {
   linkMemoryBankByTags,
   searchMemoryBank,
   unlinkMemoryBankByTags,
+  updateMemoryNode,
   memoryBankStats,
   useMemoryBank,
   type MemoryEdge,
@@ -48,7 +49,12 @@ import { ParamControl } from './ParamControls.js'
 import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
 import { Modal } from '../base/Modal.js'
-import { IconEditOutline16, IconTrashOutline16 } from '../base/icons.js'
+import {
+  IconCloseOutline16,
+  IconEditOutline16,
+  IconSearchOutline16,
+  IconTrashOutline16,
+} from '../base/icons.js'
 import { showToast } from '../base/toastState.js'
 import { isLocalModel } from '../../services/local/catalog.js'
 import { lastLocalModelSelection } from '../../services/local/store.js'
@@ -120,6 +126,9 @@ const layoutGraph = (nodes: MemoryNode[], edges: MemoryEdge[]) => {
   return { visible, positions }
 }
 
+/** 标签归一化：与 memoryBank 里连边用的口径一致，全角 / 大小写 / 空白差异都视为同一个标签 */
+const normalizeTag = (tag: string): string => tag.normalize('NFKC').trim().toLowerCase()
+
 const formatBytes = (bytes: number): string =>
   bytes >= 1024 * 1024
     ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -129,11 +138,14 @@ const MemoryGraph = ({
   nodes,
   edges,
   selectedId,
+  highlight,
   onSelect,
 }: {
   nodes: MemoryNode[]
   edges: MemoryEdge[]
   selectedId: string | null
+  /** 筛选命中集合：传 null 表示没有筛选，全部正常显示 */
+  highlight?: Set<string> | null
   onSelect: (id: string | null) => void
 }) => {
   const t = useTranslate()
@@ -186,7 +198,10 @@ const MemoryGraph = ({
           return (
             <g
               key={node.id}
-              className={styles.graphNode}
+              className={clsx(
+                styles.graphNode,
+                highlight && !highlight.has(node.id) && styles.graphNodeDim
+              )}
               onClick={(event) => {
                 event.stopPropagation()
                 onSelect(selected ? null : node.id)
@@ -238,6 +253,12 @@ export const MemorySettings = () => {
   const [query, setQuery] = useState('')
   const [debug, setDebug] = useState<MemorySearchDebug | null>(null)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  /** 记忆节点列表的筛选：正文 / 标题 / 标签关键字 + 多选标签 */
+  const [nodeFilter, setNodeFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+  /** 就地编辑中的节点与草稿 */
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
+  const [nodeDraft, setNodeDraft] = useState({ title: '', content: '', tags: '' })
   const [pendingArchive, setPendingArchive] = useState<MemoryArchive | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const bankUsage = memoryBankStats(settings.memoryBankDimension)
@@ -265,6 +286,84 @@ export const MemorySettings = () => {
       settings.memoryBankTagExpansion,
     ]
   )
+
+  /** 节点上出现过的标签：归一化后合并，按出现次数排序，用于筛选按钮 */
+  const tagIndex = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>()
+    for (const node of nodes) {
+      for (const tag of node.tags) {
+        const key = normalizeTag(tag)
+        if (!key) {
+          continue
+        }
+        const entry = counts.get(key)
+        if (entry) {
+          entry.count += 1
+        } else {
+          counts.set(key, { label: tag.trim(), count: 1 })
+        }
+      }
+    }
+    return [...counts.entries()]
+      .map(([key, { label, count }]) => ({ key, label, count }))
+      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+  }, [nodes])
+
+  const filterActive = nodeFilter.trim() !== '' || tagFilter.length > 0
+
+  /** 关键字匹配标题、正文与标签；标签筛选是「全部命中」的与关系 */
+  const filteredNodes = useMemo(() => {
+    const keyword = nodeFilter.trim().normalize('NFKC').toLowerCase()
+    const wantTags = tagFilter.map(normalizeTag)
+    return nodes.filter((node) => {
+      if (wantTags.length > 0) {
+        const own = node.tags.map(normalizeTag)
+        if (!wantTags.every((tag) => own.includes(tag))) {
+          return false
+        }
+      }
+      if (keyword === '') {
+        return true
+      }
+      return [node.title, node.content, ...node.tags].some((value) =>
+        value.normalize('NFKC').toLowerCase().includes(keyword)
+      )
+    })
+  }, [nodes, nodeFilter, tagFilter])
+
+  const toggleTagFilter = (key: string) => {
+    setTagFilter((current) =>
+      current.includes(key) ? current.filter((tag) => tag !== key) : [...current, key]
+    )
+  }
+
+  const startNodeEdit = (node: MemoryNode) => {
+    setEditingNodeId(node.id)
+    setNodeDraft({ title: node.title, content: node.content, tags: node.tags.join(', ') })
+  }
+
+  const saveNodeEdit = (id: string) => {
+    const content = nodeDraft.content.trim()
+    if (!content) {
+      showToast({ key: 'memoryNodeEditEmpty' })
+      return
+    }
+    updateMemoryNode(
+      id,
+      {
+        title: nodeDraft.title.trim() || content.slice(0, 40),
+        content,
+        tags: nodeDraft.tags
+          .split(/[,，\n]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+          .slice(0, 8),
+      },
+      settings.memoryBankTagExpansion
+    )
+    setEditingNodeId(null)
+    showToast({ key: 'memoryNodeEditSaved' })
+  }
 
   const handleAdd = () => {
     if (addSavedMemory(newText)) {
@@ -654,6 +753,7 @@ export const MemorySettings = () => {
             nodes={nodes}
             edges={edges}
             selectedId={selectedNode}
+            highlight={filterActive ? new Set(filteredNodes.map((node) => node.id)) : null}
             onSelect={setSelectedNode}
           />
           {selected ? (
@@ -681,8 +781,120 @@ export const MemorySettings = () => {
       )}
 
       {nodes.length > 0 ? (
+        <div className={styles.nodeFilter}>
+          <div className={styles.filterInput}>
+            <span className={styles.filterIcon} aria-hidden>
+              <IconSearchOutline16 />
+            </span>
+            <input
+              className={clsx(styles.input, styles.filterInputField)}
+              value={nodeFilter}
+              placeholder={t('memoryNodeFilterPlaceholder')}
+              aria-label={t('memoryNodeFilterPlaceholder')}
+              onChange={(event) => setNodeFilter(event.target.value)}
+            />
+            {nodeFilter ? (
+              <button
+                type="button"
+                className={styles.filterClear}
+                aria-label={t('memoryNodeFilterClear')}
+                onClick={() => setNodeFilter('')}
+              >
+                <IconCloseOutline16 />
+              </button>
+            ) : null}
+          </div>
+          {tagIndex.length > 0 ? (
+            <div className={styles.tagChips}>
+              {tagIndex.map((tag) => (
+                <button
+                  key={tag.key}
+                  type="button"
+                  className={styles.tagButton}
+                  data-active={tagFilter.includes(tag.key) || undefined}
+                  aria-pressed={tagFilter.includes(tag.key)}
+                  onClick={() => toggleTagFilter(tag.key)}
+                >
+                  {tag.label}
+                  <span className={styles.tagCount}>{tag.count}</span>
+                </button>
+              ))}
+              {tagFilter.length > 0 ? (
+                <button
+                  type="button"
+                  className={styles.tagReset}
+                  onClick={() => setTagFilter([])}
+                >
+                  {t('memoryNodeFilterClear')}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <div className={styles.meta}>
+            {t('memoryNodeFilterCount', {
+              shown: filteredNodes.length,
+              total: nodes.length,
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {nodes.length > 0 && filteredNodes.length === 0 ? (
+        <div className={styles.empty}>{t('memoryNodeFilterEmpty')}</div>
+      ) : null}
+
+      {filteredNodes.length > 0 ? (
         <div className={clsx(styles.list, styles.nodeList)}>
-          {nodes.map((node) => {
+          {filteredNodes.map((node) => {
+            if (editingNodeId === node.id) {
+              return (
+                <div key={node.id} className={styles.node} data-editing="true">
+                  <div className={styles.nodeHead}>
+                    <span className={styles.nodeTitle}>{t('memoryNodeEditTitle')}</span>
+                  </div>
+                  <input
+                    className={styles.input}
+                    value={nodeDraft.title}
+                    placeholder={t('memoryNodeEditTitlePlaceholder')}
+                    aria-label={t('memoryNodeEditTitle')}
+                    onChange={(event) =>
+                      setNodeDraft((draft) => ({ ...draft, title: event.target.value }))
+                    }
+                  />
+                  <textarea
+                    className={styles.textarea}
+                    rows={4}
+                    autoFocus
+                    value={nodeDraft.content}
+                    aria-label={t('memoryNodeEditContent')}
+                    onChange={(event) =>
+                      setNodeDraft((draft) => ({ ...draft, content: event.target.value }))
+                    }
+                  />
+                  <input
+                    className={styles.input}
+                    value={nodeDraft.tags}
+                    placeholder={t('memoryNodeEditTagsPlaceholder')}
+                    aria-label={t('memoryNodeEditTagsAria')}
+                    onChange={(event) =>
+                      setNodeDraft((draft) => ({ ...draft, tags: event.target.value }))
+                    }
+                  />
+                  <div className={styles.editActions}>
+                    <Button size="s" variant="outlined" onClick={() => setEditingNodeId(null)}>
+                      {t('cancel')}
+                    </Button>
+                    <Button
+                      size="s"
+                      disabled={!nodeDraft.content.trim()}
+                      onClick={() => saveNodeEdit(node.id)}
+                    >
+                      {t('save')}
+                    </Button>
+                  </div>
+                </div>
+              )
+            }
             const nodeEdges = edges.filter(
               (edge) => edge.sourceId === node.id || edge.targetId === node.id
             )
@@ -699,6 +911,12 @@ export const MemorySettings = () => {
                   <span className={styles.meta}>
                     {t('memoryBankEdges')}: {degree}
                   </span>
+                  <IconButton
+                    size="xs"
+                    icon={<IconEditOutline16 />}
+                    tooltip={t('memoryNodeEditTooltip')}
+                    onClick={() => startNodeEdit(node)}
+                  />
                   <IconButton
                     size="xs"
                     icon={<IconTrashOutline16 />}
@@ -729,9 +947,7 @@ export const MemorySettings = () => {
             )
           })}
         </div>
-      ) : (
-        <div className={styles.empty}>{t('memoryBankEmpty')}</div>
-      )}
+      ) : null}
 
       {nodes.length > 0 ? (
         <div className={styles.clearRow}>

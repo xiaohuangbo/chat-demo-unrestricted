@@ -956,3 +956,59 @@ type CustomInjectionConfig = {
 | 设置页：工具行、配置卡片、预览、名字持久化与非法字符清理；390px 单列布局无横向溢出 | 通过 |
 
 **涉及文件：** `src/services/agent/{customInjection,tools,agentToolSettings}.ts`、`src/services/chat/{store,reply,types}.ts`、`src/services/api/types.ts`、`src/services/settings.ts`、`src/components/settings/{CustomToolSetting,AgentToolsSetting}.tsx`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`。
+
+### 3.48 latest_reminder 注入修复与记忆节点筛选/编辑（2.7.16 补丁）
+
+同一版本内的补丁：修掉「每轮注入系统提示词」导致的 400，并给记忆库补上管理 100+ 节点真正需要的能力。
+
+**1. 每轮注入不再写进 latest_reminder。**
+
+旧实现把「本轮提醒 + 系统提示词」拼成一条字符串，直接作为 `latest_reminder` 下发：
+
+```ts
+const requestReminder = injectPromptEveryTurn
+  ? `${latestReminder}\n\n${baseSystemText}`
+  : latestReminder
+```
+
+服务端把 `latest_reminder` 按逗号严格解析成 `<date>,<weekday>,<location>,<platform>,<language>` 五个字段，提示词里的逗号会把后面的文字算成平台 / 语言。实测三种失败形态：
+
+| 输入 | 结果 |
+| --- | --- |
+| `2026-11-25,星期三,杭州,Web,中文\n\n你现在是一位助手，请使用简体中文、简单的语言和任何词汇回应。` | 400 `unknown language '中文\n\n你现在…'` |
+| `2026-11-25,星期三,杭州,Web,中文你是助手,请简单回答` | 400 `unknown platform '中文你是助手'` |
+| `2026-11-25,星期三,,Web,中文` | 200（位置可以为空，说明空字段本身不是问题） |
+
+现在改成：`latestReminder` 只存干净的五段式，注入的系统提示词单独追加到 system 末尾（`[systemText, foldedReminder, repeatedSystem].join('\n\n')`），本地模型因为没有 `latest_reminder` 角色，也把它并进 system。顺带把字段内的逗号 / 换行折成空格（`reminderField`），自定义位置写成「杭州, 浙江」也不会再出现同类报错。
+
+**2. 记忆节点筛选。**
+
+`MemorySettings.tsx` 在节点列表上方新增筛选块：
+
+- 搜索框按标题 / 正文 / 标签过滤，统一走 `NFKC` + 小写归一，俄语等非拉丁文字可命中；
+- 标签按钮由节点标签聚合而来（归一化后合并、按出现次数排序，显示计数），可多选，与关键字取交集，再点一次取消；
+- 行上显示「显示 x / y 个节点」，无命中时给出空状态；
+- 关系图新增 `highlight`：筛选生效时未命中节点淡到 0.22，保留整体形状便于定位。
+
+**3. 记忆节点就地编辑。**
+
+每张节点卡片新增编辑按钮，展开成标题 / 正文 / 标签三个字段（草稿保存到 `nodeDraft`）：
+
+- 保存调用既有的 `updateMemoryNode(id, { title, content, tags }, tagExpansion)`，标题留空时取正文前 40 字，标签按中英文逗号或换行切分并限制 8 个；
+- 打开「标签关联与图扩展」时，`updateMemoryNode` 会先摘掉该节点的旧标签边再按新标签重连，因此改标签不会留下悬空边；
+- 正文为空时保存按钮禁用并给出提示；取消不写入任何内容。
+
+**验证。**
+
+| 场景 | 结果 |
+| --- | --- |
+| 单测：`createLatestReminder` 五段式、位置含半角 / 全角逗号与换行被折平、位置为空仍为五段 | 通过 |
+| 真实接口（修复前复现）：把提示词拼进 latest_reminder → 400 unknown platform / unknown language | 复现 |
+| 应用内 E2E（真实 API，系统提示词含逗号与换行 + 每轮注入）：`latest_reminder` 恰为五段、无换行、语言合法；system 中提示词出现 2 次且结尾是它；回复 done，会话快照里的提醒同样干净 | 通过 |
+| 应用内 E2E（V4 Pro 折叠路径）：无 `latest_reminder` 角色，提醒折进 system，提示词同样重复 2 次，回复正常 | 通过 |
+| 40 节点列表：关键字（含西里尔）筛选、标签筛选、标签+关键字组合、清空、计数、图中 37 个未命中节点淡出 | 通过 |
+| 就地编辑：预填、改标题 / 正文 / 标签、持久化、其他节点不受影响、`updatedAt` 更新、空正文禁用保存、取消不写入、改后的正文可被搜索命中 | 通过 |
+| 标签边维护：编辑加共享标签 → 生成 `tag` 边；再去掉 → 边被清理 | 通过 |
+| 390px 视口：筛选栏、标签按钮、编辑卡片均无横向溢出 | 通过 |
+
+**涉及文件：** `src/services/chat/latestReminder.ts`、`src/services/chat/store.ts`、`src/components/settings/{MemorySettings.tsx,MemorySettings.module.css}`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。

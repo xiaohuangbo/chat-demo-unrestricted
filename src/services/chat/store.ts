@@ -1740,10 +1740,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         ]
           .filter(Boolean)
           .join('\n\n')
-        // 每轮注入：只加在本次请求的 latest_reminder 里，不写入历史快照，避免存储膨胀
-        const requestReminder = injectPromptEveryTurn
-          ? `${latestReminder}\n\n${baseSystemText}`
-          : latestReminder
+        /**
+         * 每轮注入：把当前系统提示词再追加一次到 system 末尾。
+         *
+         * 不能拼进 latest_reminder —— 服务端把它按逗号严格解析成五个字段，提示词里的逗号
+         * 会让后面的文字被当成平台名 / 语言，直接回 400；新行同理。历史快照仍然只存干净的
+         * 五段式提醒，避免每轮把它写进会话。
+         */
+        const repeatedSystem = injectPromptEveryTurn ? baseSystemText : ''
+        const requestReminder = latestReminder
         // V4 Pro 不接受 latest_reminder 角色：把本轮提醒、压缩摘要折进 leading system
         const reminderRoleSupported = !localModel && supportsServerTools(initial.model ?? MODEL)
         const compression = getSession(sessionId)?.compression
@@ -1759,7 +1764,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ]
               .filter(Boolean)
               .join('\n\n')
-        const requestSystemText = foldedReminder ? `${systemText}\n\n${foldedReminder}` : systemText
+        const requestSystemText = [systemText, foldedReminder, repeatedSystem]
+          .filter(Boolean)
+          .join('\n\n')
         // 大附件 / 长文本：服务端只在带 DeepSeek 扩展字段时套 32768 token 的用户输入上限，
         // 去掉这些字段后纯 Anthropic 兼容请求可以一直用到 1M 上下文
         if (
@@ -1859,7 +1866,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           ? streamLocalMessage({
               model: initial.model ?? MODEL,
               // 本地模型没有 latest_reminder 角色，把本轮提醒与增强上下文拼到 system 末尾
-              system: [systemText, localAugment, requestReminder].filter(Boolean).join('\n\n'),
+              // 本地模型没有 latest_reminder 角色：提醒与每轮注入的提示词都并进 system
+              system: [systemText, localAugment, requestReminder, repeatedSystem]
+                .filter(Boolean)
+                .join('\n\n'),
               messages,
               signal: controller.signal,
             })

@@ -574,6 +574,19 @@ export const zh = {
   memoryAddButton: '添加',
   memoryEmpty: '还没有长期记忆',
   memoryEditTooltip: '编辑',
+  memoryNodeFilterPlaceholder: '搜索标题、正文或标签',
+  memoryNodeFilterClear: '清空',
+  memoryNodeFilterCount: '显示 {shown} / {total} 个节点',
+  memoryNodeFilterEmpty: '没有匹配的节点，试试换个关键字或清空标签筛选',
+  memoryNodeEditTooltip: '编辑节点',
+  memoryNodeEditTitle: '编辑记忆节点',
+  memoryNodeEditTitlePlaceholder: '标题（留空取正文前 40 字）',
+  memoryNodeEditContent: '内容',
+  memoryNodeEditTags: '标签',
+  memoryNodeEditTagsAria: '节点标签',
+  memoryNodeEditTagsPlaceholder: '标签，用逗号分隔（最多 8 个）',
+  memoryNodeEditEmpty: '内容不能为空',
+  memoryNodeEditSaved: '记忆节点已更新',
   memoryDeleteTooltip: '删除',
   memoryClearAll: '清空长期记忆',
   memoryUpdatedToast: '已更新长期记忆：{summary}',
@@ -981,7 +994,7 @@ export const zh = {
   thinkingDisguiseHeader: '【上一轮思考过程】',
   settingsInjectPrompt: '每轮注入系统提示词',
   settingsInjectPromptDescription:
-    '每轮请求都把当前系统提示词静默附带在 latest_reminder 里，长对话中模型更不容易忘记设定；会明显增加输入 token。',
+    '每轮请求都把当前系统提示词静默追加到 system 末尾重申一次，长对话中模型更不容易忘记设定；会明显增加输入 token。',
   settingsTranslateJailbreak: '将越狱提示词翻译成中文（实验性）',
   settingsTranslateJailbreakDescription:
     '把内置的 GODMODE 与深度指令换成中文翻译。中文表达与训练语料差异可能降低越狱效果，建议先小范围试用。',
@@ -2053,6 +2066,12 @@ export const zh = {
     '历史消息按规则还原成工具调用：助手消息转成 tool_use（只转本工具生成的 / 全部回答 / 不转），紧随其后的提问转成它的 tool_result（可只转带标记的消息），多轮上下文形状与本轮一致；tool_use 与 tool_result 之间不插其它角色，附件与系统提醒自动让位',
   changelogV2716Limits:
     '强制工具调用会自动处理接口限制：本轮关闭深度思考、不请求标题，并去掉安全审核字段与联网搜索 / 链接阅读工具（这些字段与 tool_choice 同时出现会被当成思考模式拒绝）；工具被关闭或大输入触发扩展字段剥离时不转换历史，避免下发未声明的工具',
+  changelogV2716ReminderFix:
+    '修复「每轮注入系统提示词」把提示词拼进 latest_reminder 导致的 400：服务端把该字段按逗号严格解析成 <日期>,<星期>,<位置>,<平台>,<语言> 五段，提示词里的逗号会让后面的文字被当成平台 / 语言。现在每轮注入改为追加到 system 末尾，latest_reminder 始终保持干净的五段式；位置名里的逗号与换行也会先折成空格，避免同类报错',
+  changelogV2716MemoryFilter:
+    '记忆节点列表新增筛选栏：搜索框按标题 / 正文 / 标签过滤（Unicode 口径，俄语等非拉丁文字同样可用），标签按钮可多选并与关键字取交集，行上显示「显示 x / y 个节点」，关系图会把未命中的节点淡出',
+  changelogV2716MemoryEdit:
+    '记忆节点卡片新增编辑按钮：可就地修改标题、正文与标签（最多 8 个），保存后列表、关系图与检索立即生效；改动标签时同步重算标签边，不用再删掉重建或导出 JSON 手改',
   changelogV2716Apk: '同步构建 2.7.16 APK（versionCode 286），使用 xiaohuangbo.jks 签名',
   changelogV2715Title: 'v2.7.15 · 2026-11',
   changelogV2715Genui:

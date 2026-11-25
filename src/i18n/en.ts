@@ -645,6 +645,19 @@ export const en = {
   memoryAddButton: 'Add',
   memoryEmpty: 'No long-term memories yet',
   memoryEditTooltip: 'Edit',
+  memoryNodeFilterPlaceholder: 'Search title, content or tags',
+  memoryNodeFilterClear: 'Clear',
+  memoryNodeFilterCount: 'Showing {shown} of {total} nodes',
+  memoryNodeFilterEmpty: 'No matching nodes — try another keyword or clear the tag filter',
+  memoryNodeEditTooltip: 'Edit node',
+  memoryNodeEditTitle: 'Edit memory node',
+  memoryNodeEditTitlePlaceholder: 'Title (blank uses the first 40 characters)',
+  memoryNodeEditContent: 'Content',
+  memoryNodeEditTags: 'Tags',
+  memoryNodeEditTagsAria: 'Node tags',
+  memoryNodeEditTagsPlaceholder: 'Tags separated by commas (up to 8)',
+  memoryNodeEditEmpty: 'Content cannot be empty',
+  memoryNodeEditSaved: 'Memory node updated',
   memoryDeleteTooltip: 'Delete',
   memoryClearAll: 'Clear all memories',
   memoryUpdatedToast: 'Saved to memory: {summary}',
@@ -1065,7 +1078,7 @@ export const en = {
   thinkingDisguiseHeader: '[Previous-round thinking]',
   settingsInjectPrompt: 'Inject the system prompt every round',
   settingsInjectPromptDescription:
-    'Silently attaches the current system prompt to latest_reminder on every request so long chats keep the setup; this clearly increases input tokens.',
+    'Silently appends the current system prompt to the end of system on every request so long chats keep the setup; this clearly increases input tokens.',
   settingsTranslateJailbreak: 'Translate jailbreak prompts to Chinese (experimental)',
   settingsTranslateJailbreakDescription:
     'Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak; try it on a small scale first.',
@@ -2211,6 +2224,12 @@ export const en = {
     'History is restored as tool calls by rule: an assistant message becomes tool_use (only ones from this tool / every answer / never) and the user message right after it becomes its tool_result (optionally only marked messages), so multi-turn context keeps this round’s shape; nothing is inserted between tool_use and tool_result, and attachments plus reminders move out of the way',
   changelogV2716Limits:
     'Forced tool choice handles the API limits automatically: thinking is off for the round, no title is requested, and the safety check field plus web search / link reading tools are dropped (any of them alongside tool_choice is rejected as thinking mode). When the tool is disabled or large input strips the extension fields, history is left as text so no undeclared tool is sent',
+  changelogV2716ReminderFix:
+    'Fixes the 400 caused by “Inject the system prompt every round” appending the prompt into latest_reminder: the server parses that field as exactly five comma-separated parts (<date>,<weekday>,<location>,<platform>,<language>), so commas in the prompt made the rest look like the platform or language. The prompt is now appended to the end of system instead and latest_reminder stays clean; commas and newlines inside a location name are folded to spaces to avoid the same failure',
+  changelogV2716MemoryFilter:
+    'The memory node list gains a filter bar: the search box filters by title / body / tags (Unicode-aware, so Cyrillic works too), tag buttons can be multi-selected and intersect with the keyword, a “showing x of y nodes” line tracks the result, and the graph dims nodes that do not match',
+  changelogV2716MemoryEdit:
+    'Every memory node card gains an edit button: change the title, body and tags (up to 8) in place; the list, graph and retrieval update at once, and tag changes rebuild tag edges, so no more delete-and-recreate or exporting JSON to edit by hand',
   changelogV2716Apk: 'Builds the 2.7.16 APK (versionCode 286), signed with xiaohuangbo.jks',
   changelogV2715Title: 'v2.7.15 · 2026-11',
   changelogV2715Genui:
