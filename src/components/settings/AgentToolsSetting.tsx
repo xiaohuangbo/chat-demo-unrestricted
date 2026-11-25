@@ -16,6 +16,7 @@ import { Switch } from '../base/Switch.js'
 import { IconGenuiOutline16 } from '../base/icons.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
+import { CustomToolSetting } from './CustomToolSetting.js'
 import settingsStyles from './Settings.module.css'
 import styles from './AgentToolsSetting.module.css'
 
@@ -178,6 +179,8 @@ export const AgentToolsSetting = () => {
         })}
       </div>
       <div className={styles.note}>{t('agentToolsFootnote')}</div>
+
+      <CustomToolSetting />
 
       <div className={settingsStyles.groupTitle}>{t('agentWorkspaceToolsTitle')}</div>
       <div className={styles.workspaceGate}>

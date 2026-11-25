@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.15.apk` (112 MB, versionCode 285,
-SHA-256 `7412f9322cd74e43526040af1aedd0c33efdc70c15aca6817ced206a2aac4f60`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.16.apk` (112 MB, versionCode 286,
+SHA-256 `6c4f9a4685dc3b4408ccd63cc904c65411a8d5f0c8ec00839e055281597e4787`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -102,6 +102,8 @@ Last regression run (2026-11, v2.7.14, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.16**: Settings → Browser tools gains a **custom prompt-injection tool** — you define the tool name, description and argument name, and state in the description that the answer body goes into that argument. With forced tool choice the request sets `tool_choice` to it, so the model can only answer as a single tool call; the client then restores the argument as plain text, so the reply card, copy and history all look like a normal answer. History is restored as tool calls by rule (assistant → `tool_use`: only from this tool / every answer / never; the following question → `tool_result`: all / only marked, marker stripped), keeping multi-turn context in this round's shape while attachments and reminders move out of the way. Forced mode handles the API limits automatically: thinking off, no title request, and the safety check field plus server tools dropped — any of them alongside `tool_choice` is rejected as thinking mode.
 
 - **2.7.15**: adds a **GenUI** browser tool — the model declares an interface in JSON (stat cards, sortable tables, line/bar charts, progress, callouts, grid cards) and the client renders it with whitelisted native components without executing HTML; icon and syntax follow [dsh-genui](https://github.com/omdsh-dev/dsh-genui) (MIT), credited at the end of the in-app changelog. Also merges upstream chat-demo 0.1.4 (`5477ea6` / `6da0786` / `ea0d208` / `cdf9617`) — history import now pairs attachments with their chat, reading the session JSON first and then its own files, so images no longer have to sit after the index; cross-chat deduplication uses ZIP offsets and the read cache holds two windows; import progress is counted in chats; and older engines are supported (AbortSignal.reason / throwIfAborted fallbacks, toSorted / toReversed replacements, 100dvh → 100vh).
 

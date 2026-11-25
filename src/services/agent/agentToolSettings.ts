@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   allAgentTools,
+  CUSTOM_INJECTION_TOOL_ID,
   registerNanovmTools,
   registerWebvmTools,
   registerUnkernelTools,
@@ -126,8 +127,13 @@ export const agentToolGroup = (id: string): ToolGroup =>
       ? 'workspace'
       : 'browser'
 
-/** 当前聊天模式是否允许该工具（模式只是多加一道限制，不越过开关） */
-export const modeAllowsTool = (id: string): boolean => modeAllowsGroup(agentToolGroup(id))
+/**
+ * 当前聊天模式是否允许该工具（模式只是多加一道限制，不越过开关）。
+ * 提示词注入工具不执行任何动作、只是一种输出通道，因此不受模式分组限制，
+ * 仅聊天模式下也能把正文写成工具参数。
+ */
+export const modeAllowsTool = (id: string): boolean =>
+  id === CUSTOM_INJECTION_TOOL_ID || modeAllowsGroup(agentToolGroup(id))
 
 /** 当前实际会下发给模型的工具：开关打开 + 聊天模式允许 */
 export const enabledAgentTools = (): AgentTool[] =>

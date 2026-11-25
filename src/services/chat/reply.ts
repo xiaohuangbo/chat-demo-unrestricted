@@ -5,10 +5,16 @@ import type {
   MessageStreamEvent,
   OutputBlockStart,
   TextBlockParam,
+  ToolResultBlockParam,
 } from '../api/types.js'
 import { translate } from '../../i18n/index.js'
 import { inlineAttachmentText } from '../attachmentLargeText.js'
 import { isPoisonToolId } from '../searchPoison.js'
+import {
+  toCustomToolResult,
+  toCustomToolUse,
+  type CustomHistoryPlan,
+} from '../agent/customInjection.js'
 import type {
   AssistantMessage,
   FileAttachment,
@@ -170,6 +176,33 @@ export const settleReply = (
 })
 
 /**
+ * 注入工具的正文还原：把工具参数里的正文接回回答末尾，并记下当时的工具名与参数名
+ * （历史请求据此还原成 tool_use）。这一轮本来以 tool_use 结束，还原后按正常回答处理。
+ */
+export const applyCustomBody = (
+  reply: AssistantMessage,
+  body: string,
+  mark: NonNullable<AssistantMessage['customTool']>
+): AssistantMessage => {
+  let blocks = reply.blocks
+  if (body !== '') {
+    const last = blocks.at(-1)
+    blocks =
+      last?.type === 'text' && !last.isTemplate
+        ? [...blocks.slice(0, -1), { ...last, text: last.text + body }]
+        : [...blocks, { type: 'text', text: body }]
+  }
+  return {
+    ...reply,
+    blocks,
+    customTool: mark,
+    // 正文已经还原成普通回答：结束原因与续写资格都按正常回答恢复
+    stopReason: reply.stopReason === 'tool_use' ? 'end_turn' : reply.stopReason,
+    prefix: true,
+  }
+}
+
+/**
  * 回复是否保留了服务端已下发的正文或思维链。
  * 拒绝回复默认被清空，只有开启防撤回时才有内容，界面据此决定是否按正常回复展示。
  */
@@ -320,12 +353,26 @@ const toInlineBlocks = (files: FileAttachment[]): TextBlockParam[] =>
 const hasInlineText = (files: FileAttachment[]): boolean =>
   files.some(({ inline, inlineText }) => inline && inlineText)
 
-/** 有文件时用内容块数组：先文件块、再直接放入上下文的正文，最后是本轮文字 */
-const toUserParam = ({ content, files }: UserMessage): MessageParam => {
+/** 提问是否会进入请求：没有文字、没有可用附件、也没有直接放入上下文正文时整轮省略 */
+const userHasBody = ({ content, files }: UserMessage): boolean =>
+  content !== '' || toFileBlocks(files).length > 0 || hasInlineText(files)
+
+/**
+ * 有文件时用内容块数组：先文件块、再直接放入上下文的正文，最后是本轮文字。
+ * 传入 toolResult 时这条提问按「注入工具的历史还原」处理：正文整体放进 tool_result，
+ * 且 tool_result 必须排在文件块之前（同一消息里 tool_result 只能出现在最前面）。
+ */
+const toUserParam = (
+  { content, files }: UserMessage,
+  toolResult?: ToolResultBlockParam
+): MessageParam => {
   const blocks: (FileBlockParam | TextBlockParam)[] = [
     ...toFileBlocks(files),
     ...toInlineBlocks(files),
   ]
+  if (toolResult) {
+    return { role: 'user', content: [toolResult, ...blocks] }
+  }
   return blocks.length === 0
     ? { role: 'user', content }
     : {
@@ -442,7 +489,9 @@ export const toRequestMessages = (
   latestReminder?: string,
   compression?: SessionCompression,
   disguiseThinking = false,
-  omitReminders = false
+  omitReminders = false,
+  /** 注入工具的历史还原规则；null 表示按普通文本回传历史 */
+  customPlan?: CustomHistoryPlan | null
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
@@ -471,19 +520,58 @@ export const toRequestMessages = (
     }
   }
   const lastRound = rounds.length - 1
+  /** 上一条被还原成 tool_use 的回复：下一次提问要作为它的 tool_result 回传 */
+  let pendingToolUseId: string | null = null
   rounds.forEach(([user, reply], index) => {
     // 历史提问没有文字、附件也都没有 serverId 且没有直接放入上下文的正文时，提问为空，连同回答一起省略。
-    if (!user.content && toFileBlocks(user.files).length === 0 && !hasInlineText(user.files)) {
+    if (!userHasBody(user)) {
       return
     }
-    appendReminder(reply.latestReminder)
+    // 助手回复能否还原，取决于紧随其后的那条提问是否也按 tool_result 回传（协议要求成对出现）
+    const nextUser = rounds[index + 1]?.[0] ?? question
+    const toolUse =
+      customPlan &&
+      customPlan.convertAssistant(reply) &&
+      customPlan.convertUser(nextUser) &&
+      // 用户消息整条被省略时不能还原：tool_use 后面必须跟得上 tool_result
+      userHasBody(nextUser)
+        ? toCustomToolUse(reply, customPlan.config)
+        : null
+    // tool_use 与 tool_result 之间不能夹其它角色：这类轮次的系统提醒改放到提问之前
+    const reminderFirst = pendingToolUseId !== null || toolUse !== null
+    if (reminderFirst) {
+      appendReminder(reply.latestReminder)
+    }
     messages.push(
-      toUserParam(user),
-      toAssistantParam(reply, false, thinking, disguiseThinking && index === lastRound)
+      toUserParam(
+        user,
+        pendingToolUseId !== null && customPlan
+          ? toCustomToolResult(user, pendingToolUseId, customPlan.config)
+          : undefined
+      )
     )
+    pendingToolUseId = null
+    if (toolUse) {
+      messages.push({ role: 'assistant', content: [toolUse] })
+      pendingToolUseId = toolUse.id
+    } else {
+      if (!reminderFirst) {
+        appendReminder(reply.latestReminder)
+      }
+      messages.push(
+        toAssistantParam(reply, false, thinking, disguiseThinking && index === lastRound)
+      )
+    }
   })
   appendReminder(latestReminder)
-  messages.push(toUserParam(question))
+  messages.push(
+    toUserParam(
+      question,
+      pendingToolUseId !== null && customPlan
+        ? toCustomToolResult(question, pendingToolUseId, customPlan.config)
+        : undefined
+    )
+  )
   if (prefix?.prefix) {
     const assistant = toAssistantParam(prefix, true, thinking)
     // 没有非空白正文或有效思考时直接重发原问题，避免服务端拒绝空 Prefill。

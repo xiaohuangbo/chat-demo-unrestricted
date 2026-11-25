@@ -41,7 +41,18 @@ import { buildContextBreakdown, noteContextBreakdown } from './contextBreakdown.
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { estimatePages, estimateTokens, noteRunTiming } from './sessionStats.js'
-import { enabledAgentTools } from '../agent/agentToolSettings.js'
+import { enabledAgentTools, isAgentToolEnabled, modeAllowsTool } from '../agent/agentToolSettings.js'
+import { CUSTOM_INJECTION_TOOL_ID } from '../agent/tools.js'
+import {
+  customHistoryEnabled,
+  customHistoryPlan,
+  customInjectionDefinition,
+  customInjectionReady,
+  customInjectionToolChoice,
+  extractCustomBody,
+  isCustomInjectionCall,
+  type CustomInjectionConfig,
+} from '../agent/customInjection.js'
 import { createToolCall, runAgentToolCall, toolResultForModel } from '../agent/runTool.js'
 import { modePolicy, modeSystemNote } from './mode.js'
 import type { ChatToolCall } from '../agent/types.js'
@@ -69,6 +80,7 @@ import {
 } from './drafts.js'
 import { createLatestReminder } from './latestReminder.js'
 import {
+  applyCustomBody,
   applyEvent,
   canContinueReply,
   getContextRounds,
@@ -167,21 +179,58 @@ const serverTools = (search: boolean): RequestTools => {
  * 本轮下发的工具列表：服务端工具 + 已开启的浏览器工具。
  * 浏览器工具由设置里的主开关与逐项开关过滤，关闭时模型完全看不到它。
  */
-const requestTools = (search: boolean, allowAgentTools: boolean, model: string): RequestTools => {
+type RequestPlan = {
+  tools: RequestTools
+  /** 本轮生效的注入工具配置；未启用或配置不成立时为 null */
+  customInjection: CustomInjectionConfig | null
+  /** tool_choice 指向注入工具（强制模式）；接口限制见下方说明 */
+  forcedToolChoice: boolean
+}
+
+/**
+ * 组装本轮工具。
+ *
+ * 自定义注入工具下发的名字 / 描述 / 参数都由配置生成，因此不能直接用注册表里的静态定义。
+ * 强制 tool_choice 有两个接口限制（实测）：思考模式下不接受任何 tool_choice，
+ * 声明服务端工具（deepseek_read_url / deepseek_web_search）时同样会被当成思考模式拒绝，
+ * 所以强制模式本轮不下发服务端工具，并关闭思考。
+ */
+const requestPlan = (
+  search: boolean,
+  allowAgentTools: boolean,
+  model: string,
+  config: CustomInjectionConfig
+): RequestPlan => {
+  const customActive =
+    allowAgentTools &&
+    isAgentToolEnabled(CUSTOM_INJECTION_TOOL_ID) &&
+    modeAllowsTool(CUSTOM_INJECTION_TOOL_ID) &&
+    customInjectionReady(config)
+  const forced = customActive && config.forceToolChoice
   // V4 Pro 不支持服务端联网工具；带任一服务端工具会被 API 直接拒绝
-  const tools = supportsServerTools(model) ? serverTools(search) : []
+  const tools: RequestTools = forced ? [] : supportsServerTools(model) ? serverTools(search) : []
   if (!allowAgentTools) {
-    return tools
+    return { tools, customInjection: null, forcedToolChoice: false }
+  }
+  if (customActive) {
+    tools.push(customInjectionDefinition(config))
   }
   for (const tool of enabledAgentTools()) {
+    // 注入工具的静态定义只是设置页占位，真正的定义在上面按配置生成
+    if (tool.id === CUSTOM_INJECTION_TOOL_ID) {
+      continue
+    }
     tools.push({
       name: tool.id,
       description: tool.description,
       input_schema: tool.inputSchema,
     })
   }
-  return tools
+  return { tools, customInjection: customActive ? config : null, forcedToolChoice: forced }
 }
+
+/** 强制工具调用需要关闭思考：同一个会话只提示一次，避免每轮都在打扰 */
+const forcedThinkingNoticeSessions = new Set<string>()
 
 /** 一轮里客户端工具往返的默认上限；PTC / 创造模式由 mode.ts 放宽 */
 const MAX_TOOL_ROUNDS = 4
@@ -1640,6 +1689,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           memoryBankVectorWeight,
           memoryBankEdgeWeight,
           memoryBankTagExpansion,
+          customTool: customToolConfig,
         } = useSettings.getState()
         // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
         const baseSystemText =
@@ -1710,6 +1760,46 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               .filter(Boolean)
               .join('\n\n')
         const requestSystemText = foldedReminder ? `${systemText}\n\n${foldedReminder}` : systemText
+        // 大附件 / 长文本：服务端只在带 DeepSeek 扩展字段时套 32768 token 的用户输入上限，
+        // 去掉这些字段后纯 Anthropic 兼容请求可以一直用到 1M 上下文
+        if (
+          !stripDeepseekExtensions &&
+          estimateUserInputTokens(prepared.history, prepared.question) > DEEPSEEK_INPUT_TOKEN_LIMIT
+        ) {
+          stripDeepseekExtensions = true
+        }
+        if (stripDeepseekExtensions && !largeInputNoticeSessions.has(sessionId)) {
+          largeInputNoticeSessions.add(sessionId)
+          showToast({ key: 'largeInputExtensionsOff' })
+        }
+        // 本轮不再请求服务端标题：从标题请求集合里摘掉，否则这轮的用量会被当成标题请求不记账
+        if (stripDeepseekExtensions) {
+          titleRequests.delete(controller)
+        }
+        // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
+        const plan =
+          localModel || stripDeepseekExtensions
+            ? { tools: [] as RequestTools, customInjection: null, forcedToolChoice: false }
+            : requestPlan(
+                (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
+                true,
+                initial.model ?? MODEL,
+                customToolConfig
+              )
+        const tools = plan.tools
+        // 历史还原只在注入工具本轮生效时启用：工具没下发时历史里的 tool_use 会让服务端报错
+        const historyPlan =
+          plan.customInjection && customHistoryEnabled(plan.customInjection)
+            ? customHistoryPlan(plan.customInjection)
+            : null
+        if (plan.forcedToolChoice) {
+          // 标题请求同样会与 tool_choice 冲突：本轮主动放弃，改用提问开头几个字作为标题
+          titleRequests.delete(controller)
+          if (initial.thinking && !forcedThinkingNoticeSessions.has(sessionId)) {
+            forcedThinkingNoticeSessions.add(sessionId)
+            showToast({ key: 'customToolThinkingOff' })
+          }
+        }
         const messages = [
           ...toRequestMessages(
             prepared.history,
@@ -1719,7 +1809,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             reminderRoleSupported ? requestReminder : undefined,
             reminderRoleSupported ? compression : undefined,
             thinkingAsBody,
-            !reminderRoleSupported
+            !reminderRoleSupported,
+            historyPlan
           ),
           ...toolMessages,
         ]
@@ -1740,31 +1831,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         if (autoTuned) {
           noteAutoTune(initial.id, autoTuned.detectedContext, autoTuned.params)
         }
-        // 大附件 / 长文本：服务端只在带 DeepSeek 扩展字段时套 32768 token 的用户输入上限，
-        // 去掉这些字段后纯 Anthropic 兼容请求可以一直用到 1M 上下文
-        if (
-          !stripDeepseekExtensions &&
-          estimateUserInputTokens(prepared.history, prepared.question) > DEEPSEEK_INPUT_TOKEN_LIMIT
-        ) {
-          stripDeepseekExtensions = true
-        }
-        if (stripDeepseekExtensions && !largeInputNoticeSessions.has(sessionId)) {
-          largeInputNoticeSessions.add(sessionId)
-          showToast({ key: 'largeInputExtensionsOff' })
-        }
-        // 本轮不再请求服务端标题：从标题请求集合里摘掉，否则这轮的用量会被当成标题请求不记账
-        if (stripDeepseekExtensions) {
-          titleRequests.delete(controller)
-        }
-        // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
-        const tools =
-          localModel || stripDeepseekExtensions
-            ? []
-            : requestTools(
-                (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
-                true,
-                initial.model ?? MODEL
-              )
         noteContextBreakdown(
           sessionId,
           buildContextBreakdown({ system: systemText, tools, messages })
@@ -1803,13 +1869,16 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                 model: initial.model ?? MODEL,
                 system: requestSystemText,
                 messages,
-                thinking: initial.thinking
-                  ? fallbackNoReasoning
-                    ? { type: 'enabled' }
-                    : { type: 'enabled', budget_tokens: thinkingBudget(effort) }
-                  : { type: 'disabled' },
-                // 思考强度：0 档与降级后都不下发
-                ...(initial.thinking && effort > 0 && !fallbackNoReasoning
+                // 强制 tool_choice 时接口要求关闭思考（思考模式不接受任何 tool_choice）
+                thinking: plan.forcedToolChoice
+                  ? { type: 'disabled' }
+                  : initial.thinking
+                    ? fallbackNoReasoning
+                      ? { type: 'enabled' }
+                      : { type: 'enabled', budget_tokens: thinkingBudget(effort) }
+                    : { type: 'disabled' },
+                // 思考强度：0 档、降级后与强制工具调用时都不下发
+                ...(initial.thinking && effort > 0 && !fallbackNoReasoning && !plan.forcedToolChoice
                   ? { reasoning_effort: reasoningEffortValue(effort) }
                   : {}),
                 temperature: autoTuned?.params.temperature ?? temperature,
@@ -1819,10 +1888,25 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                 ...(stripDeepseekExtensions
                   ? {}
                   : {
-                      safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
+                      // safety_check 与 tool_choice 同时出现也会被当成思考模式拒绝（实测），强制模式下不携带
+                      ...(plan.forcedToolChoice
+                        ? {}
+                        : {
+                            safety_check: safetyCheck(
+                              unrestricted || autoJailbreak,
+                              skipSafetyCheck
+                            ),
+                          }),
                       // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
                       tools,
-                      ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+                      // 强制模式：tool_choice 指向用户自定义的注入工具
+                      ...(plan.customInjection && plan.forcedToolChoice
+                        ? { tool_choice: customInjectionToolChoice(plan.customInjection) }
+                        : {}),
+                      // 强制工具调用时不能请求标题：标题生成与 tool_choice 同时出现会被当成思考模式拒绝
+                      ...(titleRequests.has(controller) && !plan.forcedToolChoice
+                        ? { title: { enabled: true } }
+                        : {}),
                     }),
               },
               controller.signal
@@ -1859,7 +1943,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
           if (
             event.type === 'message_delta' &&
-            (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
+            (event.delta.stop_reason === 'end_turn' ||
+              event.delta.stop_reason === 'max_tokens' ||
+              // 强制工具调用时本轮以 tool_use 结束，标题仍然有效
+              (plan.customInjection !== null && event.delta.stop_reason === 'tool_use')) &&
             event.delta.title?.trim() &&
             titleRequests.has(controller) &&
             !controller.signal.aborted &&
@@ -1879,8 +1966,34 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settle(reply, 'done', Date.now())
+        // 注入工具：正文落在工具参数里，这里把它接回回答并记下工具名，
+        // 不进入工具执行流程，也不再带着 tool_result 请求下一轮。
+        if (plan.customInjection) {
+          const injection = plan.customInjection
+          const entry = [...toolSlots.entries()].find(([, slot]) =>
+            isCustomInjectionCall(slot.name, injection)
+          )
+          if (entry) {
+            const [slotIndex, slot] = entry
+            let input: unknown = {}
+            if (slot.json.trim() !== '') {
+              try {
+                input = JSON.parse(slot.json)
+              } catch {
+                input = {}
+              }
+            }
+            toolSlots.delete(slotIndex)
+            reply = applyCustomBody(reply, extractCustomBody(input, injection), {
+              name: slot.name,
+              param: injection.paramName,
+            })
+            updateReply(sessionId, reply)
+            persist(sessionId)
+          }
+        }
         // 本地模型、V4 Pro 与大输入轮次没有服务端标题：首轮用提问开头几个字作为会话标题
-        if ((!serverTitle || stripDeepseekExtensions) && !getSession(sessionId)?.title) {
+        if ((!serverTitle || stripDeepseekExtensions || plan.forcedToolChoice) && !getSession(sessionId)?.title) {
           const title = request.question.content.replace(/\s+/g, ' ').trim().slice(0, 24)
           if (title) {
             updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))

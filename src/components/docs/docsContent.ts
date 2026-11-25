@@ -75,7 +75,7 @@ const zh: DocsDoc = {
             ['搜索投毒', '时间与知识截止、接管搜索、关键字 / 正则替换、黑名单、强制结果、白名单'],
             ['记忆', '长期记忆、自动提炼、记忆更新提示、网状记忆库、导入导出、关系图、搜索调试'],
             ['附件', '附件限制、大小与数量、扩展名白名单、大文本附件、附件投毒'],
-            ['浏览器工具', '一个主开关 + 十一项能力开关（含 GenUI）、通知权限、风险标签'],
+            ['浏览器工具', '一个主开关 + 十二项能力开关（含 GenUI 与自定义提示词注入工具）、通知权限、风险标签'],
             ['工作区', '浏览器本地文件库：新建 / 编辑 / 删除、导入导出'],
             ['虚拟机', 'NanoVM Slim / WebVM 的开关、工具链、网络、内存与配额'],
             ['Unkernel Linux', '内存、超时、联网、声音、显示、数据盘、Worker、CPU、Wisp'],
@@ -638,6 +638,25 @@ const zh: DocsDoc = {
             ['open_url', '在浏览器打开链接', '写入'],
             ['show_widget', '生成可视化卡片（沙箱 iframe）', '只读'],
             ['show_genui', '用 JSON 声明原生界面：指标卡、表格、图表、进度、提示块', '只读'],
+            [
+              'custom_injection',
+              '自定义注入工具：模型把回答正文写进你定义的参数，客户端再还原成正文',
+              '只读',
+            ],
+          ],
+        },
+        {
+          type: 'p',
+          text: '提示词注入工具（设置 → 浏览器工具最下方）是唯一一个「参数由你定义」的工具：工具名、描述、参数名都自己填，描述里要写明「把回答正文写进这个参数」。打开「强制工具调用」后，请求会带 tool_choice 指向它，模型只能把正文写成一次工具调用的参数；收到回应后客户端把参数还原成普通正文，回复卡片、复制与历史里看到的都和普通回答一样，也不会真的执行任何动作。',
+        },
+        {
+          type: 'ul',
+          items: [
+            '历史消息转换：助手消息按规则还原成 tool_use（只转本工具生成的 / 全部回答 / 不转），紧随其后的提问还原成它的 tool_result（可只转带标记的消息），多轮上下文与本轮形状一致。',
+            '协议细节：tool_use 与 tool_result 必须成对且相邻，所以这类轮次的系统提醒会挪到提问之前；带附件的提问把 tool_result 排在文件块前面。',
+            '接口限制：tool_choice 与深度思考、安全审核字段、服务端联网工具、标题请求不能共存，强制模式下本轮会自动关掉思考、不请求标题并去掉这些字段。',
+            '工具被关闭、或本轮因大输入剥离扩展字段时不转换历史，避免把未声明的工具写进请求。',
+            '它不执行任何动作，只是一种输出通道，所以不受聊天模式分组限制：仅聊天模式下也能用，同一轮其它浏览器工具照旧不下发。',
           ],
         },
         {
@@ -1563,6 +1582,25 @@ const en: DocsDoc = {
               'Declare a native interface in JSON: stats, tables, charts, progress, callouts',
               'read-only',
             ],
+            [
+              'custom_injection',
+              'Custom injection tool: the model writes its answer body into an argument you define, and the client restores it as text',
+              'read-only',
+            ],
+          ],
+        },
+        {
+          type: 'p',
+          text: 'The prompt injection tool (bottom of Settings → Browser tools) is the only tool whose arguments you define: you pick the tool name, description and argument name, and the description must state that the answer body goes into that argument. With forced tool choice the request sets tool_choice to it, so the model can only answer as a single tool call; the client then restores the argument as plain text, so the reply card, copy and history all look like a normal answer, and nothing is actually executed.',
+        },
+        {
+          type: 'ul',
+          items: [
+            'History conversion: assistant messages become tool_use by rule (only ones from this tool / every answer / never) and the user message right after becomes its tool_result (optionally only marked messages), so multi-turn context matches this round.',
+            'Protocol detail: tool_use and tool_result must be adjacent and paired, so reminders for those rounds move before the question; a question with attachments puts tool_result ahead of the file blocks.',
+            'API limits: tool_choice cannot coexist with thinking, the safety check field, server tools or a title request, so forced mode turns thinking off, skips the title and drops those fields for the round.',
+            'When the tool is disabled or large input strips the extension fields, history is not converted, so no undeclared tool is sent.',
+            'It executes nothing — it is only an output channel — so it ignores the chat-mode tool groups: it works in chat-only mode while every other browser tool stays off.',
           ],
         },
         {

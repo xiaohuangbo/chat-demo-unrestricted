@@ -1,5 +1,6 @@
 import type { JsonSchema } from '../api/types.js'
 import { normalizeGenuiSpec, parseGenuiSpec } from './genui.js'
+import { extractCustomBody, normalizeCustomInjection } from './customInjection.js'
 
 /**
  * 浏览器 Agent 工具（移植自 DeepSeek-Agent 的 browser / widget 工具）。
@@ -876,6 +877,32 @@ const genuiTool: AgentTool = {
   },
 }
 
+/**
+ * 自定义提示词注入工具：设置页只给一个开关与一份配置面板，
+ * 真正下发给模型的工具名、描述、参数都由配置生成（见 customInjection.ts），
+ * 所以这里的 description 只是给设置页看的说明，请求里会整体替换。
+ */
+export const CUSTOM_INJECTION_TOOL_ID = 'custom_injection'
+
+const customInjectionTool: AgentTool = {
+  id: CUSTOM_INJECTION_TOOL_ID,
+  label: '提示词注入工具',
+  labelEn: 'Prompt injection tool',
+  summary: '自定义一个工具，让模型把回答正文写进它的参数，收到后还原成普通正文。',
+  summaryEn:
+    'Define your own tool so the model puts its answer body into its argument; restore it as text on arrival.',
+  description:
+    '由「自定义提示词注入工具」配置生成：工具名、描述、参数名都是用户自己在设置里填的。' +
+    '开启强制工具调用时，请求会带 tool_choice 指向这个工具，模型的正文因此全部落在参数里。',
+  inputSchema: objectSchema({ body: { type: 'string', description: '回答正文' } }, ['body']),
+  risk: 'safe',
+  // 只在兜底路径执行（正常流程在 chat store 里还原成正文，不会走到这里）
+  run: async (input) => {
+    const body = extractCustomBody(input, normalizeCustomInjection(null))
+    return ok(body.trim() === '' ? '（没有正文）' : body)
+  },
+}
+
 /** 浏览器工具；顺序即设置页展示顺序 */
 export const AGENT_TOOLS: AgentTool[] = [
   timeTool,
@@ -889,6 +916,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   openUrlTool,
   widgetTool,
   genuiTool,
+  customInjectionTool,
 ]
 
 export const AGENT_TOOL_IDS = AGENT_TOOLS.map((tool) => tool.id)

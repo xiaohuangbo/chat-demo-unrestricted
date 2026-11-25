@@ -898,3 +898,61 @@ onProgress?.({ done: 0, total: totalSessions })
 - 语法与项目图标移植自 [dsh-genui](https://github.com/omdsh-dev/dsh-genui)（MIT），图标用在工具行与卡片标题；鸣谢追加到更新日志的鸣谢区（unkernel / go-deepseek 之后）与 11-license；
 - 解析器 `src/services/agent/genui.ts` 做长度、层级、行数与系列数限制，坏块只丢弃自己，未知类型忽略；单测覆盖合法 spec、空 blocks、坏 JSON、未知块；
 - 真机验证：模型实际调用 `show_genui`，会话里 `toolCalls[0]` 状态 done、产物 kind=genui，回复中渲染出「本月概览 / ¥128,430 / 表格 / 柱状图」，设置页工具行显示 GenUI 图标。
+
+### 3.47 自定义提示词注入工具（2.7.16）
+
+设置 → 浏览器工具新增「提示词注入工具（自定义）」：把「回答正文」变成一次客户端工具调用的参数，收到回应后再还原为普通正文。工具本身不执行任何动作，只改变模型输出正文的通道。
+
+**1. 配置（`src/services/agent/customInjection.ts`）。** 用户自己填写工具名、工具描述、参数名与参数说明，描述里要写明「把回答正文写进这个参数」：
+
+```ts
+type CustomInjectionConfig = {
+  name: string            // 下发给模型的工具名，如 emit_answer
+  description: string     // 写给模型看的说明
+  paramName: string       // 正文参数，默认 content
+  paramDescription: string
+  forceToolChoice: boolean
+  assistantRule: 'off' | 'generated' | 'all'
+  userRule: 'off' | 'paired' | 'marked'
+  marker: string          // userRule=marked 的前缀标记
+}
+```
+
+- `sanitizeToolName` / `normalizeCustomInjection`：非法字符换成下划线、数字开头补 `tool_`、参数名不能与工具名相同、规则取值非法时回落默认；空名字允许存着（界面正在重填）但不视为可用，`customInjectionReady` 为 false 时不下发。
+- `customInjectionDefinition`：生成 `ClientToolDefinition`，`required: [paramName]`、`additionalProperties: false`；描述为空时回落到默认文案。
+
+**2. 请求组装（`store.ts` 的 `requestPlan`）。** 注入工具下发的名字 / 描述 / 参数都来自配置，因此静态注册表里的 `custom_injection` 只作设置页占位，请求时跳过、改用按配置生成的定义。强制模式追加 `tool_choice: { type: 'tool', name }`。
+
+实测有三处字段与 `tool_choice` 冲突（服务端一律回 `Thinking mode does not support this tool_choice`）：
+
+| 字段 | 处理 |
+| --- | --- |
+| 深度思考（`thinking.enabled`） | 本轮改成 `{ type: 'disabled' }`，并在会话内提示一次 |
+| `safety_check` | 本轮不携带 |
+| 服务端工具（`deepseek_read_url` / `deepseek_web_search`） | 本轮不下发 |
+| `title: { enabled: true }` | 本轮不请求，标题回落到提问开头 24 字 |
+
+**3. 正文还原（`reply.ts` 的 `applyCustomBody`）。** 流结束后如果工具槽里有注入工具调用，取出参数（`extractCustomBody` 优先配置的参数名，模型用了别的键时取第一个字符串），把它接回回答末尾：末尾是正文块就拼接，否则追加一个新的正文块；同时在回复上记 `customTool: { name, param }`。这条回复不再执行工具、不再带 `tool_result` 请求下一轮，`stopReason` 从 `tool_use` 改回 `end_turn`，`prefix` 恢复为 true，于是复制、编辑、统计与普通回复完全一致。
+
+**4. 历史还原（`toRequestMessages`）。** 多轮上下文要与本轮的形状一致，否则模型会一边输出正文一边补一次工具调用：
+
+- 规则：`convertAssistant`（only generated / all）决定哪条助手消息还原成 `tool_use`；`convertUser`（paired / marked）决定紧随其后的提问还原成它的 `tool_result`。
+- 协议：`tool_use` 必须紧跟配对 `tool_result`，所以这轮的系统提醒从「提问之后」挪到「提问之前」；带附件的提问把 `tool_result` 排在文件块最前面；助手能还原的前提是下一条提问确实会进入请求（`userHasBody`），否则整轮放弃还原。
+- 只在注入工具本轮真正下发时启用：工具被关掉、或大输入剥离扩展字段时不转换，避免请求里出现未声明的工具。
+- 它不执行任何动作、只是输出通道，因此 `modeAllowsTool` 对它单独放行：仅聊天模式下也会下发这一个工具（其余浏览器工具照旧不下发）。
+- `tool_use` 的 id 由回复 id 派生（`toolu_<id>`），同一分支多次请求保持稳定。
+
+**5. 设置界面（`CustomToolSetting.tsx`）。** 可折叠卡片：头部显示工具名 / 参数名 / 强制标签 / 历史标签与开关，展开后是工具定义表单、强制开关、历史规则两个下拉与标记输入，底部「预览」同时给出下发给接口的工具定义 JSON 和转换后的历史形状。名字非法时卡片右上角显示警告并说明原因。卡片在定高滚动的设置面板里必须 `flex-shrink: 0`，否则会被压成一条线（首版实测 2px 高）。
+
+**验证。**
+
+| 场景 | 结果 |
+| --- | --- |
+| 单测：名称清理 / 规则回落 / 参数等于工具名 / 定义与 tool_choice 形状 / 正文抽取 | 通过 |
+| 单测：历史还原（generated vs all vs off、paired vs marked、提醒位置、附件顺序、前缀续写、无计划时不转换） | 通过 |
+| 真实接口：强制 tool_choice 下模型把正文写进 `content` | 通过（`tool_choice` 正确下发，正文完整） |
+| 应用内 E2E（Chromium + 真实 API）：第一轮请求带 tool_choice、无 server tool / safety_check / title，回复渲染为正文且无工具卡片，会话记录 `customTool`、无 `toolCalls`、`stopReason=end_turn` | 通过 |
+| 应用内 E2E：第二轮请求中上一轮回答是 `assistant: tool_use`、本轮提问是 `user: tool_result`，两者 id 配对 | 通过 |
+| 设置页：工具行、配置卡片、预览、名字持久化与非法字符清理；390px 单列布局无横向溢出 | 通过 |
+
+**涉及文件：** `src/services/agent/{customInjection,tools,agentToolSettings}.ts`、`src/services/chat/{store,reply,types}.ts`、`src/services/api/types.ts`、`src/services/settings.ts`、`src/components/settings/{CustomToolSetting,AgentToolsSetting}.tsx`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`。

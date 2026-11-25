@@ -94,6 +94,11 @@ export type AssistantMessage = MessageBranch & {
   customCot?: string
   /** 本轮调用的浏览器工具记录；导出的历史包不含该字段，重新导入后不显示 */
   toolCalls?: ChatToolCall[]
+  /**
+   * 本轮正文是通过「提示词注入工具」返回的：记录当时的工具名与参数名，
+   * 历史请求据此把这条回答还原成 tool_use（设置改了也不会错乱）。
+   */
+  customTool?: { name: string; param: string }
   /** 请求时是否声明 deepseek_web_search；关闭时仍声明 deepseek_read_url */
   search?: boolean
   /** 本轮请求的系统信息快照；各回答版本独立保存，续写沿用。历史消息中缺省的快照保持为空。 */

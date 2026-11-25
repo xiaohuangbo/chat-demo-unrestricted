@@ -898,3 +898,61 @@ onProgress?.({ done: 0, total: totalSessions })
 - Syntax and the project icon are ported from [dsh-genui](https://github.com/omdsh-dev/dsh-genui) (MIT); the icon appears on the tool row and the card title, and the credit is appended to the in-app changelog credits (after unkernel / go-deepseek) and 11-license;
 - The parser in `src/services/agent/genui.ts` limits text length, nesting, rows and series; bad blocks are dropped individually and unknown types ignored. Unit tests cover a valid spec, empty blocks, malformed JSON and unknown blocks;
 - Verified end to end: the model actually called `show_genui`, the stored `toolCalls[0]` finished with an artifact of kind `genui`, the reply rendered "本月概览 / ¥128,430 / table / bar chart", and the settings row shows the GenUI icon.
+
+### 3.47 Custom prompt-injection tool (2.7.16)
+
+Settings → Browser tools gains a custom prompt-injection tool: the answer body becomes the argument of a client tool call, and the client restores it as plain text once the reply arrives. The tool performs nothing; it only changes the channel the model's answer travels through.
+
+**1. Configuration (`src/services/agent/customInjection.ts`).** You fill in the tool name, description, argument name and argument description; the description must state that the answer body goes into that argument:
+
+```ts
+type CustomInjectionConfig = {
+  name: string            // tool name sent to the API, e.g. emit_answer
+  description: string     // what the model reads
+  paramName: string       // argument carrying the body, content by default
+  paramDescription: string
+  forceToolChoice: boolean
+  assistantRule: 'off' | 'generated' | 'all'
+  userRule: 'off' | 'paired' | 'marked'
+  marker: string          // prefix marker for userRule=marked
+}
+```
+
+- `sanitizeToolName` / `normalizeCustomInjection`: invalid characters become underscores, a leading digit gets a `tool_` prefix, the argument cannot equal the tool name, and unknown rule values fall back to defaults. An empty name may be stored (the user is retyping) but `customInjectionReady` is false, so the tool is not sent.
+- `customInjectionDefinition` builds the `ClientToolDefinition` with `required: [paramName]` and `additionalProperties: false`; an empty description falls back to the default text.
+
+**2. Request assembly (`requestPlan` in `store.ts`).** The name, description and argument all come from the config, so the static `custom_injection` registry entry only exists for the settings row: it is skipped and the generated definition is sent instead. Forced mode adds `tool_choice: { type: 'tool', name }`.
+
+Three fields were found to conflict with `tool_choice` — the server answers `Thinking mode does not support this tool_choice`:
+
+| Field | Handling |
+| --- | --- |
+| Thinking (`thinking.enabled`) | Switched to `{ type: 'disabled' }` for the round, with one toast per session |
+| `safety_check` | Omitted for the round |
+| Server tools (`deepseek_read_url` / `deepseek_web_search`) | Not sent for the round |
+| `title: { enabled: true }` | Not requested; the title falls back to the first 24 characters of the question |
+
+**3. Body restore (`applyCustomBody` in `reply.ts`).** After the stream ends, if a tool slot holds an injection call, its argument is extracted (`extractCustomBody` prefers the configured argument name and falls back to the first string when the model used another key) and appended to the answer: it is concatenated into a trailing text block or added as a new one, and the reply records `customTool: { name, param }`. The turn no longer executes a tool, no `tool_result` round follows, `stopReason` drops back from `tool_use` to `end_turn` and `prefix` returns to true — so copy, edit, stats and everything else treat it as a normal answer.
+
+**4. History restore (`toRequestMessages`).** Multi-turn context must keep the same shape, otherwise the model starts mixing prose with a trailing tool call:
+
+- Rules: `convertAssistant` (only generated / all) picks which assistant messages become `tool_use`; `convertUser` (paired / marked) decides whether the following question becomes its `tool_result`.
+- Protocol: `tool_use` must be followed by a paired `tool_result`, so reminders for such rounds move from after the question to before it; a question with attachments puts `tool_result` ahead of the file blocks; an assistant reply is only converted if the next question really enters the request (`userHasBody`).
+- Conversion runs only when the tool is actually sent this round: a disabled tool or stripped extension fields leave history as text, so the request never carries an undeclared tool.
+- It executes nothing and is only an output channel, so `modeAllowsTool` exempts it: chat-only mode still sends this one tool (every other browser tool stays off).
+- The `tool_use` id derives from the reply id (`toolu_<id>`) and stays stable across requests on the same branch.
+
+**5. Settings UI (`CustomToolSetting.tsx`).** A collapsible card: the header shows the tool name, argument name, forced/history chips and the switch; expanding reveals the tool definition form, the force switch, two rule selects plus the marker input, and a preview that prints both the API tool definition JSON and the converted history shape. An invalid name raises a warning chip with the reason. Inside the fixed-height settings scroller the card needs `flex-shrink: 0`, otherwise it collapses to a 2px line (observed in the first build).
+
+**Verified.**
+
+| Case | Result |
+| --- | --- |
+| Unit: name sanitising / rule fallback / argument equals tool name / definition and tool_choice shape / body extraction | pass |
+| Unit: history restore (generated vs all vs off, paired vs marked, reminder position, attachment order, prefix continuation, no plan) | pass |
+| Live API: forced tool_choice makes the model write the body into `content` | pass |
+| In-app E2E (Chromium + live API): first request carries tool_choice and no server tool / safety_check / title; the reply renders as text with no tool card; the stored reply has `customTool`, no `toolCalls` and `stopReason=end_turn` | pass |
+| In-app E2E: the second request sends the previous answer as `assistant: tool_use` and the current question as `user: tool_result` with a matching id | pass |
+| Settings: tool row, config card, preview, name persistence and invalid-character cleanup; 390px single-column layout without horizontal overflow | pass |
+
+**Files:** `src/services/agent/{customInjection,tools,agentToolSettings}.ts`, `src/services/chat/{store,reply,types}.ts`, `src/services/api/types.ts`, `src/services/settings.ts`, `src/components/settings/{CustomToolSetting,AgentToolsSetting}.tsx`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`.

@@ -188,7 +188,11 @@ export type MessageParam =
   | { role: 'latest_reminder'; content: string }
   | {
       role: 'user'
-      content: string | (FileBlockParam | TextBlockParam)[] | ToolResultBlockParam[]
+      /** tool_result 必须排在同一消息的最前面，所以允许它和文本、文件块混排 */
+      content:
+        | string
+        | (FileBlockParam | TextBlockParam)[]
+        | (FileBlockParam | TextBlockParam | ToolResultBlockParam)[]
     }
   | { role: 'assistant'; content: AssistantBlockParam[] }
 
@@ -234,6 +238,8 @@ export type CreateMessageRequest = {
   max_tokens?: number
   /** 不传表示本轮不声明任何服务端工具 */
   tools?: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientToolDefinition)[]
+  /** 工具选择：省略时由模型自己决定；tool 指向某个客户端工具（思考模式下接口不支持） */
+  tool_choice?: { type: 'auto' | 'any' } | { type: 'tool'; name: string }
   /** 省略时不携带（等同 low 档默认检查）；high 开启基础风控，默认档下发 high */
   safety_check?: { level: 'high' | 'low' }
   title?: { enabled: boolean }

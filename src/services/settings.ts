@@ -13,6 +13,11 @@ import {
   normalizeSearchPoison,
   type SearchPoisonConfig,
 } from './searchPoison.js'
+import {
+  DEFAULT_CUSTOM_INJECTION,
+  normalizeCustomInjection,
+  type CustomInjectionConfig,
+} from './agent/customInjection.js'
 import type { AutoTuneStrategy } from './unrestricted/autotune.js'
 import type { ObfuscationTechnique } from './unrestricted/parseltongue.js'
 import type { PromptPreset } from './unrestricted/prompts.js'
@@ -77,6 +82,8 @@ type Settings = {
   memoryBankTagExpansion: boolean
   /** 搜索投毒：改写时间、接管搜索并替换/过滤结果 */
   searchPoison: SearchPoisonConfig
+  /** 自定义提示词注入工具：把回答正文改成一次工具调用的参数 */
+  customTool: CustomInjectionConfig
   /** 附件投毒：上传前往附件里写入文本 */
   attachmentPoison: AttachmentPoisonConfig
   /** 每日 Token / 费用提醒 */
@@ -185,6 +192,7 @@ const KEYS = {
   variantRaceConfirmDismissed: 'chat-demo:variant-race-confirm-dismissed',
   search: 'chat-demo:search',
   searchPoison: 'chat-demo:search-poison',
+  customTool: 'chat-demo:custom-injection',
   attachmentPoison: 'chat-demo:attachment-poison',
   temperature: 'chat-demo:temperature',
   topP: 'chat-demo:top-p',
@@ -361,6 +369,15 @@ const initialSystemPrompt = (): string | null => {
   return saved !== null && saved.trim() !== '' ? saved : null
 }
 
+/** 自定义注入工具配置：JSON 解析失败、缺字段或名字非法时统一按规则修正 */
+const initialCustomTool = (): CustomInjectionConfig => {
+  try {
+    return normalizeCustomInjection(JSON.parse(read(KEYS.customTool) ?? 'null'))
+  } catch {
+    return DEFAULT_CUSTOM_INJECTION
+  }
+}
+
 /** 搜索投毒配置：JSON 解析失败或格式不对时回到默认值 */
 const initialSearchPoison = (): SearchPoisonConfig => {
   try {
@@ -474,6 +491,7 @@ export const useSettings = create<Settings>(() => ({
   search: read(KEYS.search) === 'true',
   searchPoison: initialSearchPoison(),
   attachmentPoison: initialAttachmentPoison(),
+  customTool: initialCustomTool(),
   temperature: initialNumber(KEYS.temperature, 1, 0, 2),
   topP: initialNumber(KEYS.topP, 1, 0.01, 1),
   maxTokens: initialMaxTokens(),
@@ -574,6 +592,13 @@ export const setCustomCot = (customCot: string) => {
 export const setSearch = (search: boolean) => {
   write(KEYS.search, String(search))
   useSettings.setState({ search })
+}
+
+/** 合并式更新自定义注入工具配置；名称与参数名写入前统一做字符清理 */
+export const setCustomTool = (patch: Partial<CustomInjectionConfig>) => {
+  const next = normalizeCustomInjection({ ...useSettings.getState().customTool, ...patch })
+  write(KEYS.customTool, JSON.stringify(next))
+  useSettings.setState({ customTool: next })
 }
 
 /** 合并式更新搜索投毒配置；数组字段整体替换，写入前统一做边界校验 */
@@ -957,6 +982,7 @@ export const resetSettings = () => {
     search: false,
     searchPoison: defaultSearchPoison(),
     attachmentPoison: defaultAttachmentPoison(),
+    customTool: DEFAULT_CUSTOM_INJECTION,
     temperature: 1,
     topP: 1,
     maxTokens: null,

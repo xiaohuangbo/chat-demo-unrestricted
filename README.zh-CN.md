@@ -72,8 +72,8 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.15.apk`（112 MB，versionCode 285，
-SHA-256 `7412f9322cd74e43526040af1aedd0c33efdc70c15aca6817ced206a2aac4f60`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.16.apk`（112 MB，versionCode 286，
+SHA-256 `6c4f9a4685dc3b4408ccd63cc904c65411a8d5f0c8ec00839e055281597e4787`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -98,6 +98,8 @@ SHA-256 `7412f9322cd74e43526040af1aedd0c33efdc70c15aca6817ced206a2aac4f60`），
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.16**：设置 → 浏览器工具新增「提示词注入工具（自定义）」——自己定义工具名、描述与参数名，描述里写明「把回答正文写进这个参数」；开启强制工具调用时请求带 `tool_choice` 指向它，模型只能把正文写成一次工具调用的参数，收到回应后客户端再把参数还原成普通正文，界面、复制与历史里都是正常回答；历史消息按规则还原成工具调用（助手消息转 `tool_use`：仅本工具生成的 / 全部回答 / 不转；紧随其后的提问转 `tool_result`：全部 / 仅带标记的，标记不进正文），多轮上下文与本轮形状一致，附件与系统提醒自动让位；强制模式自动处理接口限制（关闭深度思考、不请求标题、去掉安全审核字段与联网工具，否则会被当成思考模式拒绝）。
 
 - **2.7.15**：设置 → 浏览器工具新增「生成 GenUI 界面」——模型用 JSON 声明界面（指标卡 / 可排序表格 / 折线柱状图 / 进度 / 提示 / 网格卡片），客户端用白名单组件原生渲染，不执行 HTML；图标与语法参考 [dsh-genui](https://github.com/omdsh-dev/dsh-genui)（MIT），鸣谢已加到更新日志末尾。同时合并上游 chat-demo 0.1.4（`5477ea6` / `6da0786` / `ea0d208` / `cdf9617`）——导入历史时按会话配对读取附件，先读会话 JSON 再读它自己的文件，不再要求图片排在 index 之后；跨会话去重改用 ZIP 偏移、读窗口升级为双缓存；导入进度改为按对话数显示；同时兼容旧内核（AbortSignal.reason / throwIfAborted 兜底、toSorted / toReversed 替换、100dvh 回退 100vh）。
 

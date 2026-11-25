@@ -556,6 +556,47 @@ export const en = {
     'Workspace tools read and write the virtual files in localStorage, never the real disk; writes and deletes ask for confirmation. Off by default.',
   agentToolsFootnote:
     'Tool results are saved with the reply on this device; generated files and widgets stay in the browser and are never uploaded. “Fetch webpage” is limited by the target site’s CORS, and “Open link” may be blocked by popup rules.',
+  customToolSectionTitle: 'Prompt injection tool (custom)',
+  customToolSectionDesc:
+    'Define your own tool so the model writes its whole answer into that tool’s argument; the argument is restored as plain text when the reply arrives. With forced tool choice, the request sets tool_choice to this tool.',
+  customToolConfigTitle: 'Tool definition',
+  customToolNameLabel: 'Tool name',
+  customToolNameDesc: 'The name sent to the model — letters, digits, underscore and hyphen only',
+  customToolDescriptionLabel: 'Tool description',
+  customToolDescriptionDesc:
+    'What the model reads; state clearly that the answer body goes into the argument',
+  customToolParamLabel: 'Argument name',
+  customToolParamDesc: 'Argument that carries the body, content by default',
+  customToolParamDescLabel: 'Argument description',
+  customToolForceLabel: 'Force tool choice',
+  customToolForceDesc:
+    'Sets tool_choice to this tool so the model can only answer through its argument. API limit: this round turns thinking off, skips the title request and drops the safety check field plus web search / link reading tools — any of them alongside tool_choice is rejected as thinking mode.',
+  customToolRestoreNote:
+    'When the reply arrives the argument is restored as normal text — the UI and history always show a regular answer.',
+  customToolHistoryTitle: 'History conversion',
+  customToolHistoryDesc:
+    'Restores earlier answers as tool calls so multi-turn context keeps the same shape as this round. A converted assistant message becomes tool_use, and the user message right after it becomes its tool_result.',
+  customToolAssistantRuleLabel: 'Assistant messages',
+  customToolAssistant_off: 'Do not convert',
+  customToolAssistant_generated: 'Only from this tool',
+  customToolAssistant_all: 'Every answer',
+  customToolUserRuleLabel: 'User messages',
+  customToolUser_off: 'Do not convert',
+  customToolUser_paired: 'The one right after',
+  customToolUser_marked: 'The marked ones',
+  customToolMarkerLabel: 'Marker',
+  customToolMarkerDesc:
+    'Only user messages starting with this marker are converted; the marker is dropped from the tool_result',
+  customToolPreviewTitle: 'Preview',
+  customToolPreviewTool: 'Tool definition sent to the API',
+  customToolPreviewHistory: 'History shape after conversion',
+  customToolPreviewOff: 'History conversion is off — history is sent as plain text.',
+  customToolChipIncomplete: 'incomplete config',
+  customToolNameInvalid:
+    'Invalid tool name: letters, digits, underscore and hyphen only, and it cannot start with a digit.',
+  customToolParamInvalid: 'Invalid argument name, or it equals the tool name.',
+  customToolThinkingOff:
+    'A forced prompt injection tool needs thinking off (API limit); disabled it for this round.',
   toolStatusRunning: 'Running',
   toolStatusDone: 'Done',
   toolStatusError: 'Failed',
@@ -2163,6 +2204,14 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2716Title: 'v2.7.16 · 2026-11',
+  changelogV2716CustomTool:
+    'Settings → Browser tools gains a custom prompt-injection tool: define the tool name, description and argument name, and state in the description that the answer body goes into that argument. With forced tool choice the request sets tool_choice to it, so the model can only answer through the argument; the client restores the argument as plain text, so the UI and history show a regular answer',
+  changelogV2716History:
+    'History is restored as tool calls by rule: an assistant message becomes tool_use (only ones from this tool / every answer / never) and the user message right after it becomes its tool_result (optionally only marked messages), so multi-turn context keeps this round’s shape; nothing is inserted between tool_use and tool_result, and attachments plus reminders move out of the way',
+  changelogV2716Limits:
+    'Forced tool choice handles the API limits automatically: thinking is off for the round, no title is requested, and the safety check field plus web search / link reading tools are dropped (any of them alongside tool_choice is rejected as thinking mode). When the tool is disabled or large input strips the extension fields, history is left as text so no undeclared tool is sent',
+  changelogV2716Apk: 'Builds the 2.7.16 APK (versionCode 286), signed with xiaohuangbo.jks',
   changelogV2715Title: 'v2.7.15 · 2026-11',
   changelogV2715Genui:
     'Settings → Browser tools gains "GenUI": the model declares an interface in JSON (text, stat cards, sortable tables, line/bar charts, progress, callouts, grid cards) and the client renders it with whitelisted native components, never executing HTML; syntax and icon follow dsh-genui (MIT), with the credit added at the end of the changelog',
