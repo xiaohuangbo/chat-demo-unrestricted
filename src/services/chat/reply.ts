@@ -537,9 +537,9 @@ export const toRequestMessages = (
       userHasBody(nextUser)
         ? toCustomToolUse(reply, customPlan.config)
         : null
-    // tool_use 与 tool_result 之间不能夹其它角色：这类轮次的系统提醒改放到提问之前
-    const reminderFirst = pendingToolUseId !== null || toolUse !== null
-    if (reminderFirst) {
+    // 服务端要求 latest_reminder 必须紧跟一条 user：所以提醒只能插在提问之前。
+    // 上一条回复是 tool_use 时，这次提问就是它的 tool_result，中间不能夹其它角色，本轮提醒快照跳过。
+    if (pendingToolUseId === null) {
       appendReminder(reply.latestReminder)
     }
     messages.push(
@@ -555,9 +555,6 @@ export const toRequestMessages = (
       messages.push({ role: 'assistant', content: [toolUse] })
       pendingToolUseId = toolUse.id
     } else {
-      if (!reminderFirst) {
-        appendReminder(reply.latestReminder)
-      }
       messages.push(
         toAssistantParam(reply, false, thinking, disguiseThinking && index === lastRound)
       )
