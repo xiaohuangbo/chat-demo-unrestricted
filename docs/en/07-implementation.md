@@ -128,7 +128,7 @@
 | [`src/components/docs/docsContent.ts`](../../src/components/docs/docsContent.ts) | The in-app docs' 26 sections (Chinese and English) |
 | [`src/services/agent/unkernelTools.ts`](../../src/services/agent/unkernelTools.ts) | The ten `unkernel_*` agent tools |
 | [`src/services/unkernel/session.ts`](../../src/services/unkernel/session.ts) | Unkernel iframe lifecycle, `window.KW.vm` polling, command execution and workspace mount |
-| [`src/services/unkernel/config.ts`](../../src/services/unkernel/config.ts) | Unkernel boot parameters and URL mapping (`mem` / `datasize` / `net` / `sound` / `display` / `worker` / `cpus` / `wisp`) |
+| [`src/services/unkernel/config.ts`](../../src/services/unkernel/config.ts) | Unkernel boot parameters and URL mapping (`distro` / `datasize` / `net` / `sound` / `display` / `worker` / `cpus` / `wisp`, plus `routes=0`, which keeps the upstream CORS mirror out of the guest’s plain HTTP; memory is owned by the page, so no `mem` is sent) |
 
 ---
 

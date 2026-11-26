@@ -18,8 +18,9 @@ The settings dialog grows from two groups to eighteen:
 | **Browser tools**     | Master switch plus twelve independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget, GenUI interfaces, and the custom prompt-injection tool |
 | **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
 | **Virtual machines**  | Two terminals: NanoVM Slim (WASM shell, quotas, toolchains, virtual network) and WebVM (CheerpX x86 Debian, cross-origin isolation, images, import/export, environment check); both run at once and switch freely |
-| **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24 / Debian 13, SMP multi-CPU, Wisp networking, sound, framebuffer, persistent disk (8 / 16 / 32 GiB), import/export, `/mnt/workspace` mount, a Chinese page UI with a desktop and 80+ apps, ten Agent tools, a DSH go app in the AI folder, data-disk reset and restart |
+| **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24 / Debian 13, SMP multi-CPU, Wisp networking, sound, framebuffer, persistent disk (8 / 16 / 32 GiB), import/export, `/mnt/workspace` mount, a Chinese page UI with a desktop and 80+ apps, ten Agent tools, a DSH go app in the AI folder, data-disk reset and restart; kernel memory is owned by the VM page’s own settings |
 | **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
+| **Account and usage** | Balance lookup, tokens and cost for today and the last 30 days, voice and search add-ons |
 | Data                  | API key, import, export, restore default settings, delete all                                                                                                                                  |
 | About                 | Repository, demo and upstream links                                                                                                                                                            |
 | Changelog             | Version history and upstream credits                                                                                                                                                           |
@@ -1132,3 +1133,35 @@ Since 2.7.9 the docs only grew feature by feature, so stale content piled up: th
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |
 
 **Files:** `README.md`, `README.zh-CN.md`, `docs/zh/*.md`, `docs/en/*.md`, `android/README.md`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.
+
+### 3.52 Dropping the duplicate memory setting and fixing Debian apt’s 403 (2.7.19)
+
+**1. Settings → Unkernel Linux no longer has a kernel-memory control.** The upstream page already has a memory slider under its own Settings → Machine, with an automatic value picked for the device, while the host’s `?mem=` pinned memory to one number: a change made inside the page was overwritten by the host’s URL on the next boot, and the two fought each other. `chat-demo:unkernel-config` no longer stores `memoryMiB` and `unkernelUrl()` no longer sends `mem`, so memory follows the page’s own settings (`kw.settings`) only. The host panel keeps distro, data disk, CPUs, devices, Worker, Wisp and timeout, and the Resources group now carries a note pointing at the VM’s own Settings. The `unkernel_*` status tools stopped reporting the host’s value too; memory now comes from the guest’s `free -m`.
+
+**2. `apt-get update` / `apt-get install` returned 403 inside Debian.** The cause is neither Debian nor Wisp: the new page hands **plain HTTP** to `deb.debian.org`, `apt.ladybird.org` and `mirror.unkernel.dev` to its own CORS mirror at `https://mirror.unkernel.dev`, answered by the page’s `fetch()` (`DEFAULT_ROUTES` in `web/src/config.ts`). That mirror keeps an Origin allowlist, so only allowlisted page origins can read it:
+
+| Page origin | `GET https://mirror.unkernel.dev/deb/debian/dists/trixie/Release` |
+| --- | --- |
+| `https://unkernel.dev` (the official site) | 200 |
+| `http://localhost:3080` | 200 |
+| `http://127.0.0.1:3080` (this app) | **403 `Origin not allowed`** |
+| The APK / a LAN address (`http://127.0.0.1:18765` and friends) | **403** |
+
+The mirror’s 403 is passed through to the guest by the page’s fetch layer, so apt reported `403 Forbidden` (`503` for index requests failing at the CORS layer). The official site never sees it because its origin is on the list. The fix is `?routes=0` on the iframe — upstream’s switch for exactly this case: the guest’s plain HTTP goes through Wisp instead of the mirror. The page’s own scripts already check whether a name is routed into `198.51.100.0/24` (the marker range of `DEFAULT_ROUTES`), so with routing off they switch to their upstream URLs by themselves.
+
+Measured (a minimal local Wisp relay plus the Debian 13 image that ships with the page):
+
+| Case | `apt-get update` | `apt-get install bzip2` |
+| --- | --- | --- |
+| `routes=0` (this version) | passes: `Get:1 http://deb.debian.org/debian trixie InRelease [140 kB]` … 10.2 MB in 16 s | passes: `bzip2 1.0.8-6` installed, `bzip2 --version` prints its banner |
+| No `routes` (previous behaviour) | `503 Service Unavailable [IP: 198.51.100.1 80]` | `403 Forbidden [IP: 198.51.100.1 80]` |
+
+Alpine shows no regression: `apk update` and `apk add curl` work, and `curl http://deb.debian.org/debian/dists/trixie/Release` inside the guest returns 200. The trade-off is written up as known limit 87: apt indexes and `.deb` files now cross a public Wisp proxy (whose operator sees plain-HTTP content) and apps that rely on the mirror fall back to their upstreams.
+
+| Check | Result |
+| --- | --- |
+| Settings → Resources | distro / CPUs / data disk / timeout only, a single slider (CPUs), and the note pointing at the VM’s own Settings |
+| iframe URL | `…&cpus=1&routes=0&wisp=…`, no `mem=` |
+| Parsed by the page | `KW.config.routes === null`, `memParam === null`, `memMiB === 2048` (the automatic value) |
+| Guest runs | Debian `apt-get update` and install pass; Alpine `apk` and an HTTP 200 pass |
+| `pnpm type` / `pnpm lint` / `pnpm build` | pass |

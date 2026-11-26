@@ -2,7 +2,7 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.7.18**
+> 当前版本：**2.7.19**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
@@ -11,7 +11,7 @@
 - **虚拟工作区**：浏览器 localStorage 里的长期文件库，可新建 / 编辑 / 删除、单文件下载、整包导入导出，并配有 5 个工作区工具；
 - **NanoVM Slim**：内置 WASM Shell Engine 与 130 个 busybox 风格命令，支持从本机或工作区直接导入单个文件（含 zip / 二进制），模型可用 `nanovm_import` 工具写入文件；桌面端右侧停靠、手机端底部面板；Python / Node.js / Lua / SQLite / esbuild / TypeScript / Sass / Terser / Prettier / make / Git / PyBot 按需安装，还有一套虚拟机内虚拟网络，能跑 Node 与 Python 的 HTTP / WebSocket 服务；
 - **WebVM（CheerpX）**：第二个终端跑真正的 x86 Debian 10，内置 bash / coreutils / gcc / g++ / Python 3 / Node.js / Ruby / Lua / make / git / vim；与 NanoVM 同时运行、自由切换，支持导入导出与模型调用，磁盘改动写进 IndexedDB 覆盖层；
-- **Unkernel Linux**：真正编译成 WebAssembly 的 Linux 7.x 内核（Alpine 3.24 / Debian 13，SMP 多 CPU），完整页面以同源 iframe 运行：新版是桌面（窗口 / 程序坞 / 应用启动器 / 控制中心 / 预览浏览器 / Wayland 窗口），80+ 个开箱应用（Steam、Chromium / Firefox / Ladybird、VLC / mpv、Xfce / X11、Vulkan、Claude Code / Ollama、Node / Python / Go / Rust、nginx / PostgreSQL、Ubuntu chroot 与 box64 等）首次运行按需下载并装包；支持 Wisp 联网、声音、framebuffer、持久磁盘（可扩容、可重置）、导入导出，页面已汉化；工作区挂到 `/mnt/workspace`，设置栏可导入 / 下载文件、保存到工作区、重置数据盘和重启虚拟机，并提供十个 `unkernel_*` 模型工具与 **DSH go**（在「AI」文件夹，24 MiB 静态 Go 二进制、中文 REPL）；NanoVM / WebVM 也提供 `fastfetch`；
+- **Unkernel Linux**：真正编译成 WebAssembly 的 Linux 7.x 内核（Alpine 3.24 / Debian 13，SMP 多 CPU），完整页面以同源 iframe 运行：新版是桌面（窗口 / 程序坞 / 应用启动器 / 控制中心 / 预览浏览器 / Wayland 窗口），80+ 个开箱应用（Steam、Chromium / Firefox / Ladybird、VLC / mpv、Xfce / X11、Vulkan、Claude Code / Ollama、Node / Python / Go / Rust、nginx / PostgreSQL、Ubuntu chroot 与 box64 等）首次运行按需下载并装包；支持 Wisp 联网、声音、framebuffer、持久磁盘（可扩容、可重置）、导入导出，内核内存交给虚拟机自己的设置，页面已汉化；工作区挂到 `/mnt/workspace`，设置栏可导入 / 下载文件、保存到工作区、重置数据盘和重启虚拟机，并提供十个 `unkernel_*` 模型工具与 **DSH go**（在「AI」文件夹，24 MiB 静态 Go 二进制、中文 REPL）；NanoVM / WebVM 也提供 `fastfetch`；
 - **聊天模式**：输入栏四档切换——仅聊天 / 网页 Agent / PTC / 创造，决定这一轮下发哪些客户端工具、允许多少次工具往返；创造模式让模型在虚拟机里自己装运行时、把脚本变成新命令；
 - **关键词拒答**：设置 → 模型里配置关键词、大小写与自定义话术；命中用户输入时在本地直接生成拒答回复，不请求接口，未填 API Key 也能触发；
 - **统计与上下文**：用量账本、趋势 / 热力 / 小时分布、上下文分类构成（系统提示词、工具定义、消息、思考、工具调用 / 结果、附件）与计费口径；

@@ -18,7 +18,7 @@
 | **浏览器工具**  | 一个主开关 + 十二项独立开关：时间日期、网络定位、天气查询、发送通知、读 / 写剪贴板、抓取网页、生成文件、打开链接、生成可视化组件、生成 GenUI 界面、自定义提示词注入工具 |
 | **工作区**      | 浏览器本地的虚拟文件库：新建 / 编辑 / 删除文件、单文件下载、整包导入（合并或覆盖）与导出                                       |
 | **虚拟机**      | 两个终端：NanoVM Slim（WASM shell、配额、工具链、虚拟网络）与 WebVM（CheerpX x86 Debian、跨源隔离、镜像、导入导出、编程环境检测）；两边可同时运行、自由切换 |
-| **Unkernel Linux** | 第三个虚拟机：发行版与内存、数据盘（8 / 16 / 32 GiB）、CPU、网络 / 声音 / 显示、Wisp 地址、文件导入导出、数据盘重置、重启虚拟机，以及十个 `unkernel_*` Agent 工具 |
+| **Unkernel Linux** | 第三个虚拟机：发行版、数据盘（8 / 16 / 32 GiB）、CPU、网络 / 声音 / 显示、Wisp 地址、文件导入导出、数据盘重置、重启虚拟机，以及十个 `unkernel_*` Agent 工具；内核内存由虚拟机自己的设置管理 |
 | **统计**        | 用量概览与范围切换、每日趋势柱状图、8 周活跃热力图、输入构成环、按模型拆分、上下文统计管理                                     |
 | **账户与用量**  | DeepSeek 账户余额查询、今日与近 30 天 token / 费用概览、语音与搜索附加用量、跳转统计                                             |
 | 数据管理        | API Key、导入、导出、恢复默认设置、删除全部对话                                                                                |
@@ -1133,3 +1133,35 @@ if (toolUse) { ... } else {
 | `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |
 
 **涉及文件：** `README.md`、`README.zh-CN.md`、`docs/zh/*.md`、`docs/en/*.md`、`android/README.md`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。
+
+### 3.52 去掉重复的内存设置、修复 Debian apt 的 403（2.7.19）
+
+**1. 设置 → Unkernel Linux 不再有「内核内存」。** 上游页面自己的「设置 → 机器」里就有内存滑块（带按设备算出的自动值），而宿主传的 `?mem=` 会把内存钉死成一个值：在页面里改完重启，宿主的 URL 又把改动盖回去，两边打架。现在 `chat-demo:unkernel-config` 去掉 `memoryMiB`，`unkernelUrl()` 不再传 `mem`，内存只由页面设置（`kw.settings`）决定；宿主面板保留发行版、数据盘、CPU、设备、Worker、Wisp、超时，并在「资源」下面加了一句说明指向虚拟机自己的设置。Agent 的 `unkernel_*` 状态工具也不再报宿主配置里的内存，内存改由 guest 的 `free -m` 给出。
+
+**2. Debian 里 `apt-get update` / `apt-get install` 报 403。** 根因不在 Debian，也不在 Wisp：新版页面默认把 `deb.debian.org`、`apt.ladybird.org`、`mirror.unkernel.dev` 的**纯 HTTP** 交给它自己的 CORS 镜像 `https://mirror.unkernel.dev`，由页面的 `fetch()` 代答（`web/src/config.ts` 的 `DEFAULT_ROUTES`）。该镜像带 Origin 白名单，只有白名单里的页面源能读：
+
+| 页面源 | `GET https://mirror.unkernel.dev/deb/debian/dists/trixie/Release` |
+| --- | --- |
+| `https://unkernel.dev`（官方站） | 200 |
+| `http://localhost:3080` | 200 |
+| `http://127.0.0.1:3080`（本应用） | **403 `Origin not allowed`** |
+| APK / 局域网地址（`http://127.0.0.1:18765` 等） | **403** |
+
+镜像返回的 403 被页面的 fetch 层原样转给 guest，apt 于是报 `403 Forbidden`（索引请求在 CORS 层失败时显示 `503`）。官方站没有这个问题，是因为它的源就在白名单里。修法是给 iframe 加 `?routes=0`——上游为这种情况准备的开关：guest 的纯 HTTP 也走 Wisp，不再经过镜像；页面自己的脚本本来就会检查名字是否被路由到 `198.51.100.0/24`（`DEFAULT_ROUTES` 的标记网段），关掉路由后它们自动改用上游地址。
+
+实测（本地最小 Wisp 中继 + 页面自带的 Debian 13 镜像）：
+
+| 场景 | `apt-get update` | `apt-get install bzip2` |
+| --- | --- | --- |
+| `routes=0`（本版本） | 通过：`Get:1 http://deb.debian.org/debian trixie InRelease [140 kB]` … 10.2 MB / 16 s | 通过：`bzip2 1.0.8-6` 装上，`bzip2 --version` 正常 |
+| 不传 `routes`（旧行为） | `503 Service Unavailable [IP: 198.51.100.1 80]` | `403 Forbidden [IP: 198.51.100.1 80]` |
+
+顺带确认 Alpine 侧没有回归：`apk update`、`apk add curl` 正常，guest 里 `curl http://deb.debian.org/debian/dists/trixie/Release` 返回 200。代价写在 [10. 已知限制](10-known-limits.md) 第 87 条：apt 的索引与 `.deb` 现在经过公共 Wisp 代理（代理运营方能看到明文 HTTP 内容），依赖该镜像的应用会改用上游地址。
+
+| 检查 | 结果 |
+| --- | --- |
+| 设置页「资源」 | 只剩发行版 / CPU / 数据盘 / 超时，滑块仅 CPU；说明指向虚拟机自己的设置 |
+| iframe 地址 | `…&cpus=1&routes=0&wisp=…`，没有 `mem=` |
+| 页面侧解析 | `KW.config.routes === null`、`memParam === null`、`memMiB === 2048`（自动值） |
+| guest 实测 | Debian `apt-get update` 与安装通过；Alpine `apk` 与 HTTP 200 通过 |
+| `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |

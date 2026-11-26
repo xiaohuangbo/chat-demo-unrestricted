@@ -1589,15 +1589,12 @@ export const en = {
   unkernelAllowAgentHint:
     'The model only sees the unkernel_* tools (shell, file reads and writes, workspace transfer and more) when this is on. Writes still ask for confirmation.',
   unkernelResources: 'Resources',
-  unkernelMemory: 'Kernel memory',
-  unkernelMemoryHint:
-    'Memory given to the guest. Alpine is comfortable above 128 MiB; Debian defaults to 2 GiB because apt / Node programs need more. Changing it restarts the VM.',
   unkernelTimeout: 'Command timeout',
   unkernelTimeoutHint: 'Longest an Agent command may run, in seconds.',
   unkernelDevices: 'Devices',
   unkernelNetwork: 'Network',
   unkernelNetworkHint:
-    'Gives the guest a NIC through a Wisp proxy; apk and curl work inside Alpine.',
+    'Gives the guest a NIC through a Wisp proxy; apk, apt and curl all use it, never the unkernel mirror.',
   unkernelSound: 'Sound',
   unkernelSoundHint: 'Gives the guest ALSA / OSS; audio plays through the browser Web Audio API.',
   unkernelDisplay: 'Display',
@@ -1610,7 +1607,7 @@ export const en = {
   unkernelWorkerHint: 'Needs crossOriginIsolated; falls back to the main thread when unavailable.',
   unkernelWisp: 'Wisp endpoint',
   unkernelWispHint:
-    'Leave empty to use the public Wisp servers (anura.pro / mercurywork.shop); set your own wss:// server to use your proxy.',
+    'Leave empty to use the public Wisp servers (anura.pro / mercurywork.shop); set your own wss:// server to use your proxy. Plain HTTP from the guest, apt sources included, goes through the same proxy.',
   unkernelWispInvalid: 'The Wisp endpoint must start with ws:// or wss://',
   unkernelAgentTools: 'Agent tools',
   unkernelAgentToolsHint:
@@ -1630,6 +1627,8 @@ export const en = {
   unkernelDistro: 'Distribution',
   unkernelDistroHint:
     'Alpine is small and fast; Debian ships glibc / apt for Docker and Node. Restart the VM after switching.',
+  unkernelMachineNote:
+    'Memory, GPU and Bluetooth live in the VM page’s own Settings (memory has an automatic value picked for the device); they are not set here, so the two cannot fight.',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPUs',
@@ -2217,6 +2216,12 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2719Title: 'v2.7.19 · 2026-11',
+  changelogV2719Memory:
+    'Settings → Unkernel Linux drops the kernel-memory control: the upstream page already has a memory slider under its own Settings → Machine (an automatic, per-device value), while the host’s ?mem= pinned it and overwrote page-side changes; no mem is sent any more, so memory and the other machine options follow the VM’s own settings',
+  changelogV2719Apt:
+    'Fixes the 403 from apt-get update / apt-get install inside Debian: the page hands plain HTTP to deb.debian.org to its own CORS mirror at mirror.unkernel.dev, which only accepts allowlisted origins (unkernel.dev, localhost, …) and answered this app’s origin with “Origin not allowed”; the iframe now always passes routes=0 so the guest’s plain HTTP goes through Wisp — measured: Debian fetched the 10.2 MB index and installed bzip2, while Alpine’s apk and HTTP access still work',
+  changelogV2719Apk: 'Builds the 2.7.19 APK (versionCode 289), signed with xiaohuangbo.jks',
   changelogV2718Title: 'v2.7.18 · 2026-11',
   changelogV2718Docs:
     'Documentation pass: the README, all 11 chapters and the in-app docs are brought up to 2.7.17 (GenUI, the custom prompt-injection tool, memory node filtering and inline editing, and the new Unkernel desktop page); stale version numbers, tool counts, chapter ranges and APK sizes are corrected; the settings reference gains the missing keys (prompt injection, memory weights and threshold, large text attachments, theme / locale / location); the request chapter documents tool_choice, the five-part latest_reminder rule and the per-mode tool round limits; known limits grow to 86',

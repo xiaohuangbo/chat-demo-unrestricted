@@ -5,12 +5,19 @@ import { create } from 'zustand'
  *
  * unkernel 页面本身在 public/unkernel/ 里，由 iframe 承载；这里只保存
  * 启动参数，改完后重建 iframe。Alpine 和 Debian 镜像都随应用分发；
- * Debian 需要更多磁盘和内存，适合 apt / glibc 程序。
+ * Debian 需要更多磁盘，适合 apt / glibc 程序。
+ *
+ * 内核内存不在这里：页面自己的「设置 → 机器」里就有内存滑块（带自动值），
+ * 而 ?mem= 会把内存固定成一个值、让页面里的改动每次启动都被覆盖，所以
+ * 这里不再传 mem，交给页面自己管。
  */
 
 const KEY = 'chat-demo:unkernel-config'
 
-/** 公共 Wisp 代理：上游默认服务器只接受 localhost，部署到其他域名时用它。 */
+/**
+ * 公共 Wisp 代理：上游默认服务器（wss://wisp.pi0.io:6680/）只接受它白名单里
+ * 的页面源，本应用部署在别的源上时用这两个（页面会同时竞速）。
+ */
 export const PUBLIC_WISP_SERVERS = 'wss://anura.pro/,wss://wisp.mercurywork.shop/'
 
 export type UnkernelDistro = 'alpine' | 'debian'
@@ -20,8 +27,6 @@ export type UnkernelConfig = {
   enabled: boolean
   /** 允许模型通过 unkernel_* 工具操作虚拟机 */
   allowAgent: boolean
-  /** 内核内存（MiB） */
-  memoryMiB: number
   /** 数据盘大小（MiB），稀疏磁盘；扩大后重启，页面会自动扩容 ext4 */
   dataDiskMiB: number
   /** 发行版镜像 */
@@ -48,7 +53,6 @@ const defaults: UnkernelConfig = {
   enabled: true,
   allowAgent: false,
   distro: 'alpine',
-  memoryMiB: 256,
   dataDiskMiB: 8192,
   network: true,
   sound: true,
@@ -78,7 +82,6 @@ const read = (): UnkernelConfig => {
       enabled: typeof source.enabled === 'boolean' ? source.enabled : defaults.enabled,
       allowAgent: typeof source.allowAgent === 'boolean' ? source.allowAgent : defaults.allowAgent,
       distro: source.distro === 'debian' ? 'debian' : 'alpine',
-      memoryMiB: clamp(source.memoryMiB ?? defaults.memoryMiB, 64, 2048),
       dataDiskMiB: clamp(source.dataDiskMiB ?? defaults.dataDiskMiB, 4096, 32768),
       network: typeof source.network === 'boolean' ? source.network : defaults.network,
       sound: typeof source.sound === 'boolean' ? source.sound : defaults.sound,
@@ -110,7 +113,6 @@ export const unkernelConfig = (): UnkernelConfig => useUnkernelConfig.getState()
 export const setUnkernelConfig = (patch: Partial<UnkernelConfig>) => {
   const next = { ...useUnkernelConfig.getState(), ...patch }
   next.distro = next.distro === 'debian' ? 'debian' : 'alpine'
-  next.memoryMiB = clamp(next.memoryMiB, 64, 2048)
   next.dataDiskMiB = clamp(next.dataDiskMiB, 4096, 32768)
   next.cpus = clamp(next.cpus, 1, 4)
   next.timeoutMs = clamp(next.timeoutMs, 5_000, 120_000)
@@ -140,7 +142,8 @@ export const unkernelAgentAvailable = (): boolean => {
 export const unkernelUrl = (config = unkernelConfig()): string => {
   const params = new URLSearchParams()
   params.set('distro', config.distro)
-  params.set('mem', String(config.memoryMiB))
+  // 内存交给页面自己的「设置 → 机器」管：这里传 mem 会把内存固定住，
+  // 页面里的改动每次启动都被覆盖。
   // 新版页面按 GiB 传数据盘大小（datasize），旧的 disk（MiB）参数已移除。
   params.set('datasize', String(Math.round(config.dataDiskMiB / 1024)))
   params.set('net', config.network ? '1' : '0')
@@ -149,7 +152,17 @@ export const unkernelUrl = (config = unkernelConfig()): string => {
   params.set('data', config.persistentData ? '1' : '0')
   params.set('worker', config.worker || config.cpus > 1 ? '1' : '0')
   params.set('cpus', String(config.cpus))
-  // 上游默认 Wisp 只接受 localhost；留空时用公共代理，页面里会同时竞速两个服务器。
+  // 页面默认把 deb.debian.org 等纯 HTTP 主机交给它自己的 CORS 镜像
+  // （mirror.unkernel.dev）用 fetch() 代答。该镜像只接受白名单里的 Origin
+  // （https://unkernel.dev、http://localhost:* 等），本应用跑在别的源上
+  // （127.0.0.1:3080、局域网地址、APK 的 http://127.0.0.1:18765）会
+  // 直接收到 403 Origin not allowed，guest 里的 apt update / apt install
+  // 于是报 403。routes=0 让 guest 的纯 HTTP 也走 Wisp，Debian 更新不再
+  // 经过镜像；页面自己的脚本本来就会检查名字是否被路由（198.51.100.0/24），
+  // 关掉路由后它们自动改用上游地址。
+  params.set('routes', '0')
+  // 上游默认 Wisp（wss://wisp.pi0.io:6680/）只接受白名单里的页面源；留空时用
+  // 公共代理，页面里会同时竞速两个服务器。
   params.set('wisp', config.wispUrl || PUBLIC_WISP_SERVERS)
   return `/unkernel/index.html?${params.toString()}`
 }

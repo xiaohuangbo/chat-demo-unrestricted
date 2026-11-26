@@ -51,14 +51,14 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.51：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.52：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 86 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 87 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -72,13 +72,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.18.apk`（118 MB，versionCode 288，
-SHA-256 `9c46f5d5d022a361d6fc2cdde5797f50a9e03b7bf4679325989e2d2fe2170c33`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.19.apk`（118 MB，versionCode 289，
+SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.18，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.19，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -96,11 +96,14 @@ SHA-256 `9c46f5d5d022a361d6fc2cdde5797f50a9e03b7bf4679325989e2d2fe2170c33`），
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、新版桌面与 80+ 应用启动器、Alpine / Debian、2 CPU SMP、工作区挂载/写回、文件导入/导出、设置页与 `datasize` 映射 | 通过  |
+| Unkernel 联网   | Debian `apt-get update`（10.2 MB 索引）/ `apt-get install bzip2`、Alpine `apk update` / `apk add curl`、guest HTTP 200、`routes=0` 与内存交回页面 | 通过  |
 | Upstream 0.1.4  | 归档附件随会话导入、按对话计进度、旧浏览器 AbortSignal / toSorted / 100dvh 兼容 | 通过（真机导入 3000 会话、带图归档、旧内核构建验证） |
 
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.19**：两处 Unkernel 修复。① 设置 → Unkernel Linux 去掉「内核内存」滑块：上游页面自己的「设置 → 机器」里就有内存（带按设备算出的自动值），而宿主传的 `?mem=` 会把内存钉死并在每次启动时覆盖页面里的改动，现在内存只由虚拟机自己的设置决定（`kw.settings`），宿主面板保留发行版、数据盘、CPU、设备、Worker、Wisp 与超时。② 修复 Debian 里 `apt-get update` / `apt-get install` 的 403：新版页面默认把 `deb.debian.org` 等纯 HTTP 交给自己的 CORS 镜像 `mirror.unkernel.dev` 代答，而该镜像只接受 `https://unkernel.dev`、`http://localhost:*` 等白名单源，本应用跑在 `127.0.0.1:3080`、局域网地址或 APK 的 `http://127.0.0.1:18765` 上只会拿到 `403 Origin not allowed`（官方站没有这个问题就是因为它的源在白名单里）；现在 iframe 固定带 `routes=0`，guest 的纯 HTTP 也走 Wisp，实测 Debian 的 `apt-get update` 拉完 10.2 MB 索引、`apt-get install bzip2` 正常，Alpine 的 `apk` 与 HTTP 访问也正常。
 
 - **2.7.18**：文档全面修订。README、`docs/zh|en/` 11 篇分册与应用内文档同步到 2.7.17 的实际能力（GenUI、提示词注入工具、记忆节点筛选与就地编辑、新版 Unkernel 桌面页面），修掉过期的版本号（仍写着 2.7.9）、工具数量（十项 / 十个）、章节范围（3.1–3.39）与 APK 体积（112 MB）；设置项速查补齐提示词注入、记忆检索权重与阈值、大文本附件、主题 / 语言 / 位置等 17 个缺失的 localStorage 键；请求体文档补上 `tool_choice`、`latest_reminder` 五段式与各模式的工具往返上限；已知限制扩到 86 条，并修正 Unkernel 许可证路径与隐私章节的外部请求说明。
 

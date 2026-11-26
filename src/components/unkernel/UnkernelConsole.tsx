@@ -148,11 +148,9 @@ export const UnkernelConsole = () => {
   }
 
   const chooseDistro = (distro: 'alpine' | 'debian') => {
-    setUnkernelConfig({
-      distro,
-      // Debian 的 apt / Node 程序比 Alpine 吃内存，默认至少给 512 MiB。
-      memoryMiB: distro === 'debian' ? Math.max(config.memoryMiB, 2048) : config.memoryMiB,
-    })
+    // 内存不在这里定：页面自己的「设置 → 机器」按设备给出自动值，
+    // 需要更多时在虚拟机里改，重启后保持。
+    setUnkernelConfig({ distro })
   }
 
   const commitTimeout = () => {
@@ -313,23 +311,7 @@ export const UnkernelConsole = () => {
           </div>
           <div className={nanoStyles.hint}>{t('unkernelDistroHint')}</div>
         </div>
-        <div className={nanoStyles.sliderRow}>
-          <div className={nanoStyles.sliderHead}>
-            <span className={nanoStyles.sliderLabel}>{t('unkernelMemory')}</span>
-            <span className={nanoStyles.sliderValue}>{config.memoryMiB} MiB</span>
-          </div>
-          <input
-            type="range"
-            className={nanoStyles.range}
-            min={64}
-            max={2048}
-            step={128}
-            value={config.memoryMiB}
-            aria-label={t('unkernelMemory')}
-            onChange={(event) => setUnkernelConfig({ memoryMiB: Number(event.target.value) })}
-          />
-          <div className={nanoStyles.hint}>{t('unkernelMemoryHint')}</div>
-        </div>
+        <div className={nanoStyles.hint}>{t('unkernelMachineNote')}</div>
         <div className={nanoStyles.sliderRow}>
           <div className={nanoStyles.sliderHead}>
             <span className={nanoStyles.sliderLabel}>{t('unkernelCpu')}</span>

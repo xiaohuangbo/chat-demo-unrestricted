@@ -59,15 +59,15 @@ The page's `dropLegacyScope` guard must stay (it lives in `web/src/sw.ts`): it o
 
 DSH go is built from `cmd/dsh-go` in the `go-deepseek` checkout (a 24 MiB static aarch64 Go binary). It is now a regular app in `web/src/apps/agents/dsh-go.ts`, with the binary shipped next to the page at `web/public/demos/dsh-go/dsh-go-linux-arm64`; the app pins its SHA-256 and byte size, so a rebuild must update both or the page refuses to push the file into the guest.
 
-Host settings arrive as URL parameters (`mem`, `datasize`, `net`, `sound`, `display`, `data`, `worker`, `cpus`, `wisp`); the page's own settings are overridden on restart, and the data-disk parameter rename lives in `src/services/unkernel/config.ts`.
+Host settings arrive as URL parameters (`distro`, `datasize`, `net`, `sound`, `display`, `data`, `worker`, `cpus`, `wisp`) plus a fixed `routes=0`, which keeps the guest’s plain HTTP on Wisp so Debian’s apt is not blocked with a 403 by the upstream CORS mirror’s Origin allowlist; kernel memory belongs to the page’s own Settings, so no `mem` is sent. Details live in `src/services/unkernel/config.ts`.
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.18.apk` (about 118 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.19.apk` (about 118 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, camera capture (system camera plus a content:// hand-off), microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 35.0.1+ (build-tools 34.0.0's d8 can crash on JDK 21 bytecode) and JDK 21/17. A one-click script at the repo root reads the `package.json` version (currently 2.7.18 / 288), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 35.0.1+ (build-tools 34.0.0's d8 can crash on JDK 21 bytecode) and JDK 21/17. A one-click script at the repo root reads the `package.json` version (currently 2.7.19 / 289), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -78,7 +78,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   ./android/build-apk.sh
   # non-interactive: KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 288;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 289;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---

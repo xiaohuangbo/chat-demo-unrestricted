@@ -108,6 +108,17 @@
 | WebVM             | Per-command timeout                  | 30 s                         | `chat-demo:webvm-config`                   | Unaffected                      |
 | WebVM             | Disk overlay (auto)                  | Empty                        | IndexedDB `nanovm-webvm:debian`            | Unaffected                      |
 | WebVM             | Cross-origin isolation (auto)        | Not enabled                  | Service worker `coi-sw.js`                 | Unaffected                      |
+| Unkernel          | Enable Unkernel Linux                | On                           | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Let the model call `unkernel_*`      | Off                          | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Distro                               | `alpine` (3.24)              | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Data disk                            | 8192 MiB (8 GiB)             | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Network / sound / display            | On / On / On                 | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Persistent disk                      | On                           | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Worker / CPUs                        | Off / 1                      | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Wisp endpoint                        | Empty (public proxies)       | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Command timeout                      | 30000 ms                     | `chat-demo:unkernel-config`                | Unaffected                      |
+| Unkernel          | Kernel memory (the page owns it)     | Auto (512 MiB on phones, 2048 MiB elsewhere) | `kw.settings` (the page’s own settings, same origin) | Unaffected        |
+| Unkernel          | Data disk contents / snapshots       | Empty                        | IndexedDB `kwdisk:kwdata` (the page)       | Unaffected                      |
 | Composer          | Chat mode                            | Web agent                    | `chat-demo:chat-mode`                      | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.

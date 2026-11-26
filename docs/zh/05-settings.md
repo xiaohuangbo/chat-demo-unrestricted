@@ -108,6 +108,17 @@
 | WebVM      | 单条命令超时       | 30 秒                     | `chat-demo:webvm-config`                   | 不受影响             |
 | WebVM      | 磁盘覆盖层（自动） | 空                        | IndexedDB `nanovm-webvm:debian`            | 不受影响             |
 | WebVM      | 跨源隔离（自动）   | 未启用                    | Service Worker `coi-sw.js`                 | 不受影响             |
+| Unkernel   | 启用 Unkernel Linux | 开                       | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 允许模型调用 `unkernel_*` | 关                 | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 发行版             | `alpine`（3.24）          | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 数据盘             | 8192 MiB（8 GiB）         | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 网络 / 声音 / 显示 | 开 / 开 / 开              | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 持久磁盘           | 开                        | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | Worker / CPU       | 关 / 1                    | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | Wisp 地址          | 空（公共代理）            | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 命令超时           | 30000 毫秒                | `chat-demo:unkernel-config`                | 不受影响             |
+| Unkernel   | 内核内存（页面自己管） | 自动（手机 512 MiB、桌面 2048 MiB） | `kw.settings`（页面内设置，同一源） | 不受影响 |
+| Unkernel   | 数据盘内容 / 快照  | 空                        | IndexedDB `kwdisk:kwdata`（页面）          | 不受影响             |
 | 输入栏     | 聊天模式           | 网页 Agent                | `chat-demo:chat-mode`                      | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。

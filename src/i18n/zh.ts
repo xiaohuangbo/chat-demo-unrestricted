@@ -1471,14 +1471,12 @@ export const zh = {
   unkernelAllowAgentHint:
     '开启后模型才能使用 unkernel_shell、读写文件、工作区互传等 unkernel_* 工具；写操作仍会先确认。',
   unkernelResources: '资源',
-  unkernelMemory: '内核内存',
-  unkernelMemoryHint:
-    '给 guest 的内存；Alpine 在 128 MiB 以上比较从容；Debian 默认 2 GiB（apt / Node 等程序更吃内存），改完会重启虚拟机。',
   unkernelTimeout: '命令超时',
   unkernelTimeoutHint: 'Agent 单条命令最长执行时间（秒）。',
   unkernelDevices: '设备',
   unkernelNetwork: '网络',
-  unkernelNetworkHint: '通过 Wisp 代理给 guest 一张网卡；可在 Alpine 里 apk / curl。',
+  unkernelNetworkHint:
+    '通过 Wisp 代理给 guest 一张网卡；apk、apt、curl 都走它，不经过 unkernel 的镜像。',
   unkernelSound: '声音',
   unkernelSoundHint: '给 guest ALSA / OSS，声音由浏览器的 Web Audio 播放。',
   unkernelDisplay: '显示',
@@ -1490,7 +1488,7 @@ export const zh = {
   unkernelWorkerHint: '需要 crossOriginIsolated；不满足时会自动回退到主线程。',
   unkernelWisp: 'Wisp 地址',
   unkernelWispHint:
-    '留空使用公共 Wisp（anura.pro / mercurywork.shop）；想走自己的代理时填 wss:// 地址。',
+    '留空使用公共 Wisp（anura.pro / mercurywork.shop）；想走自己的代理时填 wss:// 地址。guest 的纯 HTTP（含 Debian 的 apt 源）也走同一个代理。',
   unkernelWispInvalid: 'Wisp 地址必须以 ws:// 或 wss:// 开头',
   unkernelAgentTools: 'Agent 工具',
   unkernelAgentToolsHint: '工具是否可用由上面的「允许模型操作 Unkernel」控制；每条命令仍会先确认。',
@@ -1509,6 +1507,8 @@ export const zh = {
   unkernelDistro: '发行版',
   unkernelDistroHint:
     'Alpine 体积小、启动快；Debian 带 glibc / apt，适合 Docker、Node 等程序。切换后重启虚拟机生效。',
+  unkernelMachineNote:
+    '内存、GPU 与蓝牙等机型参数在虚拟机页面自己的「设置」里调整（内存有按设备算出的自动值），这里不重复设置，避免两边冲突。',
   unkernelDistroAlpine: 'Alpine 3.24',
   unkernelDistroDebian: 'Debian 13.7',
   unkernelCpu: 'CPU 数量',
@@ -2059,6 +2059,12 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2719Title: 'v2.7.19 · 2026-11',
+  changelogV2719Memory:
+    '设置 → Unkernel Linux 去掉「内核内存」：上游页面自己的「设置 → 机器」里就有内存滑块（按设备算出的自动值），而宿主的 ?mem= 会把内存钉死并覆盖页面里的改动；现在宿主不再传 mem，内存与 GPU 等机型参数只由虚拟机自己的设置决定',
+  changelogV2719Apt:
+    '修复 Debian 里 apt-get update / apt-get install 报 403：页面默认把 deb.debian.org 的纯 HTTP 交给自己的 CORS 镜像 mirror.unkernel.dev 代答，该镜像只接受 unkernel.dev、localhost 等白名单源，本应用的源只会拿到「Origin not allowed」；iframe 现在固定带 routes=0，guest 的纯 HTTP 改走 Wisp——实测 Debian 拉完 10.2 MB 索引并装上 bzip2，Alpine 的 apk 与 HTTP 访问正常',
+  changelogV2719Apk: '同步构建 2.7.19 APK（versionCode 289），使用 xiaohuangbo.jks 签名',
   changelogV2718Title: 'v2.7.18 · 2026-11',
   changelogV2718Docs:
     '文档全面修订：README、11 篇分册与应用内文档同步到 2.7.17 的能力（GenUI、提示词注入工具、记忆节点筛选与就地编辑、新版 Unkernel 桌面页面），修正过期版本号、工具数量、章节范围与 APK 体积；设置项速查补齐提示词注入、记忆检索权重与阈值、大文本附件、主题 / 语言 / 位置等缺失键；请求体文档补上 tool_choice 与 latest_reminder 的五段式约束、各聊天模式的工具往返上限；已知限制扩到 86 条',

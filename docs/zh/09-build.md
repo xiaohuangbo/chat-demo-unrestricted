@@ -59,15 +59,15 @@ cd ../chat-demo-unrestricted && pnpm patch:unkernel
 
 DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go 二进制，约 24 MiB），现在作为普通应用放在 `web/src/apps/agents/dsh-go.ts`，二进制从 `web/public/demos/dsh-go/dsh-go-linux-arm64` 随页面分发；应用里固定了它的 SHA-256 和字节数，重新编译后要同步更新这两个值，否则页面会拒绝把文件推入 guest。
 
-宿主设置通过 URL 参数传入（`mem`、`datasize`、`net`、`sound`、`display`、`data`、`worker`、`cpus`、`wisp`），页面自己的设置在重启时会被覆盖；数据盘参数的改名见 `src/services/unkernel/config.ts`。
+宿主设置通过 URL 参数传入（`distro`、`datasize`、`net`、`sound`、`display`、`data`、`worker`、`cpus`、`wisp`），并固定带 `routes=0` 让 guest 的纯 HTTP 也走 Wisp（否则 Debian 的 apt 会被上游 CORS 镜像的 Origin 白名单挡成 403）；内核内存由页面自己的设置决定，宿主不传 `mem`。参数细节见 `src/services/unkernel/config.ts`。
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.18.apk`（约 118 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.19.apk`（约 118 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、拍照（系统相机 + content:// 回传）、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 35.0.1+（34.0.0 的 d8 在 JDK 21 下可能崩溃）与 JDK 21/17。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.18 / 288），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 35.0.1+（34.0.0 的 d8 在 JDK 21 下可能崩溃）与 JDK 21/17。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.19 / 289），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -78,7 +78,7 @@ DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go
   ./android/build-apk.sh
   # 非交互：KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 288；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 289；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---

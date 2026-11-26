@@ -470,7 +470,6 @@ const infoTool: AgentTool = {
     }
     const lines = [
       `状态：${statusText[state.status] ?? state.status}`,
-      `内存：${config.memoryMiB} MiB`,
       `CPU：${config.cpus}`,
       `网络：${config.network ? '开' : '关'}`,
       `声音：${config.sound ? '开' : '关'}`,
@@ -573,7 +572,7 @@ const statusTool: AgentTool = {
   summary: '查看 Unkernel 是否已启动、设备与工作区挂载状态，只读且不会启动。',
   summaryEn: 'Check whether Unkernel is running, its devices and workspace mount; read-only.',
   description:
-    '查看 Unkernel 的状态：是否已启动、内存、网络/声音/显示、持久磁盘、工作区是否挂到 /mnt/workspace，以及是否允许模型调用。不会启动虚拟机。',
+    '查看 Unkernel 的状态：是否已启动、网络/声音/显示、持久磁盘、工作区是否挂到 /mnt/workspace，以及是否允许模型调用。不会启动虚拟机。',
   inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   risk: 'safe',
   run: async () => {
@@ -588,7 +587,6 @@ const statusTool: AgentTool = {
     return ok(
       [
         `状态：${statusText[state.status] ?? state.status}`,
-        `内存：${config.memoryMiB} MiB`,
         `网络：${config.network ? '开' : '关'}`,
         `声音：${config.sound ? '开' : '关'}`,
         `显示：${config.display ? '开' : '关'}`,

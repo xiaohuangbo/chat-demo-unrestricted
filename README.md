@@ -51,14 +51,14 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | ------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | 1. What this is                 | Scope, original features and everything this fork adds               | [01-what-is-this.md](docs/en/01-what-is-this.md)       |
 | 2. Restrictions in the original | What was hard-coded on the request and UI side                       | [02-original-limits.md](docs/en/02-original-limits.md) |
-| 3. What this fork changes       | 3.1–3.51: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
+| 3. What this fork changes       | 3.1–3.52: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
 | 4. Behaviour matrix             | Original / default / unrestricted mode, side by side                 | [04-behaviour.md](docs/en/04-behaviour.md)             |
 | 5. Settings reference           | Defaults and localStorage keys for every setting                     | [05-settings.md](docs/en/05-settings.md)               |
 | 6. What the request contains    | The JSON that actually goes out                                      | [06-request.md](docs/en/06-request.md)                 |
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 86 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 87 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.18.apk` (118 MB, versionCode 288,
-SHA-256 `9c46f5d5d022a361d6fc2cdde5797f50a9e03b7bf4679325989e2d2fe2170c33`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.19.apk` (118 MB, versionCode 289,
+SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -101,10 +101,13 @@ Last regression run (2026-11, v2.7.18, both `compat` and `compat-prod` matrices)
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
 | Unkernel Linux   | iframe boot, new desktop and 80+ app launcher, Alpine + Debian, 2-CPU SMP, workspace mount / write-back, file import/export, settings and the `datasize` mapping | pass |
+| Unkernel network | Debian `apt-get update` (10.2 MB index) and `apt-get install bzip2`, Alpine `apk update` / `apk add curl`, guest HTTP 200, `routes=0` and memory handed back to the page | pass |
 
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.19**: two Unkernel fixes. (1) Settings → Unkernel Linux drops the kernel-memory slider: the upstream page already has memory under its own Settings → Machine (with an automatic per-device value), while the host’s `?mem=` pinned it and overwrote page-side changes on every boot; memory now follows the VM’s own settings (`kw.settings`) and the host panel keeps distro, data disk, CPUs, devices, Worker, Wisp and timeout. (2) Debian’s `apt-get update` / `apt-get install` no longer returns 403: the new page hands plain HTTP to `deb.debian.org` and friends to its own CORS mirror at `mirror.unkernel.dev`, which only accepts allowlisted origins (`https://unkernel.dev`, `http://localhost:*`, …), so this app — on `127.0.0.1:3080`, a LAN address or the APK’s `http://127.0.0.1:18765` — got `403 Origin not allowed` (the official site is on the list, which is why it works there). The iframe now always carries `routes=0`, sending the guest’s plain HTTP through Wisp instead; Debian’s `apt-get update` fetched the 10.2 MB index and `apt-get install bzip2` succeeded, and Alpine’s `apk` plus HTTP access still work.
 
 - **2.7.18**: a documentation pass. The README, all 11 chapters under `docs/en|zh/` and the in-app docs are brought up to 2.7.17 (GenUI, the custom prompt-injection tool, memory node filtering and inline editing, and the new Unkernel desktop page); stale numbers are fixed (the version still read 2.7.9, browser tools were “ten”, chapters stopped at 3.39, the APK size read 112 MB); the settings reference gains the 17 missing localStorage keys (prompt injection, memory weights and threshold, large text attachments, theme / locale / location); the request chapter documents `tool_choice`, the five-part `latest_reminder` rule and the per-mode tool round limits; known limits grow to 86, and the Unkernel license path plus the privacy chapter’s external-request notes are corrected.
 

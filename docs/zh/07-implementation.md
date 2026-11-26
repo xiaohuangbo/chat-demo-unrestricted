@@ -128,7 +128,7 @@
 | [`src/components/docs/docsContent.ts`](../../src/components/docs/docsContent.ts)                                             | 应用内文档的 26 个小节（中英双语）与渲染数据                                                                                                                                         |
 | [`src/services/agent/unkernelTools.ts`](../../src/services/agent/unkernelTools.ts)                                           | 十个 `unkernel_*` Agent 工具                                                                                                                                                         |
 | [`src/services/unkernel/session.ts`](../../src/services/unkernel/session.ts)                                                 | Unkernel iframe 生命周期、`window.KW.vm` 轮询、命令执行与工作区挂载                                                                                                                  |
-| [`src/services/unkernel/config.ts`](../../src/services/unkernel/config.ts)                                                   | Unkernel 启动参数与 URL 映射（`mem` / `datasize` / `net` / `sound` / `display` / `worker` / `cpus` / `wisp`）                                                                       |
+| [`src/services/unkernel/config.ts`](../../src/services/unkernel/config.ts)                                                   | Unkernel 启动参数与 URL 映射（`distro` / `datasize` / `net` / `sound` / `display` / `worker` / `cpus` / `wisp`，以及固定关闭上游 CORS 镜像路由的 `routes=0`；内存交给页面自己管，不传 `mem`） |
 
 ---
 
