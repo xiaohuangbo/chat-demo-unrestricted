@@ -38,17 +38,32 @@ The API origin is set in [`rspack.config.ts`](../../rspack.config.ts) via `creat
 
 WebVM (CheerpX) needs cross-origin isolation. On static hosting such as GitHub Pages, where response headers cannot be customised, the first WebVM enable registers `coi-sw.js` and reloads once, after which the service worker adds the headers to same-origin responses. **Android WebView does not support cross-origin isolation (Chromium issue 40914606), so WebVM cannot run inside the APK; use Chrome on the phone or a desktop browser for the online version.**
 
-Unkernel does not need cross-origin isolation in the default main-thread mode; multiple CPUs do, and a static site registers `coi-sw.js` and reloads once. Its full page, UP/SMP kernel wasm and the Alpine image are copied from `public/unkernel/` into `dist/unkernel/`; the Android asset server answers `Range` requests for the 3.9 MiB `alpine.erofs`. It needs JSPI, so an old WebView shows a boot error instead of a terminal.
+Unkernel does not need cross-origin isolation in the default main-thread mode; multiple CPUs do, and a static site registers `coi-sw.js` and reloads once. Its full page, kernel wasm (UP and SMP) and the Alpine / Debian images are copied from `public/unkernel/` into `dist/unkernel/`; the Android asset server answers `Range` requests for the images. It needs JSPI, so an old WebView shows a boot error instead of a terminal.
 
-When rebuilding `public/unkernel/`, keep the vendored `dropLegacyScope` check: Unkernel's boot drops the legacy root-scope service worker, and the page must only unregister `/vm-sw.js`, never the host's `coi-sw.js`; otherwise the multi-CPU iframe reload loses COEP and Firefox blocks it with `NS_ERROR_DOM_COEP_FAILED`. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
+**Rebuilding `public/unkernel/`.** The page comes from upstream `pithings/unkernel`'s `web/` (Vite + Nitro); a build downloads the kernel and distro images from the latest GitHub release:
 
-DSH go in the launcher is built from `cmd/dsh-go` in the `go-deepseek` checkout (a 24 MiB static aarch64 Go binary) and checked in at `public/unkernel/demos/dsh-go/dsh-go-linux-arm64`; `web/src/demos/dsh.ts` pins its SHA-256 and byte size, so a rebuild must update both or the page refuses to push the file into the guest.
+```sh
+cd ../unkernel                # the upstream checkout
+pnpm install
+KW_BASE=/unkernel/ pnpm -C web build
+PORT=3100 node web/.output/server/index.mjs &   # Nitro renders index.html
+curl -s http://127.0.0.1:3100/unkernel/ -o web/.output/public/index.html
+find web/.output/public -type f \( -name '*.br' -o -name '*.gz' -o -name '*.zst' \) -delete
+rsync -a --delete web/.output/public/ ../chat-demo-unrestricted/public/unkernel/
+cd ../chat-demo-unrestricted && pnpm patch:unkernel
+```
 
-The built page assumes it is deployed at the origin root: distro images point at `/distros/`, the preview Service Worker registers `/vm-sw.js` / `/vm/`, and the manifest scope is `/`. The app serves the page under `/unkernel/`, so after syncing into `public/unkernel/` run `pnpm patch:unkernel` (or let `pnpm build` do it); the script prefixes the paths and validates the distro URLs, Service Worker and manifest, so a missed rewrite cannot turn into a 404 at boot.
+`KW_BASE=/unkernel/` makes Vite emit prefixed asset and preload URLs; `pnpm patch:unkernel` then prefixes the distro images, `/vm-sw.js`, the `/vm/` preview paths and the manifest (it matches template literals and is safe to re-run). Delete nothing except the `.br` / `.gz` / `.zst` precompressed copies: `index.html` must come from Nitro (its SSR template), and everything else comes straight from `.output/public`.
+
+The page's `dropLegacyScope` guard must stay (it lives in `web/src/sw.ts`): it only unregisters a root-scope service worker whose script ends in `/vm-sw.js`, never the host's `coi-sw.js`; otherwise the multi-CPU iframe reload loses COEP and Firefox blocks it with `NS_ERROR_DOM_COEP_FAILED`. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
+
+DSH go is built from `cmd/dsh-go` in the `go-deepseek` checkout (a 24 MiB static aarch64 Go binary). It is now a regular app in `web/src/apps/agents/dsh-go.ts`, with the binary shipped next to the page at `web/public/demos/dsh-go/dsh-go-linux-arm64`; the app pins its SHA-256 and byte size, so a rebuild must update both or the page refuses to push the file into the guest.
+
+Host settings arrive as URL parameters (`mem`, `datasize`, `net`, `sound`, `display`, `data`, `worker`, `cpus`, `wisp`); the page's own settings are overridden on restart, and the data-disk parameter rename lives in `src/services/unkernel/config.ts`.
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.17.apk` (about 112 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.17.apk` (about 118 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, camera capture (system camera plus a content:// hand-off), microphone permission, the back key and external links are wired up;

@@ -38,17 +38,32 @@ API 地址在 [`rspack.config.ts`](../../rspack.config.ts) 的 `createConfig({ a
 
 WebVM（CheerpX）需要跨源隔离。浏览器版如果部署在 GitHub Pages 这类不能自定义响应头的静态托管上，第一次启用 WebVM 时会注册 `coi-sw.js` 并刷新一次，之后由 Service Worker 为同源响应补头。**Android WebView 不支持跨源隔离（Chromium issue 40914606），所以 APK 内无法运行 WebVM；请在手机 Chrome 或桌面浏览器里打开在线版。** 也可以自己在 Nginx / Vercel 上直接配置 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: credentialless`，省掉这次刷新。
 
-Unkernel 默认在主线程运行，不需要跨源隔离；多 CPU 需要跨源隔离，静态站点会注册 `coi-sw.js` 并刷新一次。完整页面、UP/SMP 内核 wasm 与 Alpine 镜像从 `public/unkernel/` 复制到 `dist/unkernel/`，Android 资源服务器会对 3.9 MiB 的 `alpine.erofs` 响应 `Range` 请求。它需要 JSPI，旧 WebView 会显示启动错误而不是终端。
+Unkernel 默认在主线程运行，不需要跨源隔离；多 CPU 需要跨源隔离，静态站点会注册 `coi-sw.js` 并刷新一次。完整页面、内核 wasm（UP + SMP）与 Alpine / Debian 镜像从 `public/unkernel/` 复制到 `dist/unkernel/`，Android 资源服务器会对镜像响应 `Range` 请求。它需要 JSPI，旧 WebView 会显示启动错误而不是终端。
 
-重建 `public/unkernel/` 时注意保留 vendored 版本的 `dropLegacyScope` 检查：Unkernel 启动时会清理旧的根作用域 Service Worker，页面只能注销 `/vm-sw.js`，不能把宿主应用的 `coi-sw.js` 一起注销；否则多 CPU 的 iframe 重载会因缺少 COEP 被 Firefox 拦成 `NS_ERROR_DOM_COEP_FAILED`。
+**重建 `public/unkernel/`。** 页面来自上游 `pithings/unkernel` 的 `web/`（Vite + Nitro），构建时会从最新 GitHub Release 下载内核与发行版镜像：
 
-启动器里的 DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go 二进制，约 24 MiB），放在 `public/unkernel/demos/dsh-go/dsh-go-linux-arm64`；`web/src/demos/dsh.ts` 固定了它的 SHA-256 和字节数，重新编译后要同步更新这两个值，否则页面会拒绝把文件推入 guest。
+```sh
+cd ../unkernel                # 上游 checkout
+pnpm install
+KW_BASE=/unkernel/ pnpm -C web build
+PORT=3100 node web/.output/server/index.mjs &   # Nitro 渲染 index.html
+curl -s http://127.0.0.1:3100/unkernel/ -o web/.output/public/index.html
+find web/.output/public -type f \( -name '*.br' -o -name '*.gz' -o -name '*.zst' \) -delete
+rsync -a --delete web/.output/public/ ../chat-demo-unrestricted/public/unkernel/
+cd ../chat-demo-unrestricted && pnpm patch:unkernel
+```
 
-页面构建产物假设自己部署在站点根目录：发行版镜像写成 `/distros/`，预览 Service Worker 注册到 `/vm-sw.js` / `/vm/`，manifest 的 scope 是 `/`。应用把页面挂在 `/unkernel/` 下，所以同步到 `public/unkernel/` 后要运行 `pnpm patch:unkernel`（`pnpm build` 会自动执行）；脚本会统一加前缀并校验发行版 URL、Service Worker 和 manifest，漏改会在启动时 404。
+`KW_BASE=/unkernel/` 让 Vite 生成带前缀的资源与预加载地址；`pnpm patch:unkernel` 再补发行版镜像、`/vm-sw.js`、`/vm/` 预览路径与 manifest（脚本按模板字面量匹配，重复运行安全）。除 `.br/.gz/.zst` 预压缩副本外不要删其它文件：`index.html` 必须来自 Nitro（SSR 模板），其余直接取 `.output/public` 即可。
+
+页面里的 `dropLegacyScope` 检查必须保留：它只会注销脚本名以 `/vm-sw.js` 结尾的根作用域 Service Worker，不能把宿主应用的 `coi-sw.js` 一起注销；否则多 CPU 的 iframe 重载会因缺少 COEP 被 Firefox 拦成 `NS_ERROR_DOM_COEP_FAILED`。这段保护在 `web/src/sw.ts`。
+
+DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go 二进制，约 24 MiB），现在作为普通应用放在 `web/src/apps/agents/dsh-go.ts`，二进制从 `web/public/demos/dsh-go/dsh-go-linux-arm64` 随页面分发；应用里固定了它的 SHA-256 和字节数，重新编译后要同步更新这两个值，否则页面会拒绝把文件推入 guest。
+
+宿主设置通过 URL 参数传入（`mem`、`datasize`、`net`、`sound`、`display`、`data`、`worker`、`cpus`、`wisp`），页面自己的设置在重启时会被覆盖；数据盘参数的改名见 `src/services/unkernel/config.ts`。
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.17.apk`（约 112 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.17.apk`（约 118 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、拍照（系统相机 + content:// 回传）、麦克风权限、返回键和外部链接跳转；

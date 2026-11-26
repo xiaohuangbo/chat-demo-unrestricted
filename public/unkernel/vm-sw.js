@@ -5,8 +5,14 @@
 // design). It answers /vm/<vmId>/<port>/<path> and nothing else, by
 // relaying the request to the page that runs that kernel, which calls
 // vm.fetch() on the guest's 127.0.0.1:<port> and streams the response
-// back. Every other request, a preview's root-relative /style.css
-// included, goes to the network as if there were no worker.
+// back. A preview document's own requests outside /vm/ (root-relative:
+// /style.css, Vite's /@vite/client) go to its guest port too, except the
+// shim /vm-ws.js. Everything else goes to the network as if there were no
+// worker.
+//
+// WebSockets never reach a service worker, so HTML documents it relays
+// get <script src="/unkernel/vm-ws.js"> right after their doctype: that shim's
+// WebSocket talks to the page over a BroadcastChannel (preview.ts).
 //
 // Stateless on purpose: browsers stop idle service workers, so every fetch
 // asks the open windows again. Each window that is not itself a preview
@@ -24,7 +30,7 @@
 "use strict";
 
 /** /vm/<vmId>/<port>[/<path>] */
-const PREVIEW_RE = /^\/unkernel\/vm\/([A-Za-z0-9_-]{1,64})\/(\d{1,5})(\/.*)?$/;
+const PREVIEW_RE = /^\/vm\/([A-Za-z0-9_-]{1,64})\/(\d{1,5})(\/.*)?$/;
 /** A page must accept within this, else 502 (no page runs that kernel any more). */
 const ACCEPT_MS = 5000;
 /** The guest must send the status line and headers within this, else 504. */
@@ -41,6 +47,10 @@ const COEP = "require-corp";
 const DROP = new Set(["connection", "keep-alive", "transfer-encoding", "upgrade", "proxy-connection", "set-cookie", "set-cookie2",
 	"cross-origin-embedder-policy", "cross-origin-resource-policy", "cross-origin-opener-policy"]);
 const NULL_BODY = new Set([101, 103, 204, 205, 304]);
+/** The WebSocket shim (public/vm-ws.js): always from the network, never relayed. */
+const SHIM = "/unkernel/vm-ws.js";
+/** How far into a document the doctype is looked for before the shim goes at the start. */
+const SNIFF_BYTES = 1024;
 
 /**
  * Running in the old scope-/ registration of builds that kept an offline
@@ -66,7 +76,12 @@ self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 	if (url.origin !== location.origin) return; // cross-origin: the network, as usual
 	const m = PREVIEW_RE.exec(url.pathname);
-	if (!m) return; // not a preview URL: the network, as if there were no worker
+	if (!m) {
+		// A preview document's root-relative request: to its guest port. Its
+		// clientId is that document (or a worker it started); a navigation has none.
+		if (!LEGACY && event.clientId && url.pathname !== SHIM && event.request.mode !== "navigate") event.respondWith(fromPreview(event, url));
+		return; // otherwise not a preview URL: the network, as if there were no worker
+	}
 	// /vm/<id>/<port> without the slash: relative URLs in the page need it.
 	if (m[3] === undefined) event.respondWith(Response.redirect(new URL(`${url.pathname}/${url.search}`, url).href, 308));
 	else event.respondWith(relay(event, m[1], Number(m[2]), m[3] + url.search));
@@ -81,6 +96,14 @@ self.addEventListener("message", (event) => {
 	if (!port || d?.t !== "kw-check") return;
 	port.postMessage({ t: "kw-check", update: LEGACY, offline: false });
 });
+
+/** A request of a document this worker controls: relayed if that document is a preview, else from the network. */
+async function fromPreview(event, url) {
+	const client = await self.clients.get(event.clientId);
+	const m = client && PREVIEW_RE.exec(new URL(client.url).pathname);
+	if (!m || m[3] === undefined) return fetch(event.request);
+	return relay(event, m[1], Number(m[2]), url.pathname + url.search);
+}
 
 function text(status, msg) {
 	return new Response(`${msg}\n`, {
@@ -174,6 +197,10 @@ async function relay(event, vmId, port, path) {
 					pull() { owner.postMessage({ t: "more" }); return new Promise((r) => { wake = r; }); },
 					cancel() { owner.postMessage({ t: "cancel" }); ctrl = null; end(); },
 				});
+				if (wantsShim(req, d.status, headers)) {
+					stream = stream.pipeThrough(shimInjector(shimTag(vmId, port, headers)));
+					headers.delete("content-length");
+				}
 			}
 			let res;
 			try { res = new Response(stream, { status: d.status, statusText: d.statusText, headers }); }
@@ -181,5 +208,66 @@ async function relay(event, vmId, port, path) {
 			settle(res);
 			if (!stream) { owner.postMessage({ t: "cancel" }); end(); }
 		}
+	});
+}
+
+/**
+ * The WebSocket shim goes into documents only: a navigation answered with
+ * HTML that is neither partial nor encoded (accept-encoding is identity,
+ * but a server may ignore it).
+ */
+function wantsShim(req, status, headers) {
+	if (req.mode !== "navigate" || status < 200 || status > 299 || status === 206) return false;
+	if (headers.has("content-encoding")) return false;
+	return /^\s*text\/html\b/i.test(headers.get("content-type") ?? "");
+}
+
+/** The shim's tag, with the guest's CSP nonce if it has one (a nonce-only script-src blocks it otherwise). */
+function shimTag(vmId, port, headers) {
+	const nonce = /'nonce-([A-Za-z0-9+/_=-]+)'/.exec(headers.get("content-security-policy") ?? "")?.[1];
+	return `<script src="${SHIM}" data-kw-vm="${vmId}" data-kw-port="${port}"${nonce ? ` nonce="${nonce}"` : ""}></script>`;
+}
+
+/**
+ * Where the tag goes in a document's first bytes: right after the doctype
+ * (it then parses into <head>, and a doctype after it would mean quirks
+ * mode), else at the start, after a UTF-8 BOM. -1: wait for more bytes.
+ */
+function shimOffset(b, end) {
+	const s = String.fromCharCode(...b.subarray(0, Math.min(b.length, SNIFF_BYTES)));
+	const bom = s.startsWith("\xEF\xBB\xBF") ? 3 : 0;
+	const m = /^(?:\s|<!--[\s\S]*?-->)*<!doctype[^>]*>/i.exec(s.slice(bom));
+	if (m) return bom + m[0].length;
+	if (end || b.length >= SNIFF_BYTES) return bom;
+	// Still on whitespace, a comment or a doctype not yet complete: wait.
+	const rest = s.slice(bom).replace(/^(?:\s|<!--[\s\S]*?-->)*/, "");
+	const open = rest.startsWith("<!--") || (rest.length < 9 ? "<!doctype".startsWith(rest.toLowerCase()) : /^<!doctype/i.test(rest));
+	return open ? -1 : bom;
+}
+
+/** A body transform that inserts `tag` once, at shimOffset(). */
+function shimInjector(tag) {
+	const bytes = new TextEncoder().encode(tag);
+	let head = new Uint8Array(0), done = false;
+	const emit = (c, at) => {
+		done = true;
+		const out = new Uint8Array(head.length + bytes.length);
+		out.set(head.subarray(0, at));
+		out.set(bytes, at);
+		out.set(head.subarray(at), at + bytes.length);
+		head = null;
+		c.enqueue(out);
+	};
+	return new TransformStream({
+		transform(chunk, c) {
+			if (done) { c.enqueue(chunk); return; }
+			const all = new Uint8Array(head.length + chunk.length);
+			all.set(head);
+			all.set(chunk, head.length);
+			head = all;
+			const at = shimOffset(head, false);
+			if (at >= 0) emit(c, at);
+		},
+		flush(c) { if (!done) emit(c, shimOffset(head, true)); },
 	});
 }

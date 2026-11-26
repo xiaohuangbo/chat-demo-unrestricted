@@ -577,8 +577,8 @@ const zh: DocsDoc = {
             ],
             [
               'Unkernel Linux',
-              '真正编译成 WebAssembly 的 Linux 7.x 内核 + Alpine / Debian，支持 SMP、声音、显示、持久磁盘',
-              '需要 JSPI；工作区挂到 /mnt/workspace；数据盘可在设置里扩容或重置',
+              '真正编译成 WebAssembly 的 Linux 7.x 内核 + Alpine / Debian：桌面、窗口、程序坞与应用启动器，80+ 个开箱应用（游戏、浏览器、媒体、桌面、图形、AI、语言运行时、服务、Linux 工具）',
+              '需要 JSPI；工作区挂到 /mnt/workspace；数据盘可在设置里扩容或重置；应用按需下载并安装软件包',
             ],
             [
               'DSH go',
@@ -592,7 +592,9 @@ const zh: DocsDoc = {
           items: [
             '虚拟网络：NanoVM / WebVM 里用 `vm serve` 起本地服务，`curl 127.0.0.1` 会自动路由到虚拟机。',
             'Unkernel 联网走 Wisp 代理，默认使用公共服务器，也可以自己填 wss:// 地址。',
-            '数据盘是 IndexedDB 上的稀疏镜像，默认 8 GiB，可扩到 16 / 32 GiB；「重置数据盘」会清空 guest 里的所有文件。',
+            '数据盘是 IndexedDB 上的稀疏镜像，默认 8 GiB，可扩到 16 / 32 GiB；「重置数据盘」会清空 guest 里的所有文件。宿主设置通过 URL 参数传入：`mem`、`datasize`（GiB）、`net`、`sound`、`display`、`data`、`worker`、`cpus`、`wisp`；页面自己的设置项在重启后会被宿主参数覆盖。',
+            '应用启动器里有 80+ 个应用：AI（Claude Code、Ollama、llama.cpp、fx、DSH go）、工具、运行时、服务、Linux、浏览器、桌面、游戏、媒体与图形；首次运行会自动下载文件并用 apk / apt 安装依赖，进度显示在独立安装器窗口里。',
+            '桌面支持窗口、程序坞、控制中心、预览浏览器与 Wayland 窗口；多 CPU 需要跨源隔离（宿主会注册 `coi-sw.js`），单个 CPU 不需要。',
           ],
         },
         {
@@ -1521,8 +1523,8 @@ const en: DocsDoc = {
             ],
             [
               'Unkernel Linux',
-              'A real Linux 7.x kernel compiled to WebAssembly with Alpine / Debian, SMP, sound, display and a persistent disk',
-              'Needs JSPI; workspace mounted at /mnt/workspace; disk can be grown or reset in Settings',
+              'A real Linux 7.x kernel compiled to WebAssembly with Alpine / Debian: desktop, windows, dock and app launcher, 80+ ready-made apps (games, browsers, media, desktop, graphics, AI, language runtimes, servers, Linux tools)',
+              'Needs JSPI; workspace mounted at /mnt/workspace; disk can be grown or reset in Settings; apps download files and install packages on first run',
             ],
             [
               'DSH go',
@@ -1536,7 +1538,9 @@ const en: DocsDoc = {
           items: [
             'Virtual network: run `vm serve` inside NanoVM / WebVM; curl to 127.0.0.1 is routed into the VM.',
             'Unkernel networking uses Wisp proxies (public by default, custom wss:// allowed).',
-            'The data disk is a sparse image in IndexedDB, 8 GiB by default and growable to 16 / 32 GiB; Reset data disk wipes the guest.',
+            'The data disk is a sparse image in IndexedDB, 8 GiB by default and growable to 16 / 32 GiB; Reset data disk wipes the guest. Host settings arrive as URL parameters: `mem`, `datasize` (GiB), `net`, `sound`, `display`, `data`, `worker`, `cpus`, `wisp`; the page’s own settings are overridden by the host parameters after a restart.',
+            'The app launcher carries 80+ apps: AI (Claude Code, Ollama, llama.cpp, fx, DSH go), tools, runtimes, servers, Linux, browsers, desktop, games, media and graphics; a first run downloads its files and installs packages with apk / apt, with progress in an installer window of its own.',
+            'The desktop has windows, a dock, a control center, a preview browser and Wayland windows; more than one CPU needs cross-origin isolation (the host registers `coi-sw.js`), a single CPU does not.',
           ],
         },
         {

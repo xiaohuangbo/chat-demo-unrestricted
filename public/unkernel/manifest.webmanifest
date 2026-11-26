@@ -1,8 +1,8 @@
 {
 	"id": "/unkernel/",
-	"name": "Unkernel Linux",
-	"short_name": "Unkernel",
-	"description": "真正的 Linux 内核，编译成 WebAssembly，在浏览器里运行 Alpine Linux。",
+	"name": "unkernel",
+	"short_name": "unkernel",
+	"description": "A real Linux kernel, compiled to WebAssembly, running Alpine Linux in the browser.",
 	"start_url": "/unkernel/",
 	"scope": "/unkernel/",
 	"display": "standalone",

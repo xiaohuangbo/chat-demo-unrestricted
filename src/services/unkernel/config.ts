@@ -141,7 +141,8 @@ export const unkernelUrl = (config = unkernelConfig()): string => {
   const params = new URLSearchParams()
   params.set('distro', config.distro)
   params.set('mem', String(config.memoryMiB))
-  params.set('disk', String(config.dataDiskMiB))
+  // 新版页面按 GiB 传数据盘大小（datasize），旧的 disk（MiB）参数已移除。
+  params.set('datasize', String(Math.round(config.dataDiskMiB / 1024)))
   params.set('net', config.network ? '1' : '0')
   params.set('sound', config.sound ? '1' : '0')
   params.set('display', config.display ? '1' : '0')

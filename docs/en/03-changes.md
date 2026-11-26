@@ -1061,3 +1061,43 @@ That led to two more changes:
 | Live API with the injection tool: second turn is `latest_reminder,user,assistant(tool_use),user(tool_result)`; after changing the location the next turn puts the new reminder before the question, the previous round is not restored, and the request is still 200 | pass |
 
 **Files:** `src/services/chat/reply.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.
+
+### 3.50 Merging the new Unkernel Linux page (2.7.17)
+
+Upstream `pithings/unkernel` released `v0.2.0-261126-fd204d3` on 2026-11-26 and rewrote the page from a console-with-demos into a desktop. This round merges it in full while keeping our two additions — the **DSH go launcher** and the **host's Unkernel settings panel** — and localizes the whole page again.
+
+**1. The new page.** It is a desktop now:
+
+- a window manager (dock, window menu, fullscreen / minimize / maximize), a control center, a preview browser (guest ports) and Wayland windows (wland);
+- an app launcher with 80+ apps in 11 groups: AI (Claude Code, Ollama, llama.cpp, fx), tools (Git, Zed, Neovim, tmux, htop), runtimes (Node, Python, Go, Rust, Bun), servers (nginx, PostgreSQL, Valkey, SQLite), Linux (Ubuntu chroot, Docker, box64), browsers (Chromium, Firefox, Ladybird), desktop (Xfce, X11, XPaint…), games (Steam, Doom, Minecraft, SuperTuxKart…), media (VLC, mpv, radio), graphics (kmscube, Vulkan, Wayland GL) and system;
+- each app downloads its files into the guest on first run and installs its packages with `apk` / `apt`, with progress in an installer window;
+- guest GL (virgl/WebGL2), Vulkan (WebGPU), VA-API (WebCodecs), the 9p workspace, the data disk, snapshots and suspend are all still there.
+
+**2. Host integration.**
+
+- `public/unkernel/` is regenerated with `KW_BASE=/unkernel/` and then `scripts/patch-unkernel-page.mjs` prefixes the distro images, service worker, preview paths and manifest (the new script matches backtick template literals and also handles CSS fonts and `new URL('/assets/…')`).
+- `unkernelUrl()` uses the new parameters: `distro`, `mem`, `datasize` (GiB, converted from the host's disk MiB), `net`, `sound`, `display`, `data`, `worker`, `cpus`, `wisp`; the old `disk` parameter is gone.
+- The host's `KW.vm.exec` / `mount` / `write` / `resize` / `stop` still match the new `KernelHandle`, so `waitForUnkernelVm`, the workspace mount and the ten agent tools need no API change; the workspace is still at `/mnt/workspace` (verified: `mounts` contains it).
+- The `dropLegacyScope` guard is kept: the page only unregisters a root-scope service worker whose script ends in `/vm-sw.js`, never the host's `coi-sw.js` (otherwise a multi-CPU iframe would fail without COEP).
+- The page's own settings (storage, session, display…) still work, but the host overrides them with URL parameters on every restart, so the host panel stays authoritative.
+
+**3. DSH go.** It moved from the old demos into a standard app (`web/src/apps/agents/dsh-go.ts`, title “DSH go”, whale icon, `~/demos/dsh-go`): the first run downloads the 24,576,162-byte static binary from the page's origin (SHA-256 pinned), pushes it into the guest and executes it. `web/src/download.ts` now resolves relative URLs so page-served assets can be an app's `downloads`.
+
+**4. Localization.** Three parallel passes translated the page: `web/src/components/**` (~500 UI strings), `web/src/apps/**` (73 descriptions plus 11 group metadata, product names kept) and `web/src/*.ts` with `index.html` (~815 boot-log, status, error and hint strings). Technical output, scripts, commands and kernel logs stay English.
+
+**Verified.**
+
+| Case | Result |
+| --- | --- |
+| Page boots under the `/unkernel/` prefix (Chromium, JSPI) | pass: `KW.vm` ready, `uname -a` returns `Linux 7.3.4+ … aarch64` |
+| Page language and title | `lang=zh-CN`, title “unkernel — 浏览器里的 Linux”, Chinese boot log and buttons |
+| App launcher | 11 groups with Chinese names; the AI folder contains DSH go |
+| DSH go end to end | pass: installer adds `ca-certificates bash`, downloads and pushes the 24,576,162-byte binary, and the terminal runs `dsh-go` (about 14 s) |
+| Host iframe | pass: `/unkernel/index.html?distro=alpine&mem=512&datasize=8…`, `KW.vm` ready, `vm.exec` works, page in Chinese |
+| Host settings panel | pass: memory / data disk / distro / devices / files / restart present; disk set to 16 GiB and restarted, the iframe URL becomes `datasize=16` |
+| Workspace | pass: the guest's `mounts` contains `/mnt/workspace` and `ls` works |
+| Agent tool (live API) | pass: the model called `unkernel_shell`, which ran `uname -a`, finished `done` and returned the kernel version |
+| 390px viewport | pass: no horizontal overflow, dock and launcher usable |
+| WebSocket / Wisp networking | outbound `wss://` from the local browser is blocked by this network (three different servers time out); the page's network layer is unchanged and the host wisp parameters are as before |
+
+**Files:** `public/unkernel/` (whole page replaced), `scripts/patch-unkernel-page.mjs`, `src/services/unkernel/config.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`, `src/components/docs/docsContent.ts`; on the page source: `web/src/apps/agents/{dsh-go.ts,index.ts}`, `web/src/download.ts`, `web/src/sw.ts`, `web/vite.config.ts`, `web/public/demos/dsh-go/`, plus the localized `web/src/**` and `web/index.html`.

@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (C) 2026 Pooya Parsa <pooya@pi0.io> -->
+<!--
+  /profile.html: boot the page's kernel in several configurations (on the
+  page's thread, in a worker, on 1..N CPUs) and time everyday guest work in
+  each, with the page's frame gaps, to pick the defaults for ?cpus= and
+  ?worker= on this device (src/profile.ts).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>unkernel: profile</title>
+<style>body{color:#ddd;background:#000;margin:0;padding:1rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}main{max-width:64rem;margin:0 auto}h1{color:#fff;margin:0 0 .5rem;font-size:1.1rem}h2{color:#fff;margin:1.25rem 0 .5rem;font-size:1rem}fieldset{border:1px solid #333;border-radius:4px;margin:.5rem 0;padding:.5rem .75rem}legend{color:#aaa}label{align-items:center;gap:.3rem;margin:.15rem .9rem .15rem 0;display:inline-flex}select,input[type=number],input[type=text]{font:inherit;color:#ddd;background:#111;border:1px solid #444;border-radius:3px;padding:.1rem .3rem}input[type=text]{box-sizing:border-box;width:100%}button{font:inherit;color:#fff;cursor:pointer;background:#222;border:1px solid #555;border-radius:4px;margin:.25rem .5rem .25rem 0;padding:.35rem .9rem}button:disabled{opacity:.5;cursor:default}.table{overflow-x:auto}table{border-collapse:collapse;min-width:100%}th,td{text-align:right;white-space:nowrap;border-bottom:1px solid #222;padding:.2rem .5rem}th:first-child,td:first-child{text-align:left}th{color:#aaa;font-weight:400}td.best{color:#8f8}td.bad{color:#f88}pre{white-space:pre-wrap;word-break:break-word;background:#111;border-radius:4px;margin:.5rem 0;padding:.6rem}#log{color:#999;max-height:16rem;overflow:auto}#rec{color:#fff}.dim{color:#888}#spinner{vertical-align:middle;background:#8cf;border-radius:50%;width:.8rem;height:.8rem;animation:1s linear infinite pulse;display:inline-block}@keyframes pulse{0%{transform:translate(0)}50%{transform:translate(1.5rem)}to{transform:translate(0)}}a{color:#8cf}</style>
+  <script type="module" crossorigin src="/unkernel/assets/profile-ZQ-5YyjT.js"></script>
+  <link rel="modulepreload" crossorigin href="/unkernel/assets/config-CVLoJQN3.js">
+</head>
+<body>
+<main>
+	<h1>unkernel profile</h1>
+	<p class="dim">Boots the kernel once per configuration, runs the workloads, and suggests defaults for this device. Keep this tab visible and in front while it runs (frame gaps are measured with requestAnimationFrame; the dot below stutters when the page's thread is blocked). <a href="/unkernel/">Back to the page</a></p>
+	<pre id="device"></pre>
+	<fieldset><legend>Configurations</legend><div id="configs"></div></fieldset>
+	<fieldset><legend>Workloads</legend><div id="workloads"></div>
+		<label style="display:block">custom (sh -c): <input type="text" id="custom" placeholder="e.g. apt list --installed 2>/dev/null | wc -l"></label>
+	</fieldset>
+	<fieldset><legend>Options</legend>
+		<label>distro <select id="distro"></select></label>
+		<label>memory MiB <input type="number" id="mem" min="64" step="64" style="width:5rem"></label>
+		<label>runs <input type="number" id="runs" min="1" max="10" value="3" style="width:3rem"></label>
+		<label>size <select id="scale"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select></label>
+		<label><input type="checkbox" id="jit" checked> JIT</label>
+	</fieldset>
+	<button id="run">Run</button><button id="host">Host threads</button><button id="stop" disabled>Stop</button><button id="copy" disabled>Copy JSON</button><button id="copymd" disabled>Copy table</button>
+	<span id="spinner"></span> <span id="status" class="dim">idle</span>
+	<h2>Host threads <span class="dim">(no kernel: does this browser run workers in parallel, and how fast does a blocked one wake)</span></h2>
+	<pre id="hostout" class="dim">Press Host threads.</pre>
+	<h2>Suggestion</h2>
+	<pre id="rec" class="dim">Run to get one.</pre>
+	<h2>Results <span class="dim">(median ms over runs; first run in the cold row; jank = longest frame gap / frames over 50 ms)</span></h2>
+	<div class="table"><table id="results"></table></div>
+	<h2>Log</h2>
+	<pre id="log"></pre>
+</main>
+</body>
+</html>

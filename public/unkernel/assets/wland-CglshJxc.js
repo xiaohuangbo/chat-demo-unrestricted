@@ -1,0 +1,1 @@
+var e=`/unkernel/assets/wland-DzhhliP8.wasm`;export{e as default};

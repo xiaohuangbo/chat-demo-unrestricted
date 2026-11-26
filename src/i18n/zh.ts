@@ -1533,7 +1533,7 @@ export const zh = {
   unkernelDiskResetDone: '数据盘已重置，正在启动一台干净的虚拟机',
   unkernelDiskResetFailed: '重置数据盘失败：{reason}',
   unkernelDshGoHint:
-    '虚拟机里的「演示」→ DSH go 可以启动轻量的 DeepSeek Harness（24 MiB 静态二进制、中文 REPL）；首次运行在终端输入 API Key，会保存在 guest 的 ~/.dsh-go/api-key。',
+    '新版页面是带窗口、程序坞与应用启动器的桌面：应用列表的「AI」文件夹里，DSH go 可以启动轻量的 DeepSeek Harness（24 MiB 静态二进制、中文 REPL）；首次运行在终端输入 API Key，会保存在 guest 的 ~/.dsh-go/api-key。',
   unkernelCoiEnabling: '正在开启跨源隔离，页面会刷新一次…',
   unkernelCoiUnsupported: '当前环境不支持跨源隔离（Android WebView 不支持），多 CPU 不可用',
   unkernelCoiFailed: '开启跨源隔离失败：{reason}',
@@ -2066,6 +2066,8 @@ export const zh = {
     '压缩摘要与轮次提醒合并成同一条 latest_reminder：连续两条 latest_reminder 同样会被服务端拒绝（实测），摘要后面紧跟的第一条轮次提醒改为拼接进摘要文本',
   changelogV2717InjectSkip:
     '自定义提示词注入工具的历史还原让位给提醒：下一条提问前需要插入新提醒时（跨天、换定位），不再把上一条回答还原成 tool_use，避免提醒夹在 tool_use 与 tool_result 之间（该形状实测会被拒绝）；提醒不变的轮次照常还原',
+  changelogV2717Unkernel:
+    '合并新版 Unkernel Linux 页面（v0.2.0-261126）：从单个控制台升级为桌面——窗口、程序坞、应用启动器、控制中心、预览浏览器与 Wayland 窗口，80+ 个应用（Steam、Chromium / Firefox / Ladybird、VLC / mpv、Xfce / X11、kmscube / Vulkan、Claude Code / Ollama / llama.cpp、Node / Python / Go / Rust / Bun、nginx / PostgreSQL / Valkey、Ubuntu chroot 与 box64 x86 兼容等），首次运行按需下载并在 guest 里装包；保留 DSH go 启动器（并入「AI」文件夹）与宿主的 Unkernel 设置面板，设置项按新参数映射（数据盘改为 datasize/GiB）；整个页面重新汉化，DSH go 仍可一键运行',
   changelogV2717Apk: '同步构建 2.7.17 APK（versionCode 287），使用 xiaohuangbo.jks 签名',
   changelogV2716Title: 'v2.7.16 · 2026-11',
   changelogV2716CustomTool:

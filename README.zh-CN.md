@@ -72,8 +72,8 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.17.apk`（112 MB，versionCode 287，
-SHA-256 `5edfbeed97fcb50f9228a9c4b5520632616f6b81c2f512732059c4277e55208f`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.17.apk`（118 MB，versionCode 287，
+SHA-256 `c6e8b131ef7fb5d6aec8b2328a94d0ed4d35b959c1158c961705b3104ce6d6a7`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -99,7 +99,7 @@ SHA-256 `5edfbeed97fcb50f9228a9c4b5520632616f6b81c2f512732059c4277e55208f`），
 
 ## 最近版本
 
-- **2.7.17**：修复带历史的请求被服务端拒绝的 400「a `latest_reminder` message must be immediately followed by a `user` message」——2.7.16 把历史轮次的提醒快照插到了提问之后（`user → latest_reminder → assistant`），现在提醒一律插在提问之前；压缩摘要与轮次提醒合并成一条（连续两条 `latest_reminder` 同样会被拒），注入工具的历史还原在「下一条提问前要插新提醒」时让位，避免提醒夹在 `tool_use` 与 `tool_result` 之间。
+- **2.7.17**：修复带历史的请求被服务端拒绝的 400「a `latest_reminder` message must be immediately followed by a `user` message」——2.7.16 把历史轮次的提醒快照插到了提问之后（`user → latest_reminder → assistant`），现在提醒一律插在提问之前；压缩摘要与轮次提醒合并成一条（连续两条 `latest_reminder` 同样会被拒），注入工具的历史还原在「下一条提问前要插新提醒」时让位，避免提醒夹在 `tool_use` 与 `tool_result` 之间。；同版本并入新版 Unkernel Linux 页面（上游 v0.2.0-261126）：控制台升级成桌面（窗口 / 程序坞 / 应用启动器 / 控制中心 / 预览浏览器 / Wayland 窗口），80+ 个开箱应用按需下载安装（Steam、Chromium / Firefox / Ladybird、VLC / mpv、Xfce / X11、Vulkan、Claude Code / Ollama、Node / Python / Go / Rust、nginx / PostgreSQL、Ubuntu chroot 与 box64 等），保留 DSH go（移入「AI」文件夹）与宿主设置面板，数据盘改按 `datasize` 传入，整页重新汉化。
 
 - **2.7.16**：设置 → 浏览器工具新增「提示词注入工具（自定义）」——自己定义工具名、描述与参数名，描述里写明「把回答正文写进这个参数」；开启强制工具调用时请求带 `tool_choice` 指向它，模型只能把正文写成一次工具调用的参数，收到回应后客户端再把参数还原成普通正文，界面、复制与历史里都是正常回答；历史消息按规则还原成工具调用（助手消息转 `tool_use`：仅本工具生成的 / 全部回答 / 不转；紧随其后的提问转 `tool_result`：全部 / 仅带标记的，标记不进正文），多轮上下文与本轮形状一致，附件与系统提醒自动让位；强制模式自动处理接口限制（关闭深度思考、不请求标题、去掉安全审核字段与联网工具，否则会被当成思考模式拒绝）。；同版本补丁：修复「每轮注入系统提示词」把提示词拼进 latest_reminder 导致的 400（服务端把该字段按逗号切成五段，提示词里的逗号会让后面的文字被当成平台 / 语言，现在改为追加到 system 末尾，位置里的逗号与换行也会先折平）；记忆节点列表新增筛选栏（关键字按标题 / 正文 / 标签过滤、标签按钮多选取交集、关系图淡出未命中节点）与节点就地编辑（直接改标题 / 正文 / 标签，标签改动同步重算标签边）。
 

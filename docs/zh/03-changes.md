@@ -1061,3 +1061,43 @@ if (toolUse) { ... } else {
 | 真实接口 + 注入工具：第二轮 `latest_reminder,user,assistant(tool_use),user(tool_result)`；改定位后再发一轮，最后一个提醒插在提问前、上一轮不再还原，请求仍 200 | 通过 |
 
 **涉及文件：** `src/services/chat/reply.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。
+
+### 3.50 合并新版 Unkernel Linux 页面（2.7.17）
+
+上游 `pithings/unkernel` 在 2026-11-26 发到 `v0.2.0-261126-fd204d3`，页面从「控制台 + 演示」重写成了桌面。本次把这个版本完整合并进来，同时保留我们自己的两样东西：**DSH go 启动器**和**宿主的 Unkernel 设置面板**，并重新汉化整个页面。
+
+**1. 新页面。** 页面现在是桌面环境：
+
+- 窗口管理（程序坞、窗口菜单、全屏 / 最小化 / 最大化）、控制中心、预览浏览器（guest 端口）、Wayland 窗口（wland）；
+- 应用启动器 80+ 个应用、11 个分组：AI（Claude Code、Ollama、llama.cpp、fx）、工具（Git、Zed、Neovim、tmux、htop）、运行时（Node、Python、Go、Rust、Bun）、服务（nginx、PostgreSQL、Valkey、SQLite）、Linux（Ubuntu chroot、Docker、box64）、浏览器（Chromium、Firefox、Ladybird）、桌面（Xfce、X11、XPaint…）、游戏（Steam、Doom、Minecraft、SuperTuxKart…）、媒体（VLC、mpv、电台）、图形（kmscube、Vulkan、Wayland GL）、系统；
+- 每个应用首次运行由页面下载文件、推入 guest，再 `apk` / `apt` 安装依赖，进度在安装器窗口里显示；
+- guest GL（virgl/WebGL2）、Vulkan（WebGPU）、VA-API（WebCodecs）、9p 工作区、数据盘、快照与挂起都保留。
+
+**2. 宿主集成。**
+
+- `public/unkernel/` 重新生成：用 `KW_BASE=/unkernel/` 构建页面，再用 `scripts/patch-unkernel-page.mjs` 补上发行版镜像、Service Worker、预览路径与 manifest 的前缀（新脚本按 backtick 模板字面量匹配，顺带处理 CSS 字体与 `new URL('/assets/…')`）。
+- `unkernelUrl()` 改用新参数：`distro`、`mem`、`datasize`（GiB，由宿主的数据盘 MiB 换算）、`net`、`sound`、`display`、`data`、`worker`、`cpus`、`wisp`；旧的 `disk` 参数已移除。
+- 宿主 `KW.vm.exec` / `mount` / `write` / `resize` / `stop` 与新版 `KernelHandle` 兼容，`waitForUnkernelVm`、工作区挂载与十个 Agent 工具无需改 API；工作区仍挂在 `/mnt/workspace`（实测 `mounts` 含该路径）。
+- 保留 `dropLegacyScope` 的宿主保护：页面只会注销脚本名以 `/vm-sw.js` 结尾的根作用域 Service Worker，不会误删宿主的 `coi-sw.js`（否则多 CPU 的 iframe 会因缺少 COEP 失败）。
+- 页面内自己的设置（存储 / 会话 / 显示等）仍可用，但宿主每次重启会用 URL 参数覆盖，宿主的设置面板依旧是权威来源。
+
+**3. DSH go。** 从旧的 demos 迁移成标准应用（`web/src/apps/agents/dsh-go.ts`，标题「DSH go」、鲸鱼图标、`~/demos/dsh-go`），首次运行从页面同源下载 24,576,162 字节的静态二进制（SHA-256 固定）并推入 guest，再执行；`web/src/download.ts` 增加了相对 URL 解析，页面自己的资源也能作为 app 的 `downloads`。
+
+**4. 汉化。** 三个并行任务把页面文案全部译成简体中文：`web/src/components/**`（~500 条界面文案）、`web/src/apps/**`（73 条应用说明 + 11 个分组元数据，产品名保留）、`web/src/*.ts` 与 `index.html`（~815 条启动日志、状态、错误与提示）。技术输出、脚本、命令、内核日志保持英文。
+
+**验证。**
+
+| 场景 | 结果 |
+| --- | --- |
+| 页面在 `/unkernel/` 前缀下启动（Chromium，JSPI） | 通过：`KW.vm` 就绪，`uname -a` 返回 `Linux 7.3.4+ … aarch64` |
+| 页面语言与标题 | `lang=zh-CN`，标题「unkernel — 浏览器里的 Linux」，启动日志与按钮为中文 |
+| 应用启动器 | 11 个分组显示中文名称；「AI」文件夹含 DSH go |
+| DSH go 端到端 | 通过：安装器装 `ca-certificates bash`、下载并推入 24,576,162 字节二进制，终端以 `dsh-go` 运行（约 14 秒） |
+| 宿主 iframe | 通过：`/unkernel/index.html?distro=alpine&mem=512&datasize=8…`，`KW.vm` 就绪，`vm.exec` 正常，页面中文 |
+| 宿主设置面板 | 通过：内核内存 / 数据盘 / 发行版 / 设备 / 文件 / 重启虚拟机均在，数据盘改 16 GiB 后重启，iframe URL 变为 `datasize=16` |
+| 工作区 | 通过：guest `mounts` 含 `/mnt/workspace`，可 `ls` 该目录 |
+| Agent 工具（真实接口） | 通过：模型调用 `unkernel_shell` 执行 `uname -a`，工具 `done` 并返回内核版本 |
+| 390px 手机视口 | 通过：无横向溢出，程序坞与启动器可用 |
+| WebSocket / Wisp 联网 | 本机浏览器对 `wss://` 出站被网络环境阻断（三个不同服务器均超时），页面本身没有改动网络层；宿主的 Wisp 参数与旧版一致 |
+
+**涉及文件：** `public/unkernel/`（整页替换）、`scripts/patch-unkernel-page.mjs`、`src/services/unkernel/config.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`、`src/components/docs/docsContent.ts`；页面源码侧：`web/src/apps/agents/{dsh-go.ts,index.ts}`、`web/src/download.ts`、`web/src/sw.ts`、`web/vite.config.ts`、`web/public/demos/dsh-go/`，以及汉化改动的 `web/src/**`、`web/index.html`。

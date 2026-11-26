@@ -787,6 +787,7 @@ const ChangelogSetting = () => {
         'changelogV2717ReminderOrder',
         'changelogV2717ReminderMerge',
         'changelogV2717InjectSkip',
+        'changelogV2717Unkernel',
         'changelogV2717Apk',
       ],
     },

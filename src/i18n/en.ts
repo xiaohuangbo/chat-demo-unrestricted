@@ -1655,7 +1655,7 @@ export const en = {
   unkernelDiskResetDone: 'Data disk reset; starting a clean VM',
   unkernelDiskResetFailed: 'Could not reset the data disk: {reason}',
   unkernelDshGoHint:
-    'The page’s Demos → DSH go starts a lightweight DeepSeek Harness inside the VM (a 24 MiB static binary with a Chinese REPL). Its first run asks for an API key in the terminal and saves it to ~/.dsh-go/api-key in the guest.',
+    'The new page is a desktop with windows, a dock and an app launcher: in the AI folder of the app list, DSH go starts a lightweight DeepSeek Harness inside the VM (a 24 MiB static binary with a Chinese REPL). Its first run asks for an API key in the terminal and saves it to ~/.dsh-go/api-key in the guest.',
   unkernelCoiEnabling: 'Enabling cross-origin isolation; the page reloads once…',
   unkernelCoiUnsupported:
     'Cross-origin isolation is unavailable here (Android WebView), so multiple CPUs cannot run',
@@ -2224,6 +2224,8 @@ export const en = {
     'The compression summary and the first round reminder are merged into a single latest_reminder: two reminders in a row are rejected as well (verified), so the first reminder after a summary is appended to the summary text',
   changelogV2717InjectSkip:
     'History restoration for the custom prompt-injection tool yields to reminders: when a new reminder must be inserted before the next question (day change, different location), the previous answer is no longer restored as tool_use, so the reminder never lands between tool_use and tool_result (that shape is rejected, verified); rounds with unchanged reminders are still restored',
+  changelogV2717Unkernel:
+    'Merges the new Unkernel Linux page (v0.2.0-261126): the console grew into a desktop with windows, a dock, an app launcher, a control center, a preview browser and Wayland windows, plus 80+ apps (Steam, Chromium / Firefox / Ladybird, VLC / mpv, Xfce / X11, kmscube / Vulkan, Claude Code / Ollama / llama.cpp, Node / Python / Go / Rust / Bun, nginx / PostgreSQL / Valkey, an Ubuntu chroot and box64 for x86 binaries and more), each downloading its files and installing packages in the guest on first run; the DSH go launcher (now in the AI folder) and the host’s Unkernel settings panel are kept, with the host settings mapped to the new parameters (the data disk uses datasize/GiB); the whole page is localized to Chinese again, and DSH go still runs with one click',
   changelogV2717Apk: 'Builds the 2.7.17 APK (versionCode 287), signed with xiaohuangbo.jks',
   changelogV2716Title: 'v2.7.16 · 2026-11',
   changelogV2716CustomTool:
