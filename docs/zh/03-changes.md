@@ -2,7 +2,7 @@
 
 ### 3.1 设置页结构
 
-设置页从原来的「通用设置 / 数据管理」两组扩到十七组：
+设置页从原来的「通用设置 / 数据管理」两组扩到十八组：
 
 | 分组            | 内容                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -15,9 +15,10 @@
 | **搜索投毒**    | 自定义当前时间与知识截止、接管联网搜索、关键字 / 正则替换、黑名单、强制自定义结果、白名单                                      |
 | **记忆**        | 长期记忆、自动提炼、记忆更新提示、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                                   |
 | **附件**        | 附件限制开关、单文件大小、单会话数量、扩展名白名单；大文本附件：超过 32768 token 的纯文本自动拆分成 .partN 分片，或实验性直接放入 1M 上下文；附件投毒：上传前改写附件（文本正文 / 图片文字 / DOCX / 元数据 / 文件尾 / 文件名 / 伴随文本附件） |
-| **浏览器工具**  | 一个主开关 + 十项独立开关：时间日期、网络定位、天气查询、发送通知、读 / 写剪贴板、抓取网页、生成文件、打开链接、生成可视化组件 |
+| **浏览器工具**  | 一个主开关 + 十二项独立开关：时间日期、网络定位、天气查询、发送通知、读 / 写剪贴板、抓取网页、生成文件、打开链接、生成可视化组件、生成 GenUI 界面、自定义提示词注入工具 |
 | **工作区**      | 浏览器本地的虚拟文件库：新建 / 编辑 / 删除文件、单文件下载、整包导入（合并或覆盖）与导出                                       |
 | **虚拟机**      | 两个终端：NanoVM Slim（WASM shell、配额、工具链、虚拟网络）与 WebVM（CheerpX x86 Debian、跨源隔离、镜像、导入导出、编程环境检测）；两边可同时运行、自由切换 |
+| **Unkernel Linux** | 第三个虚拟机：发行版与内存、数据盘（8 / 16 / 32 GiB）、CPU、网络 / 声音 / 显示、Wisp 地址、文件导入导出、数据盘重置、重启虚拟机，以及十个 `unkernel_*` Agent 工具 |
 | **统计**        | 用量概览与范围切换、每日趋势柱状图、8 周活跃热力图、输入构成环、按模型拆分、上下文统计管理                                     |
 | **账户与用量**  | DeepSeek 账户余额查询、今日与近 30 天 token / 费用概览、语音与搜索附加用量、跳转统计                                             |
 | 数据管理        | API Key、导入、导出、恢复默认设置、删除全部对话                                                                                |
@@ -1101,3 +1102,34 @@ if (toolUse) { ... } else {
 | WebSocket / Wisp 联网 | 本机浏览器对 `wss://` 出站被网络环境阻断（三个不同服务器均超时），页面本身没有改动网络层；宿主的 Wisp 参数与旧版一致 |
 
 **涉及文件：** `public/unkernel/`（整页替换）、`scripts/patch-unkernel-page.mjs`、`src/services/unkernel/config.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`、`src/components/docs/docsContent.ts`；页面源码侧：`web/src/apps/agents/{dsh-go.ts,index.ts}`、`web/src/download.ts`、`web/src/sw.ts`、`web/vite.config.ts`、`web/public/demos/dsh-go/`，以及汉化改动的 `web/src/**`、`web/index.html`。
+
+### 3.51 文档全面修订（2.7.18）
+
+2.7.9 之后文档只随功能零散追加，积累了一批过期内容：版本号停在 2.7.9、工具数量停在「十项 / 十个」、章节范围停在 3.39、APK 体积停在 112 MB，设置项速查缺了 17 个键，请求体文档没有 `tool_choice`，已知限制没有覆盖 2.7.16 / 2.7.17 新增的接口约束。本次把所有文档按当前实现重新校对。
+
+**修订内容。**
+
+| 位置 | 问题 | 处理 |
+| --- | --- | --- |
+| `README.md` / `README.zh-CN.md` | 版本停在 2.7.17 之前的内容混杂；浏览器工具只写「十项」；Unkernel 仍写旧控制台页面；章节范围 3.1–3.39；已知限制 82 条；2.7.17 / 2.7.16 的拼接处出现「。；」 | 补充 2.7.18 条目；工具改为十二项并写明 GenUI 与提示词注入；Unkernel 改成新版桌面与 80+ 应用；章节改为 3.1–3.51；限制改为 86 条；修掉重复标点 |
+| `docs/01-what-is-this.md` | 「当前版本 2.7.9」，浏览器工具十项，Unkernel 旧描述，文末重复了一段功能列表 | 版本 2.7.18；工具十二项含 GenUI / 注入；Unkernel 桌面与应用；删除重复列表，把实验台攻击器清单并入 3.9 的条目 |
+| `docs/03-changes.md` | 设置页写「十七组」且缺 Unkernel Linux 行；浏览器工具写「十项」 | 改为十八组并补 Unkernel 行；工具十二项 |
+| `docs/05-settings.md` | 缺 17 个 localStorage 键；「系统提示词预设」两行同名 | 补齐 `custom-injection`、`memory-bank-*` 权重 / 阈值 / 标签扩展、`attachment-large-text*`、`theme-preference`、`locale`、`location`、`tts-voice`、`thinking`、`search`、`sider-collapsed`、`api-key`；两行改为「系统提示词预设（多套）」与「提示词预设（内置）」 |
+| `docs/06-request.md` | 没有 `tool_choice`；没写 `latest_reminder` 的五段式与「后面必须紧跟 user」；工具往返写死 4 轮 | 补客户端工具的 `tool_choice` 与注入工具的参数形状；写明 `latest_reminder` 规则与压缩摘要合并；往返上限按模式给出（4 / 8 / 16 / 24） |
+| `docs/07-implementation.md` | 索引缺 2.7.12–2.7.17 的新文件 | 补 `latestReminder.ts`、`memoryBank.ts`、`agent/genui.ts`、`GenuiCard.tsx`、`agent/customInjection.ts`、`CustomToolSetting.tsx`、`docs/docsContent.ts`、`unkernelTools.ts`、`unkernel/session.ts` |
+| `docs/08-privacy.md` | 没有 Unkernel 页面、Wisp、应用下载与外站请求的说明 | 补充 Wisp 代理可见范围、应用首次运行从镜像站下载、guest GL / Vulkan 本地渲染、DSH go 二进制来源 |
+| `docs/10-known-limits.md` | 第 82 条仍描述旧页面与 112 MB；没有 2.7.16 / 2.7.17 的接口约束 | 重写第 82 条；新增 83（`tool_choice` 与思考 / 安全审核 / 服务端工具 / 标题互斥）、84（注入工具历史还原让位）、85（新版页面应用首次运行需联网下载）、86（记忆筛选只影响列表）；总数 82 → 86 |
+| `docs/11-license.md` | Unkernel 许可证写成 `LICENSE-unkernel-*` | 改为页面内的 `licenses.md`，并保留上游仓库链接 |
+| `docs/09-build.md` / `android/README.md` | APK 名称与版本号停在 2.7.17 / 287 | 改为 2.7.18 / 288，并更新体积与哈希 |
+| 应用内文档 | Unkernel 小节、浏览器工具表、已知限制与 FAQ 缺新能力 | Unkernel 补桌面 / 应用 / `datasize`；工具表 12 行；FAQ 补 `tool_choice` 与提醒顺序 |
+
+**验证。**
+
+| 检查 | 结果 |
+| --- | --- |
+| 文档内部链接（README ↔ docs ↔ 源码路径 ↔ android）逐条解析 | 全部存在 |
+| 中英文小节数量、表格行数、已知限制条数 | 11 篇 × 2 语言结构一致；限制 82 → 86 两侧同步 |
+| `grep` 过期数字（2.7.9、十项、3.39、112 MB、287） | 无残留（历史版本条目里的旧数字保留） |
+| `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |
+
+**涉及文件：** `README.md`、`README.zh-CN.md`、`docs/zh/*.md`、`docs/en/*.md`、`android/README.md`、`src/components/docs/docsContent.ts`、`src/i18n/{zh,en}.ts`、`src/components/settings/SettingsDialog.tsx`。

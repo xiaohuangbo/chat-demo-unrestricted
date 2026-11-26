@@ -19,6 +19,9 @@
 | Chat mode                   | Not available               | Four entries in the composer (Chat only / Web agent / PTC / Creator) decide which client tools and round limit apply     | Same as default (independent of unrestricted mode)        |
 | NanoVM Slim                 | Not available               | Enabled by default with model access off; terminal, on-demand toolchains, VM image import/export and quotas              | Same as default                                           |
 | Context breakdown           | Not available               | Records the latest request's eight categories per session; display only                                                  | Same as default                                           |
+| Prompt injection            | Not available               | Off by default; define the tool and argument, force `tool_choice` so the answer becomes the argument and is restored as text | Same as default                                           |
+| Memory nodes                | Not available               | Settings → Memory filters by title / body / tags; every card edits title, body and tags in place                        | Same as default                                           |
+| Unkernel page               | Not available               | Desktop + app launcher (80+ apps), terminals, Wayland windows, GL / Vulkan; Alpine by default                           | Same as default                                           |
 
 ---
 

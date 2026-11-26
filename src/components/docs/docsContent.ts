@@ -788,7 +788,9 @@ const zh: DocsDoc = {
             '服务端上下文上限 1,048,576 token；超过会直接报错。',
             '带 DeepSeek 扩展字段的请求，用户输入被限制在 32768 token；应用对大输入会自动去掉这些字段。',
             '安卓 WebView 没有 WebGPU 与跨源隔离：本地 WebLLM、WebVM 在 APK 内不可用。',
-            'Unkernel 需要 JSPI；旧版浏览器会显示启动错误。',
+            'Unkernel 需要 JSPI；旧版浏览器会显示启动错误。新版页面约 127 MB，80+ 应用首次运行要联网下载并安装软件包；DSH go 随包分发，无需下载。',
+            '提示词注入工具开启强制 `tool_choice` 时，本轮不能联网搜索、也不生成服务端标题：接口把 `tool_choice` 与思考 / `safety_check` / 服务端工具 / 标题视为互斥。',
+            '`latest_reminder` 必须恰好五段、字段内不能有逗号或换行，并且后面紧跟一条 `user`；应用已自动清洗字段与合并摘要，自定义位置里的逗号也会被折成空格。',
             '越狱类开关依赖服务端当前策略，可能随时失效；失败时先看报错原文。',
             '大附件每轮都会重新计入输入 token，长会话的费用会明显上升。',
           ],
@@ -834,6 +836,14 @@ const zh: DocsDoc = {
             [
               '大附件每轮都很贵',
               '附件会随历史每轮重新计入输入 token；长会话里可以压缩历史、开新会话或改用检索式记忆。',
+            ],
+            [
+              'Unkernel 应用第一次打开停在安装器',
+              '应用首次运行要从发行版镜像下载文件并装包（Steam、Zed 等从几十到上百 MB）；网络不可用或 Wisp 被拦截时会停住，可在页面设置里换 Wisp，或先运行随包分发的 DSH go。',
+            ],
+            [
+              '提示词注入工具那一轮没有联网 / 标题',
+              '强制 `tool_choice` 与深度思考、`safety_check`、服务端工具、标题互斥，接口会按思考模式拒绝；本轮自动关闭思考并去掉这些字段，属预期行为。',
             ],
           ],
         },
@@ -1745,7 +1755,9 @@ const en: DocsDoc = {
             'Server context is 1,048,576 tokens; longer requests fail.',
             'Requests with DeepSeek extension fields cap user input at 32768 tokens; the app drops those fields for large inputs.',
             'Android WebView has no WebGPU and no cross-origin isolation, so in-browser WebLLM and WebVM do not work in the APK.',
-            'Unkernel needs JSPI; older browsers show a boot error.',
+            'Unkernel needs JSPI; older browsers show a boot error. The new page is about 127 MB and its 80+ apps download files and install packages on first run; DSH go ships with the page and needs no download.',
+            'Forced `tool_choice` in the prompt-injection tool means no web search and no server-generated title that round: the API treats `tool_choice` as incompatible with thinking, `safety_check`, server tools and `title`.',
+            '`latest_reminder` must be exactly five parts, with no comma or newline inside a field, and is followed immediately by a `user` message; the app sanitises the fields and merges summaries, and folds commas in a custom location to spaces.',
             'Jailbreak switches depend on current server policy and may stop working at any time; read the raw error first.',
             'Large attachments are re-counted every turn, so long chats get noticeably more expensive.',
           ],
@@ -1791,6 +1803,14 @@ const en: DocsDoc = {
             [
               'Large attachments get expensive',
               'Attachments are counted again on every turn; compress history, start a new chat or rely on memory retrieval instead.',
+            ],
+            [
+              'An Unkernel app stops at the installer on first launch',
+              'A first run downloads files and installs packages from distro mirrors (tens to hundreds of MB for Steam, Zed and friends); with no network or a blocked Wisp it waits there. Change the Wisp server in the page settings, or start DSH go first, which ships with the page.',
+            ],
+            [
+              'The injection tool round had no web search or title',
+              'Forced `tool_choice` is incompatible with deep thinking, `safety_check`, server tools and `title`, and the API rejects the combination as thinking mode; that round turns thinking off and drops those fields by design.',
             ],
           ],
         },

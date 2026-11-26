@@ -10,7 +10,7 @@
 | [`src/components/settings/StatsSettings.tsx`](../../src/components/settings/StatsSettings.tsx)                       | Settings → Statistics: KPI, trend bars, heatmap, composition ring, context management                                                                                                                       |
 | [`src/components/stats/charts.tsx`](../../src/components/stats/charts.tsx)                                           | Hand-rolled SVG/CSS charts: bars, heatmap, ring, sparkline, pressure gauge                                                                                                                                  |
 | [`src/services/api/mask.ts`](../../src/services/api/mask.ts)                                                         | API key masking (`sk-****` + last four) shared by the lab and other read-only displays                                                                                                                      |
-| [`src/services/agent/tools.ts`](../../src/services/agent/tools.ts)                                                   | Browser tool registry and executors (time, location, weather, notifications, clipboard, fetch, files, links, widgets)                                                                                       |
+| [`src/services/agent/tools.ts`](../../src/services/agent/tools.ts)                                                   | Browser tool registry and executors (time, location, weather, notifications, clipboard, fetch, files, links, widgets, GenUI, the injection tool's placeholder)                                              |
 | [`src/services/agent/workspaceTools.ts`](../../src/services/agent/workspaceTools.ts)                                 | Workspace tools: list / read / write / delete / diff                                                                                                                                                        |
 | [`src/services/agent/agentToolSettings.ts`](../../src/services/agent/agentToolSettings.ts)                           | Master and per-tool switches for browser and workspace tools                                                                                                                                                |
 | [`src/services/agent/runTool.ts`](../../src/services/agent/runTool.ts)                                               | Single tool execution: approval, timeout, result normalisation                                                                                                                                              |
@@ -118,6 +118,17 @@
 | [`src/components/settings/AccountSettings.tsx`](../../src/components/settings/AccountSettings.tsx) | Settings → Account & usage: balance, today and 30-day overview |
 | [`src/services/api/balance.ts`](../../src/services/api/balance.ts) | DeepSeek account balance client |
 | [`src/utils/resizeUploadImage.ts`](../../src/utils/resizeUploadImage.ts) | Upstream 0.1.3: upload image resizing and size check |
+| [`src/services/chat/latestReminder.ts`](../../src/services/chat/latestReminder.ts) | Five-part `latest_reminder` builder and field sanitising (commas / newlines folded to spaces) |
+| [`src/services/chat/memoryBank.ts`](../../src/services/chat/memoryBank.ts) | Graph memory: Unicode tokenising, hash vectors, nodes / edges, tag links and retrieval scoring |
+| [`src/services/agent/genui.ts`](../../src/services/agent/genui.ts) | GenUI declarative tree: parsing, limits and normalisation |
+| [`src/components/agent/GenuiCard.tsx`](../../src/components/agent/GenuiCard.tsx) | GenUI renderer (stats, sortable tables, line / bar charts, progress, callouts, grids) |
+| [`src/services/agent/customInjection.ts`](../../src/services/agent/customInjection.ts) | Prompt-injection tool: config validation, tool definition, body extraction and history rules |
+| [`src/components/settings/CustomToolSetting.tsx`](../../src/components/settings/CustomToolSetting.tsx) | Settings → Browser tools: injection tool config panel and preview |
+| [`src/components/settings/MemorySettings.tsx`](../../src/components/settings/MemorySettings.tsx) | Settings → Memory: memories, graph, node filtering and inline editing, relation graph and search debug |
+| [`src/components/docs/docsContent.ts`](../../src/components/docs/docsContent.ts) | The in-app docs' 26 sections (Chinese and English) |
+| [`src/services/agent/unkernelTools.ts`](../../src/services/agent/unkernelTools.ts) | The ten `unkernel_*` agent tools |
+| [`src/services/unkernel/session.ts`](../../src/services/unkernel/session.ts) | Unkernel iframe lifecycle, `window.KW.vm` polling, command execution and workspace mount |
+| [`src/services/unkernel/config.ts`](../../src/services/unkernel/config.ts) | Unkernel boot parameters and URL mapping (`mem` / `datasize` / `net` / `sound` / `display` / `worker` / `cpus` / `wisp`) |
 
 ---
 

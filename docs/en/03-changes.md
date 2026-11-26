@@ -15,10 +15,10 @@ The settings dialog grows from two groups to eighteen:
 | **Search poison**     | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist                                                                |
 | **Memory**            | Long-term memory, auto-extraction, memory-update toast, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                                          |
 | **Attachments**       | Limit switch, max size per file, max files per session, extension whitelist; large text attachments: plain text above 32768 tokens is split into .partN parts, or experimentally pasted into the 1M context; attachment poisoning: rewrite before upload (text body / image text / DOCX / metadata / file trailer / filename / companion text attachment) |
-| **Browser tools**     | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
+| **Browser tools**     | Master switch plus twelve independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget, GenUI interfaces, and the custom prompt-injection tool |
 | **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
 | **Virtual machines**  | Two terminals: NanoVM Slim (WASM shell, quotas, toolchains, virtual network) and WebVM (CheerpX x86 Debian, cross-origin isolation, images, import/export, environment check); both run at once and switch freely |
-| **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24 / Debian 13.7, SMP multi-CPU, Wisp networking, sound, framebuffer, persistent disk, import/export, `/mnt/workspace` mount, a Chinese page UI, ten Agent tools, a data disk that can grow or reset, a DSH go demo and `fastfetch` |
+| **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24 / Debian 13, SMP multi-CPU, Wisp networking, sound, framebuffer, persistent disk (8 / 16 / 32 GiB), import/export, `/mnt/workspace` mount, a Chinese page UI with a desktop and 80+ apps, ten Agent tools, a DSH go app in the AI folder, data-disk reset and restart |
 | **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
 | Data                  | API key, import, export, restore default settings, delete all                                                                                                                                  |
 | About                 | Repository, demo and upstream links                                                                                                                                                            |
@@ -1101,3 +1101,34 @@ Upstream `pithings/unkernel` released `v0.2.0-261126-fd204d3` on 2026-11-26 and 
 | WebSocket / Wisp networking | outbound `wss://` from the local browser is blocked by this network (three different servers time out); the page's network layer is unchanged and the host wisp parameters are as before |
 
 **Files:** `public/unkernel/` (whole page replaced), `scripts/patch-unkernel-page.mjs`, `src/services/unkernel/config.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`, `src/components/docs/docsContent.ts`; on the page source: `web/src/apps/agents/{dsh-go.ts,index.ts}`, `web/src/download.ts`, `web/src/sw.ts`, `web/vite.config.ts`, `web/public/demos/dsh-go/`, plus the localized `web/src/**` and `web/index.html`.
+
+### 3.51 Documentation pass (2.7.18)
+
+Since 2.7.9 the docs only grew feature by feature, so stale content piled up: the version still read 2.7.9, browser tools were “ten”, chapters stopped at 3.39, the APK size read 112 MB, the settings reference missed 17 keys, the request chapter had no `tool_choice`, and known limits did not cover the API constraints added in 2.7.16 / 2.7.17. This pass re-audits every document against the current implementation.
+
+**What changed.**
+
+| Location | Problem | Fix |
+| --- | --- | --- |
+| `README.md` / `README.zh-CN.md` | Mixed versions, “ten” browser tools, the old Unkernel console page, chapters 3.1–3.39, 82 limits, stray “。；” where 2.7.17 / 2.7.16 entries were joined | Added the 2.7.18 entry; twelve tools naming GenUI and the injection tool; Unkernel described as the new desktop with 80+ apps; chapters 3.1–3.51; 86 limits; duplicate punctuation removed |
+| `docs/01-what-is-this.md` | “Current version 2.7.9”, ten tools, old Unkernel text, a duplicated feature list at the end | 2.7.18; twelve tools including GenUI / injection; Unkernel desktop and apps; the duplicate list removed and the attacker names folded into 3.9 |
+| `docs/03-changes.md` | “Seventeen groups” and no Unkernel Linux row; browser tools said “ten” | Eighteen groups with the Unkernel row; twelve tools |
+| `docs/05-settings.md` | 17 localStorage keys missing; two rows shared the name “system prompt preset” | Added `custom-injection`, the `memory-bank-*` weights / threshold / tag expansion, `attachment-large-text*`, `theme-preference`, `locale`, `location`, `tts-voice`, `thinking`, `search`, `sider-collapsed`, `api-key`; the two preset rows renamed |
+| `docs/06-request.md` | No `tool_choice`; no five-part `latest_reminder` rule or “must be followed by user”; tool rounds hard-coded to 4 | Documented `tool_choice` and the injection tool’s argument shape; the reminder rule and summary merge; per-mode round limits (4 / 8 / 16 / 24) |
+| `docs/07-implementation.md` | Index missing the files added in 2.7.12–2.7.17 | Added `latestReminder.ts`, `memoryBank.ts`, `agent/genui.ts`, `GenuiCard.tsx`, `agent/customInjection.ts`, `CustomToolSetting.tsx`, `docs/docsContent.ts`, `unkernelTools.ts`, `unkernel/session.ts` |
+| `docs/08-privacy.md` | Nothing about the Unkernel page, Wisp, app downloads or external requests | Added what the Wisp proxies see, first-run downloads, local guest GL / Vulkan rendering, and where the DSH go binary comes from |
+| `docs/10-known-limits.md` | Limit 82 described the old page and 112 MB; no 2.7.16 / 2.7.17 API constraints | Rewrote 82; added 83 (`tool_choice` vs thinking / safety check / server tools / title), 84 (injection history restoration yields), 85 (new page apps need the network on first run), 86 (the memory filter only affects the list); 82 → 86 |
+| `docs/11-license.md` | Unkernel licence pointed at `LICENSE-unkernel-*` | Points at the page’s `licenses.md`, keeping the upstream links |
+| `docs/09-build.md` / `android/README.md` | APK name and version stuck at 2.7.17 / 287 | 2.7.18 / 288, with the new size and hash |
+| In-app docs | Unkernel section, browser tool table and known limits / FAQ missing the new abilities | Unkernel gains the desktop, apps and `datasize`; twelve tool rows; FAQ entries for `tool_choice` and reminder ordering |
+
+**Verified.**
+
+| Check | Result |
+| --- | --- |
+| Internal links (README ↔ docs ↔ source paths ↔ android) resolved one by one | all exist |
+| Section counts, table rows and limit counts across languages | 11 chapters × 2 languages in step; limits 82 → 86 on both sides |
+| `grep` for stale numbers (2.7.9, ten tools, 3.39, 112 MB, 287) | nothing left, except the historical entries that intentionally keep their old numbers |
+| `pnpm type` / `pnpm lint` / `pnpm build` | pass |
+
+**Files:** `README.md`, `README.zh-CN.md`, `docs/zh/*.md`, `docs/en/*.md`, `android/README.md`, `src/components/docs/docsContent.ts`, `src/i18n/{zh,en}.ts`, `src/components/settings/SettingsDialog.tsx`.

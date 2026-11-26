@@ -29,7 +29,7 @@
 | Local models | Qwen3 thinking     | Off                      | `chat-demo:local-enable-thinking`  | Unaffected |
 | Local models | Auto-load on open  | Off                      | `chat-demo:local-auto-load`        | Unaffected |
 | Local models | MLC-LLM endpoint   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`     | Unaffected |
-| Jailbreak         | System prompt presets | 1 (if custom text exists) | `chat-demo:system-prompt-presets` | Unaffected |
+| Jailbreak         | System prompt presets (multiple) | 1 (if custom text exists) | `chat-demo:system-prompt-presets` | Unaffected |
 | Jailbreak         | Active system preset  | Empty (auto)              | `chat-demo:system-prompt-active`  | Unaffected |
 | CoT    | CoT presets           | 1 (current text)          | `chat-demo:cot-presets`           | Unaffected |
 | CoT    | Active CoT preset     | Default preset            | `chat-demo:cot-active`            | Unaffected |
@@ -37,7 +37,7 @@
 | Jailbreak         | Custom system prompt                 | empty (assembled)            | `chat-demo:system-prompt`                  | Overrides the assembled result  |
 | Chain of thought  | Enable custom chain of thought       | off                          | `chat-demo:custom-cot-enabled`             | Unaffected                      |
 | Chain of thought  | Chain text                           | empty                        | `chat-demo:custom-cot`                     | Unaffected                      |
-| Jailbreak         | System prompt preset                 | `deepseek`                   | `chat-demo:prompt-preset`                  | Unaffected                      |
+| Jailbreak         | Built-in prompt preset               | `deepseek`                   | `chat-demo:prompt-preset`                  | Unaffected                      |
 | Jailbreak         | Input perturbation                   | off                          | `chat-demo:parseltongue`                   | Unaffected                      |
 | Jailbreak         | Perturbation technique               | `leetspeak`                  | `chat-demo:parseltongue-technique`         | Unaffected                      |
 | Jailbreak         | Perturbation intensity               | `medium`                     | `chat-demo:parseltongue-intensity`         | Unaffected                      |
@@ -45,6 +45,8 @@
 | Jailbreak         | AutoTune strategy                    | `adaptive`                   | `chat-demo:autotune-strategy`              | Unaffected                      |
 | Jailbreak         | Output shaping                       | empty (off)                  | `chat-demo:stm-modules`                    | Unaffected                      |
 | Attachments       | Enforce attachment limits            | on                           | `chat-demo:attachment-limits`              | Unaffected                      |
+| Attachments       | Split large text automatically       | Off                          | `chat-demo:attachment-large-text`          | Unaffected                      |
+| Attachments       | Inline large text into the context   | Off                          | `chat-demo:attachment-large-text-inline`   | Unaffected                      |
 | Attachments       | Max size per file                    | 64 MB                        | `chat-demo:attachment-max-mb`              | Unaffected                      |
 | Attachments       | Max files per session                | 50                           | `chat-demo:attachment-max-count`           | Unaffected                      |
 | Attachments       | Extension whitelist                  | built-in                     | `chat-demo:attachment-exts`                | Unaffected                      |
@@ -56,6 +58,14 @@
 | Jailbreak         | Inject the system prompt every round | off                          | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
 | Jailbreak         | Disguise historical thinking         | off                          | `chat-demo:thinking-as-body`               | Unaffected                      |
 | Model             | Stream output                        | on                           | `chat-demo:stream-output`                  | Unaffected                      |
+| General           | Theme                                | Follow system                | `chat-demo:theme-preference`               | Unaffected                      |
+| General           | Language                             | Follow browser               | `chat-demo:locale`                         | Unaffected                      |
+| General           | Location                             | Empty                        | `chat-demo:location`                       | Unaffected                      |
+| General           | TTS voice                            | `stella`                     | `chat-demo:tts-voice`                      | Unaffected                      |
+| General           | Sidebar collapsed                    | Off                          | `chat-demo:sider-collapsed`                | Unaffected                      |
+| Model             | Deep thinking                        | Off                          | `chat-demo:thinking`                       | Unaffected                      |
+| Model             | Smart search                         | Off                          | `chat-demo:search`                         | Unaffected                      |
+| Data              | API key                              | Empty                        | `chat-demo:api-key`                        | Unaffected                      |
 | Model             | Auto-compress long chats             | off                          | `chat-demo:auto-compress`                  | Unaffected                      |
 | Search poison     | Enable search poisoning              | off                          | `chat-demo:search-poison`                  | Unaffected                      |
 | Attachments       | Enable attachment poisoning          | off                          | `chat-demo:attachment-poison`              | Unaffected                      |
@@ -69,8 +79,15 @@
 | Memory            | Memory-graph retrieval               | on                           | `chat-demo:memory-bank-enabled`            | Unaffected                      |
 | Memory            | Results to inject                    | 4                            | `chat-demo:memory-bank-limit`              | Unaffected                      |
 | Memory            | Vector dimension                     | 256                          | `chat-demo:memory-bank-dimension`          | Unaffected                      |
+| Memory            | Retrieval threshold                  | 0.15                         | `chat-demo:memory-bank-threshold`          | Unaffected                      |
+| Memory            | Keyword weight                       | 1                            | `chat-demo:memory-bank-keyword-weight`     | Unaffected                      |
+| Memory            | Tag weight                           | 0.5                          | `chat-demo:memory-bank-tag-weight`         | Unaffected                      |
+| Memory            | Vector weight                        | 0.8                          | `chat-demo:memory-bank-vector-weight`      | Unaffected                      |
+| Memory            | Edge weight                          | 0.4                          | `chat-demo:memory-bank-edge-weight`        | Unaffected                      |
+| Memory            | Tag linking & graph expansion        | Off                          | `chat-demo:memory-bank-tag-expansion`      | Unaffected                      |
 | Browser tools     | Enable browser tools                 | Off                          | `chat-demo:agent-tools-enabled`            | Unaffected                      |
 | Browser tools     | Per-tool switches                    | All on (with master)         | `chat-demo:agent-tool-flags`               | Unaffected                      |
+| Browser tools     | Injection tool config                | name `emit_answer`, argument `content`, forced `tool_choice` on | `chat-demo:custom-injection` | Unaffected |
 | Workspace         | Enable workspace                     | Off                          | `chat-demo:workspace-enabled`              | Unaffected                      |
 | Workspace         | Workspace files                      | Empty                        | `chat-demo:workspace`                      | Unaffected                      |
 | Workspace         | Storage backend                      | `local`                      | `chat-demo:workspace-mode`                 | Unaffected                      |

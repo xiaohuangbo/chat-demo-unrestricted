@@ -2217,6 +2217,10 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2718Title: 'v2.7.18 · 2026-11',
+  changelogV2718Docs:
+    'Documentation pass: the README, all 11 chapters and the in-app docs are brought up to 2.7.17 (GenUI, the custom prompt-injection tool, memory node filtering and inline editing, and the new Unkernel desktop page); stale version numbers, tool counts, chapter ranges and APK sizes are corrected; the settings reference gains the missing keys (prompt injection, memory weights and threshold, large text attachments, theme / locale / location); the request chapter documents tool_choice, the five-part latest_reminder rule and the per-mode tool round limits; known limits grow to 86',
+  changelogV2718Apk: 'Builds the 2.7.18 APK (versionCode 288), signed with xiaohuangbo.jks',
   changelogV2717Title: 'v2.7.17 · 2026-11',
   changelogV2717ReminderOrder:
     'Fixes the 400 “a `latest_reminder` message must be immediately followed by a `user` message”: 2.7.16 inserted the historical reminder snapshot after the question (user → latest_reminder → assistant), which the server rejects; reminders are now always inserted before the question so no turn can leave a reminder without a following user message',

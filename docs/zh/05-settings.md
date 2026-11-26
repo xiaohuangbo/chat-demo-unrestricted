@@ -29,7 +29,7 @@
 | 本地模型   | Qwen3 思考模式     | 关                        | `chat-demo:local-enable-thinking`           | 不受影响             |
 | 本地模型   | 打开页面自动加载   | 关                        | `chat-demo:local-auto-load`                 | 不受影响             |
 | 本地模型   | MLC-LLM 服务地址   | `http://127.0.0.1:8000`  | `chat-demo:local-mlc-endpoint`              | 不受影响             |
-| 破甲       | 系统提示词预设     | 1 套（有自定义时）        | `chat-demo:system-prompt-presets`          | 不受影响             |
+| 破甲       | 系统提示词预设（多套） | 1 套（有自定义时）    | `chat-demo:system-prompt-presets`          | 不受影响             |
 | 破甲       | 当前预设           | 空（自动组装）            | `chat-demo:system-prompt-active`           | 不受影响             |
 | 思维链     | 思维链预设         | 1 套（当前内容）          | `chat-demo:cot-presets`                    | 不受影响             |
 | 思维链     | 当前预设           | 默认预设                  | `chat-demo:cot-active`                     | 不受影响             |
@@ -37,7 +37,7 @@
 | 破甲       | 自定义系统提示词   | 空（自动组装）            | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
 | 思维链     | 启用自定义思维链   | 关                        | `chat-demo:custom-cot-enabled`             | 不受影响             |
 | 思维链     | 思维链正文         | 空                        | `chat-demo:custom-cot`                     | 不受影响             |
-| 破甲       | 系统提示词预设     | `deepseek`                | `chat-demo:prompt-preset`                  | 不受影响             |
+| 破甲       | 提示词预设（内置） | `deepseek`                | `chat-demo:prompt-preset`                  | 不受影响             |
 | 破甲       | 输入扰动           | 关                        | `chat-demo:parseltongue`                   | 不受影响             |
 | 破甲       | 扰动技术           | `leetspeak`               | `chat-demo:parseltongue-technique`         | 不受影响             |
 | 破甲       | 扰动强度           | `medium`                  | `chat-demo:parseltongue-intensity`         | 不受影响             |
@@ -45,6 +45,8 @@
 | 破甲       | 调参策略           | `adaptive`                | `chat-demo:autotune-strategy`              | 不受影响             |
 | 破甲       | 输出整形           | 空（关闭）                | `chat-demo:stm-modules`                    | 不受影响             |
 | 附件       | 启用附件限制       | 开                        | `chat-demo:attachment-limits`              | 不受影响             |
+| 附件       | 大文本自动分片     | 关                        | `chat-demo:attachment-large-text`          | 不受影响             |
+| 附件       | 大文本直接放入上下文 | 关                      | `chat-demo:attachment-large-text-inline`   | 不受影响             |
 | 附件       | 单文件大小上限     | 64 MB                     | `chat-demo:attachment-max-mb`              | 不受影响             |
 | 附件       | 单会话数量上限     | 50                        | `chat-demo:attachment-max-count`           | 不受影响             |
 | 附件       | 扩展名白名单       | 内置清单                  | `chat-demo:attachment-exts`                | 不受影响             |
@@ -56,6 +58,14 @@
 | 破甲       | 每轮注入系统提示词 | 关                        | `chat-demo:inject-prompt-every-turn`       | 不受影响             |
 | 破甲       | 历史思维链伪装     | 关                        | `chat-demo:thinking-as-body`               | 不受影响             |
 | 模型       | 流式输出           | 开                        | `chat-demo:stream-output`                  | 不受影响             |
+| 通用       | 主题               | 跟随系统                  | `chat-demo:theme-preference`               | 不受影响             |
+| 通用       | 语言               | 跟随浏览器                | `chat-demo:locale`                         | 不受影响             |
+| 通用       | 位置信息           | 空                        | `chat-demo:location`                       | 不受影响             |
+| 通用       | 朗读音色           | `stella`                  | `chat-demo:tts-voice`                      | 不受影响             |
+| 通用       | 侧边栏收起         | 关                        | `chat-demo:sider-collapsed`                | 不受影响             |
+| 模型       | 深度思考           | 关                        | `chat-demo:thinking`                       | 不受影响             |
+| 模型       | 智能搜索           | 关                        | `chat-demo:search`                         | 不受影响             |
+| 数据管理   | API Key            | 空                        | `chat-demo:api-key`                        | 不受影响             |
 | 模型       | 自动压缩长对话     | 关                        | `chat-demo:auto-compress`                  | 不受影响             |
 | 搜索投毒   | 启用搜索投毒       | 关                        | `chat-demo:search-poison`                  | 不受影响             |
 | 附件       | 启用附件投毒       | 关                        | `chat-demo:attachment-poison`              | 不受影响             |
@@ -69,8 +79,15 @@
 | 记忆       | 网状记忆检索       | 开                        | `chat-demo:memory-bank-enabled`            | 不受影响             |
 | 记忆       | 注入条数           | 4                         | `chat-demo:memory-bank-limit`              | 不受影响             |
 | 记忆       | 向量维度           | 256                       | `chat-demo:memory-bank-dimension`          | 不受影响             |
+| 记忆       | 检索阈值           | 0.15                      | `chat-demo:memory-bank-threshold`          | 不受影响             |
+| 记忆       | 关键词权重         | 1                         | `chat-demo:memory-bank-keyword-weight`     | 不受影响             |
+| 记忆       | 标签权重           | 0.5                       | `chat-demo:memory-bank-tag-weight`         | 不受影响             |
+| 记忆       | 向量权重           | 0.8                       | `chat-demo:memory-bank-vector-weight`      | 不受影响             |
+| 记忆       | 关联边权重         | 0.4                       | `chat-demo:memory-bank-edge-weight`        | 不受影响             |
+| 记忆       | 标签关联与图扩展   | 关                        | `chat-demo:memory-bank-tag-expansion`      | 不受影响             |
 | 浏览器工具 | 启用浏览器工具     | 关                        | `chat-demo:agent-tools-enabled`            | 不受影响             |
 | 浏览器工具 | 单项工具开关       | 全开（随主开关）          | `chat-demo:agent-tool-flags`               | 不受影响             |
+| 浏览器工具 | 提示词注入工具配置 | 工具名 `emit_answer`、参数 `content`、强制 `tool_choice` 开 | `chat-demo:custom-injection` | 不受影响             |
 | 工作区     | 启用工作区         | 关                        | `chat-demo:workspace-enabled`              | 不受影响             |
 | 工作区     | 工作区文件         | 空                        | `chat-demo:workspace`                      | 不受影响             |
 | 工作区     | 存储方式           | `local`                   | `chat-demo:workspace-mode`                 | 不受影响             |

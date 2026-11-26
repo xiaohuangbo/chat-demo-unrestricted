@@ -2059,6 +2059,10 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2718Title: 'v2.7.18 · 2026-11',
+  changelogV2718Docs:
+    '文档全面修订：README、11 篇分册与应用内文档同步到 2.7.17 的能力（GenUI、提示词注入工具、记忆节点筛选与就地编辑、新版 Unkernel 桌面页面），修正过期版本号、工具数量、章节范围与 APK 体积；设置项速查补齐提示词注入、记忆检索权重与阈值、大文本附件、主题 / 语言 / 位置等缺失键；请求体文档补上 tool_choice 与 latest_reminder 的五段式约束、各聊天模式的工具往返上限；已知限制扩到 86 条',
+  changelogV2718Apk: '同步构建 2.7.18 APK（versionCode 288），使用 xiaohuangbo.jks 签名',
   changelogV2717Title: 'v2.7.17 · 2026-11',
   changelogV2717ReminderOrder:
     '修复 400「a `latest_reminder` message must be immediately followed by a `user` message」：2.7.16 把历史轮次的提醒快照插到了提问之后（user → latest_reminder → assistant），服务端因此拒绝；现在提醒一律插在提问之前，任何轮次都不会出现「提醒后面不是 user」的形状',
