@@ -51,7 +51,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.53：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.55：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
@@ -73,7 +73,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk`（118 MB，versionCode 290，
-SHA-256 `b6e4678f85fcb3e40bea95b894e7f05dee1c82f399bfae1a0dc4d111ba6d1b4c`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+SHA-256 `3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -96,6 +96,8 @@ SHA-256 `b6e4678f85fcb3e40bea95b894e7f05dee1c82f399bfae1a0dc4d111ba6d1b4c`），
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、新版桌面与 80+ 应用启动器、Alpine / Debian、2 CPU SMP、工作区挂载/写回、文件导入/导出、设置页与 `datasize` 映射 | 通过  |
+| 思考自动折叠    | 默认关；开启后回复结束收起、历史消息默认收起、点标题可展开、生成中保持展开、拨开关即时生效 | 通过  |
+| 首屏加载页      | 字标与转圈、弧长随节点推进、深色不闪白、语言跟随、主包 aborted 的失败态、320px 布局 | 通过  |
 | 会话置顶 / 多选 | 「…」逐个置顶、置顶分组与图钉、刷新后仍生效、多选头部计数、批量置顶、批量删除确认、390px 抽屉 | 通过  |
 | Unkernel 联网   | Debian `apt-get update`（10.2 MB 索引）/ `apt-get install bzip2`、Alpine `apk update` / `apk add curl`、guest HTTP 200、`routes=0` 与内存交回页面 | 通过  |
 | Upstream 0.1.4  | 归档附件随会话导入、按对话计进度、旧浏览器 AbortSignal / toSorted / 100dvh 兼容 | 通过（真机导入 3000 会话、带图归档、旧内核构建验证） |
@@ -104,7 +106,7 @@ SHA-256 `b6e4678f85fcb3e40bea95b894e7f05dee1c82f399bfae1a0dc4d111ba6d1b4c`），
 
 ## 最近版本
 
-- **2.7.20**：两个新功能（另附一次图标修缮）。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。②「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。置顶图标换成 Material 的 `push_pin` 标准图钉（原来手绘路径在 16px 下糊成一团色块）。
+- **2.7.20**：两个新功能（另附一次图标修缮）。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。②「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。置顶图标换成 Material 的 `push_pin` 标准图钉（原来手绘路径在 16px 下糊成一团色块）。通用设置新增「回复展示 → 思考内容自动折叠」（默认关）：开启后回复结束把推理收进「已思考（用时 N 秒）」标题、历史消息默认收起，生成中仍展开，点过标题后不再自动抢状态。首屏加载动画移植自 deepseek-harness 的 boot page：主包下载与执行期间显示 `DEEPSEEK UNRESTRICTED` 字标与转圈，弧长随真实节点 72°→288° 推进，背景先按本机主题设好（深色不闪白），提示语跟随语言，主包 404 / 断网时换成原样报错与「重新加载」。
 
 - **2.7.19**：两处 Unkernel 修复。① 设置 → Unkernel Linux 去掉「内核内存」滑块：上游页面自己的「设置 → 机器」里就有内存（带按设备算出的自动值），而宿主传的 `?mem=` 会把内存钉死并在每次启动时覆盖页面里的改动，现在内存只由虚拟机自己的设置决定（`kw.settings`），宿主面板保留发行版、数据盘、CPU、设备、Worker、Wisp 与超时。② 修复 Debian 里 `apt-get update` / `apt-get install` 的 403：新版页面默认把 `deb.debian.org` 等纯 HTTP 交给自己的 CORS 镜像 `mirror.unkernel.dev` 代答，而该镜像只接受 `https://unkernel.dev`、`http://localhost:*` 等白名单源，本应用跑在 `127.0.0.1:3080`、局域网地址或 APK 的 `http://127.0.0.1:18765` 上只会拿到 `403 Origin not allowed`（官方站没有这个问题就是因为它的源在白名单里）；现在 iframe 固定带 `routes=0`，guest 的纯 HTTP 也走 Wisp，实测 Debian 的 `apt-get update` 拉完 10.2 MB 索引、`apt-get install bzip2` 正常，Alpine 的 `apk` 与 HTTP 访问也正常。
 

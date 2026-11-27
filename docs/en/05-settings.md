@@ -15,6 +15,7 @@
 | Memory     | Extraction model    | `auto` (follow model)    | `chat-demo:memory-extract-engine`  | Unaffected |
 | Characters | Role list / persona | DeepSeek only            | `chat-demo:roles`                  | Unaffected |
 | Characters | Session character   | Follows active role      | session field `roleId`             | Unaffected |
+| General    | Auto-collapse thinking | Off                   | `chat-demo:thinking-auto-collapse` | Unaffected |
 | General    | My name             | `我`                     | `chat-demo:profile-name`           | Unaffected |
 | General    | My avatar           | Empty                    | `chat-demo:profile-avatar`         | Unaffected |
 | Model      | Compression threshold | `0` (context pressure) | `chat-demo:compress-threshold`     | Unaffected |

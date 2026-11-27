@@ -24,7 +24,7 @@ Local models bundle `@mlc-ai/web-llm@0.2.87` into the build and emit an extra We
 Local models must run on an http(s) page: under `file://` both the Worker and WebGPU are restricted, and an MLC-LLM API endpoint must allow cross-origin requests.
 
 
-`dist/` can be deployed to any static host, or opened locally by double-clicking `dist/index.html` (the browser must allow storage on `file://` pages and cross-origin requests to your API origin). Enter your API key under Settings → Data before the first chat.
+`dist/index.html` carries the first-paint boot page (inline CSS / JS, see `src/index.html`): before the bundle executes it shows the wordmark, spinner and hint from the stored theme and locale, then fades out once the interface renders and needs no external asset. `dist/` can be deployed to any static host, or opened locally by double-clicking `dist/index.html` (the browser must allow storage on `file://` pages and cross-origin requests to your API origin). Enter your API key under Settings → Data before the first chat.
 
 | Command       | Purpose                      |
 | ------------- | ---------------------------- |

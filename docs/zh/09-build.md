@@ -22,7 +22,7 @@ pnpm build      # 产物在 dist/
 本地模型用到的 `@mlc-ai/web-llm@0.2.87` 会打进构建产物，并额外产出一个 Web Worker chunk（约 6 MB）；模型权重与 wasm 库不在包里，首次使用时从 Hugging Face / GitHub Raw 下载并写入浏览器缓存。
 
 
-`dist/` 可以直接部署到静态服务器，也可以双击 `dist/index.html` 本地打开（需要浏览器允许 `file://` 页面使用存储，并允许跨域请求你的 API 地址）。首次使用在设置 → 数据管理里填写 API Key。
+`dist/index.html` 里包含首屏加载页（内联 CSS / JS，见 `src/index.html`）：主包执行前先按本机主题与语言显示字标、转圈与提示，界面渲染完自动淡出移除，不依赖任何外部资源。`dist/` 可以直接部署到静态服务器，也可以双击 `dist/index.html` 本地打开（需要浏览器允许 `file://` 页面使用存储，并允许跨域请求你的 API 地址）。首次使用在设置 → 数据管理里填写 API Key。
 
 本地模型必须在 http(s) 页面下运行：`file://` 打开时 Worker 与 WebGPU 都受限制；MLC-LLM API 也需要目标服务允许跨域。
 

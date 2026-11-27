@@ -734,6 +734,10 @@ export const en = {
   memoryDebugTotal: 'Total',
   memoryDebugPassed: 'Pass',
   memoryDebugEmpty: 'No candidates',
+  replyDisplaySection: 'Reply display',
+  thinkingAutoCollapseLabel: 'Auto-collapse thinking',
+  thinkingAutoCollapseDesc:
+    'When on, the reasoning collapses once a reply finishes, leaving only the “Thought for N seconds” title (click it to expand); older replies start collapsed too, while a reply that is still generating stays open. Display only — requests are unchanged.',
   dailyUsageSection: 'Daily usage and alerts',
   dailyUsageTokens: 'Today tokens',
   dailyUsageCost: 'Today cost',
@@ -2246,6 +2250,10 @@ export const en = {
     'Pinning and multi-select: the row menu pins or unpins a chat, pinned chats move into a “Pinned” group with a pin mark, and “Select” turns the list into checkboxes with an “N selected” header, select-all and a bottom “Pin / Delete” bar that confirms the count; the pin is stored with the chat, so reloads and restarts keep it (the export format carries no pin)',
   changelogV2720Reset:
     '“Restore default settings” now resets every store (settings, prompt presets, local-model preferences, NanoVM / WebVM / Unkernel parameters) while keeping the API key, chats, attachments, workspace, memory bank and statistics; the dialog lists what resets and what is kept',
+  changelogV2720Collapse:
+    'General settings gain “Reply display → Auto-collapse thinking” (off by default): once a reply finishes its reasoning folds into the “Thought for N seconds” title and older replies start collapsed, while a reply still generating stays open and a manual title click stops the auto behaviour; display only, requests are unchanged',
+  changelogV2720Boot:
+    'First-paint boot animation (ported from deepseek-harness’s boot page): a DEEPSEEK UNRESTRICTED wordmark plus a spinner while the bundle downloads and runs, with the arc advancing on real milestones (72°→288°); the background is set from the stored theme first so dark users see no white flash; the hint follows the locale; a 404 or offline bundle becomes the raw error plus Reload',
   changelogV2720Apk: 'Builds the 2.7.20 APK (versionCode 290), signed with xiaohuangbo.jks',
   changelogV2719Title: 'v2.7.19 · 2026-11',
   changelogV2719Memory:

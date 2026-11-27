@@ -1182,3 +1182,61 @@ Alpine shows no regression: `apk update` and `apk add curl` work, and `curl http
 | Mobile at 390px | selection header and action bar both visible in the drawer, no horizontal overflow |
 | Pin icon | Swapped for Material’s `push_pin`, a proper thumbtack; the hand-drawn path turned into a smudge at 16px |
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |
+
+### 3.54 First-paint boot animation (2.7.20)
+
+The bundle ships the Unkernel page and images, so downloading and executing it used to leave a blank white page. `src/index.html` now carries an inline boot page ported from **deepseek-harness** (`packages/client/web/src/boot-page.ts` + `boot-page.module.css`):
+
+| Element | How |
+| --- | --- |
+| Wordmark | `DEEPSEEK UNRESTRICTED`, 16px / 600, `0.08em` tracking — this project’s name, mirroring upstream’s `HARNESS` |
+| Spinner | 20×20, 2px ring plus a `conic-gradient` arc cut into a thin ring by `-webkit-mask` / `mask`, rotating `0.8s linear` |
+| Progress | The arc length is `--boot-arc`, 72° → 288°, advanced by real milestones: parse done 0.72, entry executing 0.86, interface committed 0.94, rendered 1.0; monotonic, because `DOMContentLoaded` fires after the deferred bundle and allowed regressions would shrink the arc again |
+| Dismissal | Once the interface commits, one frame later the arc fills and the page fades out (0.28s) and leaves the DOM |
+| Theme | The inline script reads `chat-demo:theme-preference` plus `prefers-color-scheme` first, sets `<html>` background and `color-scheme` (and syncs `theme-color`), so dark-theme users never see a white flash |
+| Locale | Reads `chat-demo:locale` (falling back to `navigator.language`): `正在加载界面…` / `Loading the interface…` |
+| Failure | The bundle’s tag gets its own `error` listener: a 404 or offline bundle becomes “The interface failed to load” with the raw error and a Reload button; after 12 s a reload hint appears, and a 30 s backstop removes the page so it can never block the UI forever |
+| Degradation | `@supports` guards `mask`, so older WebViews show a plain ring instead of a pie; `prefers-reduced-motion` turns rotation into a gentle pulse |
+
+Both the entry and `App` advance it: `src/main.tsx` calls `progress(0.86)` before `setupTheme()`, and `App`’s first `useEffect` pushes 0.94 and calls `ready()` on the next frame; `window.__boot` is typed in `src/env.d.ts`.
+
+| Check | Result |
+| --- | --- |
+| Slow load (bundle delayed 2.5 s) | Boot page visible: `DEEPSEEK UNRESTRICTED`, `正在加载界面…`, 72° arc, `boot-spin` |
+| Rendered | Splash fades out and is removed once the interface appears (`#boot` gone) |
+| Dark + English | `data-theme=dark`, background `rgb(21,21,23)`, wordmark `rgb(249,250,251)`, `<html>` already dark, `theme-color` synced, hint `Loading the interface…` |
+| Bundle aborted | Failure state: `界面没有加载起来` plus `主程序加载失败：static/js/main.xxx.js` and Reload, spinner hidden |
+| Reduced motion | Animation becomes `boot-pulse` |
+| 320 / 390px | No horizontal overflow, wordmark on one line (216px) |
+| `pnpm type` / `pnpm lint` / `pnpm build` | pass |
+
+### 3.55 General settings gains “Auto-collapse thinking” (2.7.20)
+
+The switch from the official client comes to this project: Settings → General has a new “Reply display” group with one row, **Auto-collapse thinking** (`chat-demo:thinking-auto-collapse`, off by default).
+
+Behaviour:
+
+| Case | What it does when on |
+| --- | --- |
+| Reply generating | Stays expanded, so the live “Thinking” text remains visible |
+| Reply finished | Collapses to the “Thought for N seconds” title with the chevron pointing right |
+| Older replies (reopened session, reload) | Start collapsed; click the title to expand |
+| Title clicked by hand | This reply stops following the setting until the next generation starts |
+| Toggling the switch | Already-rendered replies follow the new value immediately (unless their title was clicked) |
+| Off (default) | Exactly as before: reasoning and answer both expanded |
+
+Display only — requests, saved replies, copy and export are unchanged, and the switch itself lives in local storage.
+
+The logic sits in `ReplyArea` (`src/components/messages/ReplyArea.tsx`): `open` now starts as `streaming || !autoCollapse` and a `useEffect` follows `streaming` / `autoCollapse`; a `touched` ref records a manual title click so the setting and manual toggles never fight. The thinking area also gained stable hooks — `data-think-area`, `data-think-title` (with `data-open`) and `data-think-steps` — so tests no longer depend on hashed CSS module class names.
+
+| Check | Result |
+| --- | --- |
+| Row exists with the “Reply display” group title | pass |
+| Off by default, nothing written to localStorage | pass (`aria-checked=false`, key is `null`) |
+| When off the reply stays expanded | pass (reasoning and answer both visible) |
+| Turning it on | writes `'true'`, and an existing reply collapses immediately |
+| On + reply finished | `data-open=0`, answer visible, reasoning text out of view, title “已思考（用时 1 秒）” |
+| Clicking the title | `data-open=1`, reasoning text back |
+| While generating (local slow SSE server) | `data-open=1`, title “正在思考”, reasoning visible |
+| Stream ends | collapses by itself (`data-open=0`, title “已思考（用时 3 秒）”) |
+| `pnpm type` / `pnpm lint` / `pnpm build` | pass |

@@ -40,6 +40,8 @@ type Settings = {
   location: UserLocation | null
   ttsVoice: TtsVoice
   thinking: boolean
+  /** 思考内容自动折叠：回复结束后把思考过程收起来，只留标题；历史消息同样默认收起 */
+  thinkingAutoCollapse: boolean
   /** 思考强度 0-4；0 为关闭，与 thinking 保持同步 */
   reasoningEffort: number
   /** 自定义思维链：预先写好推理步骤，请求前注入 system */
@@ -162,6 +164,7 @@ const KEYS = {
   themePreference: 'chat-demo:theme-preference',
   ttsVoice: 'chat-demo:tts-voice',
   thinking: 'chat-demo:thinking',
+  thinkingAutoCollapse: 'chat-demo:thinking-auto-collapse',
   reasoningEffort: 'chat-demo:reasoning-effort',
   customCotEnabled: 'chat-demo:custom-cot-enabled',
   customCot: 'chat-demo:custom-cot',
@@ -455,6 +458,7 @@ export const useSettings = create<Settings>(() => ({
   themePreference: initialThemePreference(),
   ttsVoice: initialTtsVoice(),
   thinking: initialReasoningEffort() > 0,
+  thinkingAutoCollapse: read(KEYS.thinkingAutoCollapse) === 'true',
   reasoningEffort: initialReasoningEffort(),
   customCotEnabled: read(KEYS.customCotEnabled) === 'true',
   customCot: initialCustomCot(),
@@ -566,6 +570,12 @@ export const setThinking = (thinking: boolean) => {
   write(KEYS.thinking, String(thinking))
   write(KEYS.reasoningEffort, String(effort))
   useSettings.setState({ thinking, reasoningEffort: effort })
+}
+
+/** 思考内容自动折叠：只影响展示，不改变请求与已保存的回答内容 */
+export const setThinkingAutoCollapse = (thinkingAutoCollapse: boolean) => {
+  write(KEYS.thinkingAutoCollapse, String(thinkingAutoCollapse))
+  useSettings.setState({ thinkingAutoCollapse })
 }
 
 /** 拖动思考强度轨道：0 档同时关闭深度思考 */
@@ -952,6 +962,7 @@ export const resetSettings = () => {
     location: null,
     ttsVoice: 'stella',
     thinking: false,
+    thinkingAutoCollapse: false,
     reasoningEffort: 0,
     customCotEnabled: false,
     customCot: DEFAULT_CUSTOM_COT,

@@ -15,6 +15,7 @@
 | 记忆       | 自动提炼模型       | `auto`（跟随当前模型）    | `chat-demo:memory-extract-engine`           | 不受影响             |
 | 角色       | 角色列表 / 人设    | 仅 DeepSeek               | `chat-demo:roles`                           | 不受影响             |
 | 角色       | 会话角色           | 跟随当前角色              | 会话字段 `roleId`                           | 不受影响             |
+| 通用       | 思考内容自动折叠   | 关                        | `chat-demo:thinking-auto-collapse`         | 不受影响             |
 | 通用       | 我的昵称           | `我`                      | `chat-demo:profile-name`                    | 不受影响             |
 | 通用       | 我的头像           | 空                        | `chat-demo:profile-avatar`                  | 不受影响             |
 | 模型       | 压缩触发阈值       | `0`（跟随上下文压力）     | `chat-demo:compress-threshold`              | 不受影响             |

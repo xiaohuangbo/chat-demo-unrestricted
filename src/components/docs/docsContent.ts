@@ -63,7 +63,7 @@ const zh: DocsDoc = {
           type: 'table',
           head: ['分组', '内容'],
           rows: [
-            ['通用设置', '主题、界面语言、朗读音色、位置、每日用量与提醒'],
+            ['通用设置', '主题、界面语言、朗读音色、位置、回复展示（思考内容自动折叠）、每日用量与提醒'],
             ['模型', '当前模型、流式输出、温度、Top P、最大输出、自动压缩、关键词拒答'],
             ['角色', '角色卡：昵称、性别、人设、头像、自动记忆；会话在输入栏选角色'],
             ['本地模型', 'WebGPU 探测、WebLLM 模型目录、MLC-LLM API、模型包导入、缓存与上下文窗口'],
@@ -845,6 +845,10 @@ const zh: DocsDoc = {
               '应用首次运行要从发行版镜像下载文件并装包（Steam、Zed 等从几十到上百 MB）；网络不可用或 Wisp 被拦截时会停住，可在页面设置里换 Wisp，或先运行随包分发的 DSH go。',
             ],
             [
+              '打开页面一直停在加载动画',
+              '首屏加载页只在主包下载与渲染期间显示：主包 404 / 断网时会换成原样报错和「重新加载」按钮，慢网络 12 秒后提示可以刷新；正常情况下界面渲染完就自动淡出。',
+            ],
+            [
               '提示词注入工具那一轮没有联网 / 标题',
               '强制 `tool_choice` 与深度思考、`safety_check`、服务端工具、标题互斥，接口会按思考模式拒绝；本轮自动关闭思考并去掉这些字段，属预期行为。',
             ],
@@ -937,7 +941,7 @@ const en: DocsDoc = {
           type: 'table',
           head: ['Group', 'Contents'],
           rows: [
-            ['General', 'Theme, language, read-aloud voice, location, daily usage and reminders'],
+            ['General', 'Theme, language, read-aloud voice, location, reply display (auto-collapse thinking), daily usage and reminders'],
             [
               'Model',
               'Model, streaming, temperature, top_p, max output, auto compression, keyword refusal',
@@ -1813,6 +1817,10 @@ const en: DocsDoc = {
             [
               'An Unkernel app stops at the installer on first launch',
               'A first run downloads files and installs packages from distro mirrors (tens to hundreds of MB for Steam, Zed and friends); with no network or a blocked Wisp it waits there. Change the Wisp server in the page settings, or start DSH go first, which ships with the page.',
+            ],
+            [
+              'The page stays on the loading animation',
+              'The boot page only shows while the bundle downloads and renders: a 404 or offline bundle turns it into the raw error plus a Reload button, and a slow network shows a reload hint after 12 seconds; normally it fades out as soon as the interface renders.',
             ],
             [
               'The injection tool round had no web search or title',

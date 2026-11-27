@@ -181,6 +181,17 @@ export const App = () => {
 
   usePreventPageScroll(isMobile)
 
+  // 首屏加载页：界面已经提交到 DOM，先推满进度再等一帧淡出，避免淡出动画盖住首帧绘制
+  useEffect(() => {
+    const boot = window.__boot
+    if (!boot) {
+      return
+    }
+    boot.progress(0.94)
+    const frame = requestAnimationFrame(() => boot.ready())
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
   useEffect(() => {
     document.documentElement.lang = locale
   }, [locale])

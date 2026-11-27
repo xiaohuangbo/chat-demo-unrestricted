@@ -8,5 +8,360 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      首屏加载页：打包体积较大（含 Unkernel 镜像等），脚本执行前先给一个和深色 / 浅色主题一致的
+      加载动画，避免白屏。转圈的做法移植自 deepseek-harness 的 boot page：--boot-arc 控制
+      conic-gradient 的长度，随真实加载节点推进（初始 72°、脚本执行、首帧渲染各进一步），
+      渲染完成后再淡出移除。这段 CSS / JS 全部内联，不依赖主样式表。
+    -->
+    <div id="boot" data-boot role="status" aria-live="polite">
+      <div class="boot-card">
+        <div class="boot-mark">DEEPSEEK UNRESTRICTED</div>
+        <div class="boot-spinner" data-boot-spinner></div>
+        <div class="boot-hint" data-boot-hint>正在加载界面…</div>
+      </div>
+    </div>
+    <style>
+      html {
+        background-color: #ffffff;
+      }
+
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        display: grid;
+        place-items: center;
+        background-color: #ffffff;
+        transition:
+          opacity 0.28s ease,
+          visibility 0s linear 0.28s;
+      }
+
+      #boot[data-theme='dark'] {
+        background-color: rgb(21, 21, 23);
+      }
+
+      #boot[data-out] {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .boot-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 0 24px;
+        text-align: center;
+      }
+
+      .boot-mark {
+        font-family:
+          system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          sans-serif;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: rgb(15, 17, 21);
+      }
+
+      #boot[data-theme='dark'] .boot-mark {
+        color: rgb(249, 250, 251);
+      }
+
+      /* 转圈：2px 圆环 + 用 conic-gradient 画弧，弧长由 --boot-arc 控制 */
+      .boot-spinner {
+        position: relative;
+        box-sizing: border-box;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        animation: boot-spin 0.8s linear infinite;
+      }
+
+      #boot[data-theme='dark'] .boot-spinner {
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+
+      .boot-spinner::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        background: conic-gradient(rgb(57, 100, 254) var(--boot-arc, 72deg), transparent 0);
+        opacity: 0;
+      }
+
+      #boot[data-theme='dark'] .boot-spinner::after {
+        background: conic-gradient(rgb(86, 134, 254) var(--boot-arc, 72deg), transparent 0);
+      }
+
+      /* 不支持 mask 的老 WebView 只显示完整圆环，不会变成一块扇形色饼 */
+      @supports ((-webkit-mask: radial-gradient(#000, #000)) or (mask: radial-gradient(#000, #000))) {
+        .boot-spinner::after {
+          opacity: 1;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+        }
+      }
+
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .boot-hint {
+        font-family:
+          system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          sans-serif;
+        font-size: 12px;
+        line-height: 18px;
+        color: rgb(129, 133, 140);
+      }
+
+      #boot[data-theme='dark'] .boot-hint {
+        color: rgb(173, 178, 184);
+      }
+
+      /* 加载失败：脚本没起来时给一句原样报错和一个重试按钮，而不是一直转圈 */
+      .boot-failed {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        max-width: 420px;
+      }
+
+      #boot[data-failed] .boot-failed {
+        display: flex;
+      }
+
+      #boot[data-failed] .boot-spinner,
+      #boot[data-failed] .boot-hint {
+        display: none;
+      }
+
+      .boot-failed-title {
+        font-size: 14px;
+        line-height: 22px;
+        font-weight: 600;
+        color: rgb(15, 17, 21);
+      }
+
+      #boot[data-theme='dark'] .boot-failed-title {
+        color: rgb(249, 250, 251);
+      }
+
+      .boot-failed-text {
+        margin: 0;
+        font-family: Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 12px;
+        line-height: 18px;
+        color: rgb(129, 133, 140);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      #boot[data-theme='dark'] .boot-failed-text {
+        color: rgb(173, 178, 184);
+      }
+
+      .boot-retry {
+        margin-top: 4px;
+        padding: 6px 16px;
+        border: none;
+        border-radius: 100px;
+        background-color: rgb(57, 100, 254);
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #boot[data-theme='dark'] .boot-retry {
+        background-color: rgb(86, 134, 254);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .boot-spinner {
+          animation: boot-pulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes boot-pulse {
+          0%,
+          100% {
+            opacity: 0.45;
+          }
+
+          50% {
+            opacity: 1;
+          }
+        }
+      }
+    </style>
+    <script>
+      // 首屏加载页的控制器：只做三件事——定主题、报进度、收场或报错。
+      ;(function () {
+        var THEME_KEY = 'chat-demo:theme-preference'
+        var LOCALE_KEY = 'chat-demo:locale'
+        var boot = document.getElementById('boot')
+        var spinner = boot && boot.querySelector('[data-boot-spinner]')
+        var hint = boot && boot.querySelector('[data-boot-hint]')
+        var done = false
+
+        function read(key) {
+          try {
+            return localStorage.getItem(key)
+          } catch (error) {
+            return null
+          }
+        }
+
+        // 主题：手动选择优先，「跟随系统」时取系统深浅色
+        var preference = read(THEME_KEY)
+        var dark =
+          preference === 'dark' ||
+          (preference !== 'light' &&
+            !!window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        var backgroundColor = dark ? 'rgb(21, 21, 23)' : '#ffffff'
+
+        if (boot) {
+          boot.setAttribute('data-theme', dark ? 'dark' : 'light')
+        }
+        var root = document.documentElement
+        root.style.backgroundColor = backgroundColor
+        root.style.colorScheme = dark ? 'dark' : 'light'
+        var themeColor = document.querySelector('meta[name="theme-color"]')
+        if (themeColor) {
+          themeColor.setAttribute('content', backgroundColor)
+        }
+
+        // 提示语跟随应用语言
+        var locale = read(LOCALE_KEY)
+        var chinese =
+          locale === 'zh-CN' ||
+          (locale !== 'en-US' && (navigator.language || '').toLowerCase().indexOf('zh') === 0)
+        if (hint) {
+          hint.textContent = chinese ? '正在加载界面…' : 'Loading the interface…'
+        }
+
+        // 弧长 72° → 288°：0 是刚开始、1 是渲染完成。只增不减——DOMContentLoaded 在
+        // defer 脚本之后才触发，若允许回退，弧会先长后缩。
+        var current = -1
+        var progress = function (ratio) {
+          if (!boot || !spinner) {
+            return
+          }
+          var safe = Math.max(0, Math.min(1, Number(ratio) || 0))
+          if (safe <= current) {
+            return
+          }
+          current = safe
+          spinner.style.setProperty('--boot-arc', Math.round(72 + safe * 216) + 'deg')
+        }
+
+        var remove = function () {
+          if (!boot) {
+            return
+          }
+          boot.setAttribute('data-out', '')
+          window.setTimeout(function () {
+            if (boot.parentNode) {
+              boot.parentNode.removeChild(boot)
+            }
+          }, 400)
+        }
+
+        // 渲染完成：填满弧、淡出、移除；重复调用安全
+        var ready = function () {
+          if (done) {
+            return
+          }
+          done = true
+          progress(1)
+          remove()
+        }
+
+        var fail = function (message) {
+          if (done || !boot) {
+            return
+          }
+          done = true
+          var box = document.createElement('div')
+          box.className = 'boot-failed'
+          var title = document.createElement('div')
+          title.className = 'boot-failed-title'
+          title.textContent = chinese ? '界面没有加载起来' : 'The interface failed to load'
+          var text = document.createElement('p')
+          text.className = 'boot-failed-text'
+          text.textContent = String(message || (chinese ? '未知错误' : 'Unknown error'))
+          var button = document.createElement('button')
+          button.className = 'boot-retry'
+          button.type = 'button'
+          button.textContent = chinese ? '重新加载' : 'Reload'
+          button.addEventListener('click', function () {
+            location.reload()
+          })
+          box.appendChild(title)
+          box.appendChild(text)
+          box.appendChild(button)
+          boot.querySelector('.boot-card').appendChild(box)
+          boot.setAttribute('data-failed', '')
+          window.__boot = { progress: progress, ready: ready, fail: fail }
+        }
+
+        window.__boot = { progress: progress, ready: ready, fail: fail }
+        progress(0)
+
+        // 真实进度只有三个可观测节点：解析完成（defer 脚本已执行）、脚本首帧、界面渲染完成。
+        // 中间节点由主入口 main.tsx 推，这里只补最后兜底的两件事。
+        document.addEventListener('DOMContentLoaded', function () {
+          progress(0.72)
+        })
+
+        // 主包标签在 head 里（构建时注入），单独挂一次监听：404 / 断网时直接报错，
+        // 不必等 30 秒兜底（window 的 error 事件收不到资源加载失败）
+        var bundle = document.querySelector('script[src]')
+        if (bundle) {
+          bundle.addEventListener('error', function () {
+            fail(
+              (chinese ? '主程序加载失败：' : 'The app bundle failed to load: ') +
+                (bundle.getAttribute('src') || '')
+            )
+          })
+        }
+
+        // 脚本自身或依赖加载失败：给原样报错，不无限转圈（图片等资源错误不算）
+        window.addEventListener('error', function (event) {
+          if (event && event.target && event.target !== window && event.target.tagName) {
+            return
+          }
+          fail((event && event.message) || (chinese ? '脚本加载失败' : 'Scripts failed to load'))
+        })
+
+        // 兜底：12 秒还没渲染出来就提示可以刷新（不判定失败，慢网络仍可能成功）
+        window.setTimeout(function () {
+          if (done || !hint) {
+            return
+          }
+          hint.textContent = chinese
+            ? '仍在加载，网络较慢时可以刷新页面'
+            : 'Still loading — reload if the network is slow'
+        }, 12000)
+
+        // 兜底：万一主入口没报到，30 秒后无论如何移除，避免永久遮挡界面
+        window.setTimeout(function () {
+          if (!done) {
+            ready()
+          }
+        }, 30000)
+      })()
+    </script>
   </body>
 </html>

@@ -8,6 +8,9 @@ import { initNetProxy } from './services/nanovm/netProxy.js'
 import './app/theme.css'
 import './app/global.css'
 
+// 首屏加载页：能执行到这里说明主包已经下载并开始执行，推进一格进度
+window.__boot?.progress(0.86)
+
 ensureKatex()
 setupTheme()
 // OPFS 工作区是异步加载的；localStorage 模式会立即完成

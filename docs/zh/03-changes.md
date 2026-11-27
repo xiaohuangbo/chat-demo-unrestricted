@@ -1182,3 +1182,61 @@ if (toolUse) { ... } else {
 | 手机端 390px | 抽屉里多选头部与底部操作条都可见、无横向溢出 |
 | 置顶图标 | 换成 Material 的 `push_pin` 标准图钉：原来手绘的路径在 16px 下糊成一团色块 |
 | `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |
+
+### 3.54 首屏加载动画（2.7.20）
+
+打包产物含 Unkernel 页面与镜像，主包下载 + 执行期间页面原本是白屏。现在 `src/index.html` 内联了一套首屏加载页，做法移植自 **deepseek-harness** 的 boot page（`packages/client/web/src/boot-page.ts` + `boot-page.module.css`）：
+
+| 元素 | 做法 |
+| --- | --- |
+| 字标 | `DEEPSEEK UNRESTRICTED`，16px / 600、字距 `0.08em`，与本项目名称一致（对应上游的 `HARNESS`） |
+| 转圈 | 20×20、2px 圆环 + `conic-gradient` 画弧，`-webkit-mask` / `mask` 把弧裁成细环，`0.8s linear` 旋转 |
+| 进度 | 弧长由 `--boot-arc` 控制，72° → 288°，随真实节点推进：解析完成 0.72、主入口执行 0.86、界面提交 0.94、渲染完成 1.0；**只增不减**（`DOMContentLoaded` 在 defer 脚本之后触发，允许回退会让弧先长后缩） |
+| 收场 | 界面提交后等一帧推满弧再淡出（0.28s）并从 DOM 移除 |
+| 主题 | 内联脚本先读 `chat-demo:theme-preference` 与 `prefers-color-scheme`，给 `<html>` 设好背景色与 `color-scheme`，顺带同步 `theme-color`，深色用户不会看到白闪 |
+| 语言 | 读 `chat-demo:locale`（缺省按 `navigator.language`），中文「正在加载界面…」/ 英文「Loading the interface…」 |
+| 失败态 | 主包标签单独挂 `error` 监听：404 / 断网时换成「界面没有加载起来」+ 原样报错 + 「重新加载」按钮；12 秒仍无进展提示可以刷新，30 秒兜底移除，绝不永久遮挡 |
+| 降级 | `@supports` 守 `mask`，老 WebView 只显示完整圆环而不是扇形色饼；`prefers-reduced-motion` 时改成呼吸明暗 |
+
+主入口与 `App` 各推一格：`src/main.tsx` 在 `setupTheme()` 之前 `progress(0.86)`，`App` 的首个 `useEffect` 推 0.94 并在下一帧 `ready()`；`window.__boot` 的类型声明在 `src/env.d.ts`。
+
+| 检查 | 结果 |
+| --- | --- |
+| 慢速加载（主包延迟 2.5s） | 加载页可见：字标 `DEEPSEEK UNRESTRICTED`、`正在加载界面…`、弧 72°、`boot-spin` 旋转 |
+| 渲染完成 | 界面出现后加载页淡出并移除（`#boot` 不存在） |
+| 深色 + 英文 | `data-theme=dark`、背景 `rgb(21,21,23)`、字标 `rgb(249,250,251)`、`<html>` 已是深色、`theme-color` 同步、提示语 `Loading the interface…` |
+| 主包 aborted | 失败态：`界面没有加载起来` + `主程序加载失败：static/js/main.xxx.js` + 「重新加载」，转圈隐藏 |
+| 减少动画偏好 | 动画换成 `boot-pulse` |
+| 320 / 390px | 无横向溢出，字标单行完整（216px） |
+| `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |
+
+### 3.55 通用设置新增「思考内容自动折叠」（2.7.20）
+
+官方客户端里那条开关搬到了本项目：设置 → 通用设置新增「回复展示」分组，只有一项 **思考内容自动折叠**（`chat-demo:thinking-auto-collapse`，默认**关**）。
+
+行为：
+
+| 场景 | 开着时的表现 |
+| --- | --- |
+| 回复生成中 | 仍然展开，实时看到「正在思考」的推理文字 |
+| 回复结束 | 自动收起，只留「已思考（用时 N 秒）」标题，标题右侧箭头朝右 |
+| 历史消息（重新打开会话、刷新） | 默认收起，点标题展开 |
+| 点过标题 | 本轮不再自动抢状态，直到下一次生成开始才重新跟随设置 |
+| 切换开关 | 已经渲染的回复立刻按新值收起 / 展开（没手动点过标题的那些） |
+| 关着（默认） | 与以前完全一致：思考与正文一起展开 |
+
+只影响展示：请求内容、保存的回答、复制与导出都不变，开关本身也只在本地存储。
+
+实现落在 `ReplyArea`（`src/components/messages/ReplyArea.tsx`）：`open` 的初始值改为 `streaming || !autoCollapse`，再用 `useEffect` 跟着 `streaming` / `autoCollapse` 走；`touched` ref 记录用户是否手动点过标题，避免设置与手动操作互相打架。顺带给思考区加了 `data-think-area` / `data-think-title`（带 `data-open`）/ `data-think-steps` 三个稳定钩子，测试不再依赖 CSS Modules 的哈希类名。
+
+| 检查 | 结果 |
+| --- | --- |
+| 设置项存在、分组标题「回复展示」 | 通过 |
+| 默认关、未写 localStorage | 通过（`aria-checked=false`、键为 `null`） |
+| 关着时回复结束仍是展开 | 通过（思考与正文同时可见） |
+| 拨开开关 | 写入 `'true'`，已有回复立刻收起 |
+| 开启 + 回复结束 | `data-open=0`，正文可见、思考文字不在视口文本里，标题「已思考（用时 1 秒）」 |
+| 点标题 | `data-open=1`，思考文字重新出现 |
+| 生成中（本地慢速 SSE 服务） | `data-open=1`、标题「正在思考」、思考可见 |
+| 流结束 | 自动收起（`data-open=0`、标题「已思考（用时 3 秒）」） |
+| `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |

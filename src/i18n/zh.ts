@@ -662,6 +662,10 @@ export const zh = {
   memoryDebugTotal: '总分',
   memoryDebugPassed: '命中',
   memoryDebugEmpty: '没有候选',
+  replyDisplaySection: '回复展示',
+  thinkingAutoCollapseLabel: '思考内容自动折叠',
+  thinkingAutoCollapseDesc:
+    '开启后回复结束时把推理过程收起来，只留「已思考（用时 N 秒）」标题，点标题可展开；历史消息同样默认收起，生成过程中仍然展开。只影响展示，不改请求。',
   dailyUsageSection: '每日用量与提醒',
   dailyUsageTokens: '今日 Token',
   dailyUsageCost: '今日费用',
@@ -2088,6 +2092,10 @@ export const zh = {
     '会话置顶与多选：行内「…」菜单可置顶 / 取消置顶，置顶的会话进「置顶」分组并带图钉；「多选」后头部显示「已选择 N 个对话」并可全选，底部给出「置顶 / 删除」操作条，删除前确认数量。置顶标记随会话保存，刷新与重开后仍在（导出为 DeepSeek 历史格式不带置顶）',
   changelogV2720Reset:
     '「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好、NanoVM / WebVM / Unkernel 参数一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗列出「会重置 / 会保留」',
+  changelogV2720Collapse:
+    '通用设置新增「回复展示 → 思考内容自动折叠」（默认关）：开启后回复结束就把推理收进「已思考（用时 N 秒）」标题、历史消息默认收起，生成过程中仍展开，点过标题后不再自动抢状态；只影响展示，不改请求',
+  changelogV2720Boot:
+    '首屏加载动画（移植自 deepseek-harness 的 boot page）：主包下载与执行期间显示 DEEPSEEK UNRESTRICTED 字标 + 转圈，弧长随真实节点推进（72°→288°）；先按本机主题设好背景，深色用户不闪白；提示语跟随语言；主包 404 / 断网时换成原样报错与「重新加载」',
   changelogV2720Apk: '同步构建 2.7.20 APK（versionCode 290），使用 xiaohuangbo.jks 签名',
   changelogV2719Title: 'v2.7.19 · 2026-11',
   changelogV2719Memory:

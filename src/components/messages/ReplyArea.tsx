@@ -1,6 +1,6 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo, useEffect, useState, type ReactNode } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   IconBrowseOutline16,
   IconBrowseWarningOutline16,
@@ -15,6 +15,7 @@ import {
   IconThinkOutline16,
 } from '../base/icons.js'
 import type { AssistantMessage } from '../../services/chat/types.js'
+import { useSettings } from '../../services/settings.js'
 import {
   getAreaTitle,
   isDeepSearchKind,
@@ -65,7 +66,19 @@ export const ReplyArea = memo(function ReplyArea({
   hasResponse: boolean
 }) {
   useTranslate()
-  const [open, setOpen] = useState(true)
+  const autoCollapse = useSettings((state) => state.thinkingAutoCollapse)
+  // 生成中先展开让人看到推理过程；生成结束后按「思考内容自动折叠」决定是否收起。
+  // 手动点过标题后就不再抢用户的开关状态，只有下一轮生成开始时才恢复跟随设置。
+  const touched = useRef(false)
+  const [open, setOpen] = useState(() => streaming || !autoCollapse)
+  useEffect(() => {
+    if (streaming) {
+      touched.current = false
+    }
+    if (!touched.current) {
+      setOpen(streaming || !autoCollapse)
+    }
+  }, [streaming, autoCollapse])
   const titleActive = streaming && !hasResponse
   useTicker(titleActive, 1000)
   if (view.steps.length === 0 && !(message.thinking && streaming)) {
@@ -76,9 +89,17 @@ export const ReplyArea = memo(function ReplyArea({
   const title = thinking ? getAreaTitle(view, streaming, Date.now(), hasResponse) : null
   const stopped = !streaming && !hasResponse
   return (
-    <div className={styles.area}>
+    <div className={styles.area} data-think-area>
       {title ? (
-        <div className={styles.title} onClick={() => setOpen((value) => !value)}>
+        <div
+          className={styles.title}
+          data-think-title
+          data-open={open ? '1' : '0'}
+          onClick={() => {
+            touched.current = true
+            setOpen((value) => !value)
+          }}
+        >
           <span className={clsx(styles.titleIcon, stopped && styles.stoppedIcon)}>
             <IconThinkOutline16 />
           </span>
@@ -87,7 +108,7 @@ export const ReplyArea = memo(function ReplyArea({
         </div>
       ) : null}
       {open || !title ? (
-        <div className={styles.steps}>
+        <div className={styles.steps} data-think-steps>
           {view.steps.map((step, index) => (
             <StepItem
               key={stepKey(step, index)}

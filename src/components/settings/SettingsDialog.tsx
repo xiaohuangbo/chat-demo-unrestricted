@@ -76,6 +76,7 @@ import {
   setStmModules,
   setStreamOutput,
   setThinkingAsBody,
+  setThinkingAutoCollapse,
   setTranslateJailbreakZh,
   setKeepReplyContent,
   setLocale,
@@ -272,6 +273,7 @@ const SettingsContent = () => {
               <LocaleSetting />
               <TtsVoiceSetting />
               <LocationSetting />
+              <ReplyDisplaySetting />
               <DailyUsageSetting />
             </>
           ) : section === 'model' ? (
@@ -472,6 +474,33 @@ const useHistoryDelete = () => {
     },
     confirm,
   }
+}
+
+/**
+ * 通用设置 → 回复展示：思考内容自动折叠。
+ * 开启后回复结束就把推理过程收起来（只留「已思考（用时 N 秒）」标题，点标题可展开），
+ * 历史消息同样默认收起；生成过程中仍然展开，方便看实时推理。
+ */
+const ReplyDisplaySetting = () => {
+  const t = useTranslate()
+  const autoCollapse = useSettings((state) => state.thinkingAutoCollapse)
+  return (
+    <>
+      <div className={styles.groupTitle}>{t('replyDisplaySection')}</div>
+      <SettingCell
+        label={t('thinkingAutoCollapseLabel')}
+        description={t('thinkingAutoCollapseDesc')}
+        status={null}
+        action={
+          <Switch
+            checked={autoCollapse}
+            onChange={setThinkingAutoCollapse}
+            label={t('thinkingAutoCollapseLabel')}
+          />
+        }
+      />
+    </>
+  )
 }
 
 const DailyUsageSetting = () => {
@@ -781,7 +810,13 @@ const ChangelogSetting = () => {
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
       title: 'changelogV2720Title',
-      items: ['changelogV2720Pin', 'changelogV2720Reset', 'changelogV2720Apk'],
+      items: [
+        'changelogV2720Pin',
+        'changelogV2720Reset',
+        'changelogV2720Boot',
+        'changelogV2720Collapse',
+        'changelogV2720Apk',
+      ],
     },
     {
       title: 'changelogV2719Title',
