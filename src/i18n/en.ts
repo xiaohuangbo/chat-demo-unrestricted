@@ -1985,7 +1985,7 @@ export const en = {
   localModelPreparing: 'Preparing the model…',
   localModelReadyText: 'Model ready',
   localModelLoadFailed: 'Failed to load the model: {error}',
-  localModelNotFound: 'Model is not in the current WebLLM catalog: {model}',
+  localModelNotFound: 'Model is not in the current WebLLM catalogue: {model}',
   localModelLoaded: 'Resident in GPU memory: {model}',
   localModelCurrent: 'Current model',
   localModelDownloaded: 'Downloaded',
@@ -2257,7 +2257,7 @@ export const en = {
   changelogV2720Reset:
     '“Restore default settings” now resets every store (settings, prompt presets, local-model preferences, NanoVM / WebVM / Unkernel parameters) while keeping the API key, chats, attachments, workspace, memory bank and statistics; the dialog lists what resets and what is kept',
   changelogV2720Collapse:
-    'General settings gain “Reply display → Auto-collapse thinking” (off by default): once a reply finishes its reasoning folds into the “Thought for N seconds” title and older replies start collapsed, while a reply still generating stays open and a manual title click stops the auto behaviour; display only, requests are unchanged',
+    'General settings gain “Reply display → Auto-collapse thinking” (off by default): once a reply finishes its reasoning folds into the “Thought for N seconds” title and older replies start collapsed, while a reply still generating stays open and a manual title click stops the automatic behaviour; display only, requests are unchanged',
   changelogV2720Boot:
     'First-paint boot animation (ported from deepseek-harness’s boot page): a DEEPSEEK UNRESTRICTED wordmark plus a spinner while the bundle downloads and runs, with the arc advancing on real milestones (72°→288°); the background is set from the stored theme first so dark users see no white flash; the hint follows the locale; a 404 or offline bundle becomes the raw error plus Reload',
   changelogV2720Apk: 'Builds the 2.7.20 APK (versionCode 290), signed with xiaohuangbo.jks',
@@ -2279,7 +2279,7 @@ export const en = {
   changelogV2717InjectSkip:
     'History restoration for the custom prompt-injection tool yields to reminders: when a new reminder must be inserted before the next question (day change, different location), the previous answer is no longer restored as tool_use, so the reminder never lands between tool_use and tool_result (that shape is rejected, verified); rounds with unchanged reminders are still restored',
   changelogV2717Unkernel:
-    'Merges the new Unkernel Linux page (v0.2.0-261126): the console grew into a desktop with windows, a dock, an app launcher, a control center, a preview browser and Wayland windows, plus 80+ apps (Steam, Chromium / Firefox / Ladybird, VLC / mpv, Xfce / X11, kmscube / Vulkan, Claude Code / Ollama / llama.cpp, Node / Python / Go / Rust / Bun, nginx / PostgreSQL / Valkey, an Ubuntu chroot and box64 for x86 binaries and more), each downloading its files and installing packages in the guest on first run; the DSH go launcher (now in the AI folder) and the host’s Unkernel settings panel are kept, with the host settings mapped to the new parameters (the data disk uses datasize/GiB); the whole page is localized to Chinese again, and DSH go still runs with one click',
+    'Merges the new Unkernel Linux page (v0.2.0-261126): the console grew into a desktop with windows, a dock, an app launcher, a control centre, a preview browser and Wayland windows, plus 80+ apps (Steam, Chromium / Firefox / Ladybird, VLC / mpv, Xfce / X11, kmscube / Vulkan, Claude Code / Ollama / llama.cpp, Node / Python / Go / Rust / Bun, nginx / PostgreSQL / Valkey, an Ubuntu chroot and box64 for x86 binaries and more), each downloading its files and installing packages in the guest on first run; the DSH go launcher (now in the AI folder) and the host’s Unkernel settings panel are kept, with the host settings mapped to the new parameters (the data disk uses datasize/GiB); the whole page is localised to Chinese again, and DSH go still runs with one click',
   changelogV2717Apk: 'Builds the 2.7.17 APK (versionCode 287), signed with xiaohuangbo.jks',
   changelogV2716Title: 'v2.7.16 · 2026-11',
   changelogV2716CustomTool:
@@ -2346,9 +2346,9 @@ export const en = {
   changelogV279Webvm:
     'Fixed WebVM drifting on mobile when the soft keyboard opens: focus the xterm textarea with preventScroll and scroll the page back to the origin after the keyboard appears',
   changelogV279Unkernel:
-    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localized to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH go demo (a 24 MiB static Go binary with a Chinese REPL) and data-disk reset are added, and NanoVM / WebVM gain `fastfetch`',
+    'Ported Unkernel Linux (a Linux 7.x kernel compiled to WebAssembly): Alpine 3.24 / Debian 13.7, real kernel, apk / apt, bash, SMP multi-CPU, networking, sound, display, a persistent disk and the full page; the workspace is mounted at /mnt/workspace; the page UI is fully localised to Chinese, Settings gains file import / download / save-to-workspace and Restart VM, and the Agent tools grow to 10 (shell, list, read, write, workspace transfer, Python, system info, open, restart, status); networking defaults to public Wisp proxies (anura.pro / mercurywork.shop), a DSH go demo (a 24 MiB static Go binary with a Chinese REPL) and data-disk reset are added, and NanoVM / WebVM gain `fastfetch`',
   changelogV279Settings:
-    'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localized; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel; sidebar entry, README and license credits updated',
+    'New Chinese “Unkernel Linux” settings section for memory, timeout, network, sound, display, persistent disk, Worker and Wisp, plus file import / download / save-to-workspace and Restart VM; the page UI is fully localised; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel; sidebar entry, README and licence credits updated',
   changelogV279Apk: 'Builds the 2.7.9 APK (versionCode 279), signed with xiaohuangbo.jks',
   changelogV278Title: 'v2.7.8 · 2026-11',
   changelogV278V4Pro:
