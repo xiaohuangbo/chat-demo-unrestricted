@@ -6,10 +6,17 @@ const DAY = 86_400_000
 
 const startOfDay = (time: number) => new Date(time).setHours(0, 0, 0, 0)
 
-/** 分组：今天 / 昨天 / 7 天内 / 30 天内 / 按月 */
+/**
+ * 分组：置顶 / 今天 / 昨天 / 7 天内 / 30 天内 / 按月。
+ * 置顶的会话先单独成组（组内仍按最近更新排序），其余按日期分组。
+ */
 export const groupSessions = (sessions: SessionSummary[], now: number, t = translate) => {
   const groups: { key: string; label: string; sessions: SessionSummary[] }[] = []
-  for (const session of sessions) {
+  const pinned = sessions.filter((session) => session.pinned)
+  if (pinned.length) {
+    groups.push({ key: 'pinned', label: t('sessionPinnedGroupLabel'), sessions: pinned })
+  }
+  for (const session of sessions.filter((item) => !item.pinned)) {
     const diff = Math.floor((now - startOfDay(session.updatedAt)) / DAY)
     const key =
       diff <= 0

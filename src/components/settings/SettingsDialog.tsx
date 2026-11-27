@@ -46,7 +46,6 @@ import {
 } from '../../services/location.js'
 import {
   isChineseBrowser,
-  resetSettings,
   CUSTOM_COT_MAX_CHARS,
   setAttachmentExts,
   setAutoJailbreak,
@@ -123,15 +122,14 @@ import { LocalModelSettings } from '../local/LocalModelSettings.js'
 import { RolesSettings } from './RolesSettings.js'
 import { AccountSettings } from './AccountSettings.js'
 import { ProfileCard } from './ProfileCard.js'
+import { AccountCard } from './AccountCard.js'
 import { PromptPresetBar } from './PromptPresetBar.js'
 import {
   ensurePromptPresetsMigrated,
-  resetPromptPresets,
   updatePresetContent,
   usePromptPresets,
 } from '../../services/promptPresets.js'
-import { resetLocalModelSettings } from '../../services/local/store.js'
-import { disposeEngine } from '../../services/local/engine.js'
+import { resetAllSettings } from '../../services/resetAll.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import {
@@ -314,6 +312,7 @@ const SettingsContent = () => {
             <ChangelogSetting />
           ) : (
             <>
+              <AccountCard />
               <ApiKeyField editor={apiKeyEditor} />
               <ImportHistory historyImport={historyImport} disabled={historyBusy} />
               <ExportHistory disabled={historyBusy} />
@@ -359,11 +358,8 @@ const SettingsContent = () => {
         <ResetSettingsConfirm
           onCancel={() => setResetOpen(false)}
           onConfirm={() => {
-            resetSettings()
-            resetPromptPresets()
-            // 本地模型偏好与当前显存里的模型一并回到默认状态
-            resetLocalModelSettings()
-            void disposeEngine()
+            // 一处联动：设置项、提示词预设、本地模型、三个虚拟机的参数与账号登录态一起回默认
+            resetAllSettings()
             setResetOpen(false)
             showToast({ key: 'resetSettingsDone' })
           }}
@@ -398,7 +394,11 @@ const ResetSettingsConfirm = ({
         </div>
       }
     >
-      {t('resetSettingsModalDescription')}
+      <div className={styles.resetBody} data-reset-body>
+        <p className={styles.resetParagraph}>{t('resetSettingsModalDescription')}</p>
+        <p className={styles.resetCovers}>{t('resetSettingsCovers')}</p>
+        <p className={styles.resetKeeps}>{t('resetSettingsKeeps')}</p>
+      </div>
     </Modal>
   )
 }
@@ -781,6 +781,10 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV2720Title',
+      items: ['changelogV2720Pin', 'changelogV2720Account', 'changelogV2720Reset', 'changelogV2720Apk'],
+    },
     {
       title: 'changelogV2719Title',
       items: ['changelogV2719Memory', 'changelogV2719Apt', 'changelogV2719Apk'],

@@ -2,7 +2,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.7.19**
+> Current version: **2.7.20**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -18,10 +18,11 @@ On top of that, this fork turns the hard-coded limits of the original into confi
 - **Custom chain of thought**: write reasoning steps in advance and inject them into system, with an injected-steps card above replies when deep thinking is off; experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers (PAIR, TAP, GPTFuzzer, ReNeLLM, ICA, DeepInception, Jailbroken, Cipher, CodeChameleon, Multilingual), model races, variant races (budget cap + start confirmation), and result import/export, with the final prompt, target response and judge result for every instance;
-- **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
+- **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual); the session list pins chats one by one (pinned chats move to the top “Pinned” group) and its “…” menu has a multi-select mode that pins / unpins or deletes several chats at once;
+- **Characters and account**: character cards, My profile, DeepSeek account sign-in (with the account’s API Key; afterwards the account nickname can be copied into My profile and Account & usage shares the same key), compression threshold, and balance / usage overview;
 - **Models and cost**: a model card in the input bar (built-in Flash / V4 Pro plus cloud fetch), a context ring, session statistics, per-model billing, and daily token / cost alerts;
 - **Memory**: long-term memory (manual / auto-extracted) and a memory graph (nodes, edges, vector dimension, retrieval weights, search debug) injected into requests; the node list filters by title / body / tags with multi-select tag buttons, and every card can edit its title, body and tags in place;
-- **Data and attachments**: configurable size / count / extension limits, history import/export, and one-click restore-default-settings.
+- **Data and attachments**: configurable size / count / extension limits, history import/export, and one-click restore-default-settings (which also resets prompt presets, local-model preferences, NanoVM / WebVM / Unkernel parameters and the account sign-in state, keeping the API key, chats, attachments, workspace and memory bank).
 
 Every switch only affects **requests sent from this browser and conversations stored locally**. Nothing changes the behaviour of the API service itself.
 

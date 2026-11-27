@@ -1026,3 +1026,36 @@
   flex-direction: column;
   gap: 10px;
 }
+
+/* 恢复默认设置确认：段落 + 会重置 / 会保留两行说明 */
+.resetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resetParagraph {
+  margin: 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.resetCovers,
+.resetKeeps {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+.resetCovers {
+  background-color: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.resetKeeps {
+  background-color: var(--dsw-alias-interactive-bg-hover, var(--dsw-alias-interactive-bg-active));
+  color: var(--dsw-alias-label-tertiary);
+}

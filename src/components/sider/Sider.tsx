@@ -4,16 +4,25 @@ import { useTranslate } from '../../i18n/index.js'
 import {
   IconBookOutline16,
   IconChipOutline16,
+  IconCloseOutline16,
   IconGlobeLanguageOutline14,
   IconPanelLeftOutline16,
+  IconPinOutline16,
   IconSettingsOutline16,
   IconTerminalOutline16,
   IconThinkOutline16,
+  IconTrashOutline16,
   NewChatIcon,
 } from '../base/icons.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { groupSessions } from '../../services/chat/sessionGroups.js'
-import { newChat, removeSession, useChatStore } from '../../services/chat/store.js'
+import {
+  newChat,
+  removeSession,
+  removeSessions,
+  setSessionsPinned,
+  useChatStore,
+} from '../../services/chat/store.js'
 import type { SessionSummary } from '../../services/chat/types.js'
 import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
@@ -29,6 +38,14 @@ import { useUnkernelConfig } from '../../services/unkernel/config.js'
 import { openUnkernel, useUnkernel } from '../../services/unkernel/session.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
+import {
+  exitSelecting,
+  pruneSelected,
+  setSelected,
+  startSelecting,
+  toggleSelected,
+  useSessionSelection,
+} from './sessionSelection.js'
 import styles from './Sider.module.css'
 
 /** 展开的侧边栏：名称与收起按钮、开启新对话、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
@@ -48,6 +65,21 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const groups = useMemo(() => groupSessions(sessions, now, t), [sessions, now, t])
   const [deleting, setDeleting] = useState<SessionSummary | null>(null)
   const [deletePending, setDeletePending] = useState(false)
+  const selection = useSessionSelection()
+  const selecting = selection.active
+  const selectedIds = useMemo(() => new Set(selection.ids), [selection.ids])
+  const selectedSessions = useMemo(
+    () => sessions.filter((session) => selectedIds.has(session.id)),
+    [sessions, selectedIds]
+  )
+  const allPinned = selectedSessions.length > 0 && selectedSessions.every((s) => s.pinned)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkPending, setBulkPending] = useState(false)
+
+  // 会话被删除或导入替换后，丢掉已经不存在的选择
+  useEffect(() => {
+    pruneSelected(sessions.map((session) => session.id))
+  }, [sessions])
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -75,47 +107,121 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
 
   return (
     <div className={clsx(styles.sider, mobile && styles.mobile)}>
-      <div className={styles.top}>
-        <div className={styles.appName}>{t('appName')}</div>
-        <IconButton
-          size="m"
-          icon={<IconPanelLeftOutline16 />}
-          tooltip={t('collapseSiderbarButton')}
-          tooltipPlacement="bottom"
-          onClick={() => (mobile ? closeMobileSider() : setSiderCollapsed(true))}
-        />
-      </div>
-      <button
-        type="button"
-        className={styles.newChat}
-        onClick={() => {
-          closeLab()
-          newChat()
-          closeMobileSider()
-        }}
-      >
-        <span className={styles.newChatIcon}>
-          <NewChatIcon />
-        </span>
-        {t('newChat')}
-      </button>
+      {selecting ? (
+        <div className={clsx(styles.top, styles.selectTop)}>
+          <div className={styles.selectTitle} data-selection-header>
+            {t('sessionSelectTitle', { count: selectedSessions.length })}
+          </div>
+          <div className={styles.selectActions}>
+            <button
+              type="button"
+              className={styles.selectAll}
+              onClick={() =>
+                setSelected(
+                  selectedSessions.length === sessions.length ? [] : sessions.map((s) => s.id)
+                )
+              }
+            >
+              {selectedSessions.length === sessions.length && sessions.length > 0
+                ? t('sessionSelectNone')
+                : t('sessionSelectAll')}
+            </button>
+            <IconButton
+              size="m"
+              icon={<IconCloseOutline16 />}
+              tooltip={t('sessionSelectExit')}
+              tooltipPlacement="bottom"
+              onClick={exitSelecting}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className={styles.top}>
+          <div className={styles.appName}>{t('appName')}</div>
+          <IconButton
+            size="m"
+            icon={<IconPanelLeftOutline16 />}
+            tooltip={t('collapseSiderbarButton')}
+            tooltipPlacement="bottom"
+            onClick={() => (mobile ? closeMobileSider() : setSiderCollapsed(true))}
+          />
+        </div>
+      )}
+      {selecting ? null : (
+        <button
+          type="button"
+          className={styles.newChat}
+          onClick={() => {
+            closeLab()
+            newChat()
+            closeMobileSider()
+          }}
+        >
+          <span className={styles.newChatIcon}>
+            <NewChatIcon />
+          </span>
+          {t('newChat')}
+        </button>
+      )}
       <div className={styles.listWrap}>
         <div className={styles.list}>
           {groups.map((group) => (
             <div key={group.key} className={styles.section}>
-              <div className={styles.sectionHeader}>{group.label}</div>
+              <div className={styles.sectionHeader} data-group={group.key}>
+                {group.label}
+              </div>
               {group.sessions.map((session) => (
                 <SessionItem
                   key={session.id}
                   session={session}
                   active={session.id === activeId}
+                  selecting={selecting}
+                  selected={selectedIds.has(session.id)}
                   onDelete={() => setDeleting(session)}
+                  onToggleSelect={() => toggleSelected(session.id)}
+                  onStartSelecting={() => startSelecting(session.id)}
                 />
               ))}
             </div>
           ))}
         </div>
       </div>
+      {selecting ? (
+        <div className={styles.bulkBar} data-bulk-bar>
+          <button
+            type="button"
+            className={styles.bulkAction}
+            data-bulk="pin"
+            disabled={!selectedSessions.length}
+            onClick={() => {
+              const pinned = !allPinned
+              const changed = setSessionsPinned(selection.ids, pinned)
+              if (changed) {
+                showToast(
+                  pinned
+                    ? t('sessionPinnedCountToast', { count: changed })
+                    : t('sessionUnpinnedCountToast', { count: changed })
+                )
+                exitSelecting()
+              }
+            }}
+          >
+            <IconPinOutline16 />
+            {allPinned ? t('sessionUnpinSelected') : t('sessionPinSelected')}
+          </button>
+          <span className={styles.bulkDivider} aria-hidden />
+          <button
+            type="button"
+            className={clsx(styles.bulkAction, styles.bulkDanger)}
+            data-bulk="delete"
+            disabled={!selectedSessions.length}
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <IconTrashOutline16 />
+            {t('delete')}
+          </button>
+        </div>
+      ) : (
       <div className={styles.bottom}>
         <button
           type="button"
@@ -225,6 +331,51 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
           <span className={styles.settingsLabel}>{t('settings')}</span>
         </button>
       </div>
+      )}
+      {bulkDeleteOpen ? (
+        <Modal
+          title={t('sessionBulkDeleteTitle', { count: selectedSessions.length })}
+          onClose={() => {
+            if (!bulkPending) {
+              setBulkDeleteOpen(false)
+            }
+          }}
+          footer={
+            <>
+              <Button
+                variant="outlined"
+                disabled={bulkPending}
+                onClick={() => setBulkDeleteOpen(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={bulkPending || !selectedSessions.length}
+                onClick={async () => {
+                  setBulkPending(true)
+                  try {
+                    const removed = await removeSessions(selection.ids)
+                    setBulkDeleteOpen(false)
+                    exitSelecting()
+                    if (removed === selectedSessions.length) {
+                      showToast(t('sessionBulkDeletedToast', { count: removed }))
+                    } else {
+                      showToast({ key: 'sessionDeleteFailed', type: 'error' })
+                    }
+                  } finally {
+                    setBulkPending(false)
+                  }
+                }}
+              >
+                {t('delete')}
+              </Button>
+            </>
+          }
+        >
+          {t('sessionBulkDeleteBody', { count: selectedSessions.length })}
+        </Modal>
+      ) : null}
       {deleting ? (
         <Modal
           title={t('deleteSessionModalContentTitle')}

@@ -51,14 +51,14 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | ------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | 1. What this is                 | Scope, original features and everything this fork adds               | [01-what-is-this.md](docs/en/01-what-is-this.md)       |
 | 2. Restrictions in the original | What was hard-coded on the request and UI side                       | [02-original-limits.md](docs/en/02-original-limits.md) |
-| 3. What this fork changes       | 3.1–3.52: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
+| 3. What this fork changes       | 3.1–3.53: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
 | 4. Behaviour matrix             | Original / default / unrestricted mode, side by side                 | [04-behaviour.md](docs/en/04-behaviour.md)             |
 | 5. Settings reference           | Defaults and localStorage keys for every setting                     | [05-settings.md](docs/en/05-settings.md)               |
 | 6. What the request contains    | The JSON that actually goes out                                      | [06-request.md](docs/en/06-request.md)                 |
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 87 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 88 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.19.apk` (118 MB, versionCode 289,
-SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk` (118 MB, versionCode 290,
+SHA-256 `068ee438be8d7d90c7a6083527e4f0d06fef6186fa716d17b49ec5db729d931d`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -101,11 +101,15 @@ Last regression run (2026-11, v2.7.18, both `compat` and `compat-prod` matrices)
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
 | Unkernel Linux   | iframe boot, new desktop and 80+ app launcher, Alpine + Debian, 2-CPU SMP, workspace mount / write-back, file import/export, settings and the `datasize` mapping | pass |
+| Pin / multi-select | Pin from the row menu, the Pinned group and pin mark, survives a reload, selection header count, bulk pin, bulk delete with confirmation, 390px drawer | pass |
+| DeepSeek account | API-key sign-in, key tail and balance card, nickname synced into My profile, profile account row, sign-out, restore-defaults clears it | pass |
 | Unkernel network | Debian `apt-get update` (10.2 MB index) and `apt-get install bzip2`, Alpine `apk update` / `apk add curl`, guest HTTP 200, `routes=0` and memory handed back to the page | pass |
 
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.20**: three features. (1) The session list pins chats and multi-selects them: the row menu pins one chat (pinned chats move into a “Pinned” group with a pin mark), “Select” turns the list into checkboxes with an “N selected” header, select-all, and a bottom “Pin / Delete” bar that asks for confirmation with the count; the pin is stored with the session, so reloads and restarts keep it (the export uses DeepSeek’s history format, which carries no pin). (2) Settings → Data gains “Sign in with DeepSeek account”: one balance check with the account’s API key establishes the sign-in state, the account card shows avatar / nickname / key tail / balance / sign-in time with refresh, nickname sync into My profile and sign-out, and the profile card’s new account row shares one nickname and avatar (the platform OAuth flow needs a host callback and sends no CORS headers, so a static site cannot get a token — hence the API key, written up as known limit 88). (3) “Restore default settings” now reaches every store: settings, prompt presets, local-model preferences (unloading the model), the NanoVM / WebVM / Unkernel parameters and the account sign-in state all reset, while the API key, chats, attachments, workspace, memory bank and statistics stay; the confirmation lists “Reset” and “Kept”.
 
 - **2.7.19**: two Unkernel fixes. (1) Settings → Unkernel Linux drops the kernel-memory slider: the upstream page already has memory under its own Settings → Machine (with an automatic per-device value), while the host’s `?mem=` pinned it and overwrote page-side changes on every boot; memory now follows the VM’s own settings (`kw.settings`) and the host panel keeps distro, data disk, CPUs, devices, Worker, Wisp and timeout. (2) Debian’s `apt-get update` / `apt-get install` no longer returns 403: the new page hands plain HTTP to `deb.debian.org` and friends to its own CORS mirror at `mirror.unkernel.dev`, which only accepts allowlisted origins (`https://unkernel.dev`, `http://localhost:*`, …), so this app — on `127.0.0.1:3080`, a LAN address or the APK’s `http://127.0.0.1:18765` — got `403 Origin not allowed` (the official site is on the list, which is why it works there). The iframe now always carries `routes=0`, sending the guest’s plain HTTP through Wisp instead; Debian’s `apt-get update` fetched the 10.2 MB index and `apt-get install bzip2` succeeded, and Alpine’s `apk` plus HTTP access still work.
 
@@ -123,15 +127,6 @@ Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known
 
 - **2.7.12**: fixes memory-graph retrieval for Russian (Cyrillic) and other non-Latin scripts by tokenizing with Unicode letters/digits (`\p{L}` / `\p{N}`) while keeping Chinese single characters plus bigrams; Settings → Memory gains a "Tag linking & graph expansion" switch that links nodes sharing tags (at most 3 links each) and expands matches through tag neighbours, with a tag-expanded counter in search debug.
 
-- **2.7.11**: fixes the real cause of the "token too large" attachment failure — any DeepSeek extension field (`tools` / `safety_check` / `title`) makes the server cap user input at 32768 tokens; turns above that now drop the three fields and read attachments through the plain Anthropic-compatible path up to 1M, retrying once without them if the estimate was too low. A first large turn falls back to the first 24 characters as the title and usage is still recorded.
-
-- **2.7.10**: Settings → Attachments gains "Handle large text attachments": plain-text files above 32768 tokens are split into `.partN` parts under the same limit at pick time and sent together, plus an experimental switch that pastes the text straight into the turn using the model 1M context; Settings → Data → Import chat history now shows a progress bar with processed / total entries, imported chats and the percentage.
-
-- **2.7.9**: fixes mobile WebVM drift when the soft keyboard opens; ports Unkernel Linux (real Linux 7.x kernel in WebAssembly, Alpine 3.24 and Debian 13.7, SMP multi-CPU, Debian defaulting to 2 GiB memory) with networking, sound, display, persistent disk, import/export, a full-screen page, a `/mnt/workspace` mount shared with the chat workspace, a fully Chinese page UI, file import/export and Restart in a separate Chinese settings section, ten `unkernel_*` Agent tools, a data disk that Settings can grow or reset, a **DSH go** launcher demo (a 24 MiB static Go binary with a Chinese REPL and a `bash` tool, replacing the former DSH + dsh-TUI installer) and `fastfetch` in NanoVM / WebVM; the desktop right-hand VM dock slides in like the left sidebar, and pulling down at the top of the main page opens Unkernel.
-
-- **2.7.8**: fixes DeepSeek V4 Pro requests — server-side web tools and cloud titles are no longer sent, `latest_reminder` is folded into system, the search toggle points users to Flash and new sessions take their title from the first question; the README acknowledgements now include the Linux DO community.
-- **2.7.7**: settings are regrouped into Jailbreak and Attachments — unrestricted mode, prompt presets, auto jailbreak, obfuscation, AutoTune, anti-retraction, skip safety check and continue-after-refusal now live on Jailbreak, and attachment poisoning moves under Attachments; DeepChat memory-update notices are ported (a toast shows what was written, switchable under Settings → Memory); avatar upload opens a circular crop dialog (drag / zoom, dimmed outside the circle, 384×384 output); inside the APK the composer paperclip becomes a + tray for camera / photos / files, and the camera opens the system camera app; the mobile sidebar becomes a DeepChat-style swipe drawer, with a slide-in animation on desktop;
-- **2.7.6**: NanoVM gains single-file import for users and the agent — write any file from this device or the workspace straight into the VM without base64 shell commands, with automatic disk growth; new `nanovm_import` tool; PyBot toolchain (pure-Python rule chatbot) installs offline from a bundled snapshot and supports an interactive `pybot -i` chat with `/reset` and `/exit`; known limits now 80.
 - Older entries live in the in-app changelog (Settings → Changelog).
 
 ## Star History

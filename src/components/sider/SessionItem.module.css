@@ -95,3 +95,50 @@
     font-size: 16px;
   }
 }
+
+/* 多选：整行可勾选，勾选框占最左，选中行用浅色底 */
+.selectable {
+  padding-left: 8px;
+}
+
+.selected {
+  background-color: var(--dsw-specific-sidebar-nav-item-hover);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border: 1.5px solid var(--dsw-alias-border-l2, var(--dsw-alias-border-l1));
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary-foreground, #fff);
+
+  &.checkOn {
+    border-color: var(--dsw-alias-brand-primary);
+    background-color: var(--dsw-alias-brand-primary);
+  }
+}
+
+.check svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* 置顶标记：标题后面的小图钉，选中态跟随行文字颜色 */
+.pinMark {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 6px;
+  color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
+
+  &.pinMark svg {
+    width: 13px;
+    height: 13px;
+  }
+}

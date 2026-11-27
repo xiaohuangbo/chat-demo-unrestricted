@@ -279,8 +279,9 @@ export const useChatStore = create<ChatState>(() => ({
 
 const { getState: get, setState: set } = useChatStore
 
+/** 置顶的排在前面，其余按最近更新倒序 */
 const sortSessions = (sessions: SessionSummary[]) =>
-  [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)
+  [...sessions].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt - a.updatedAt)
 
 const getSession = (id: string) => {
   const cache = get().sessionCache
@@ -293,7 +294,10 @@ const getStreamController = (id: string) => {
 }
 
 const sameSummary = (a: SessionSummary, b: SessionSummary) =>
-  a.title === b.title && a.createdAt === b.createdAt && a.updatedAt === b.updatedAt
+  a.title === b.title &&
+  a.createdAt === b.createdAt &&
+  a.updatedAt === b.updatedAt &&
+  Boolean(a.pinned) === Boolean(b.pinned)
 
 const sessionAccess = new Map<string, number>()
 const unsavedSessions = new Set<string>()
@@ -832,6 +836,42 @@ export const selectSession = (id: string) => {
 }
 
 /** 切换会话角色；角色提示词在下一轮请求时生效 */
+/** 内存里的标记先改：列表立刻重排，落库失败时由 retrySaveSessions 提示 */
+const applyPinned = (ids: readonly string[], pinned: boolean) => {
+  const wanted = new Set(ids)
+  const patch = <T extends { id: string; pinned?: boolean }>(item: T): T =>
+    wanted.has(item.id) ? { ...item, ...(pinned ? { pinned: true } : { pinned: undefined }) } : item
+  set((state) => {
+    const sessionCache: Record<string, Session> = {}
+    for (const [id, session] of Object.entries(state.sessionCache)) {
+      sessionCache[id] = patch(session)
+    }
+    return { sessions: sortSessions(state.sessions.map(patch)), sessionCache }
+  })
+}
+
+/** 置顶 / 取消置顶：改标记与列表元数据，不触发 updatedAt 变化 */
+export const setSessionPinned = (id: string, pinned: boolean) => {
+  if (get().importingHistory || deletingSessions.has(id) || !get().sessions.some((s) => s.id === id)) {
+    return
+  }
+  applyPinned([id], pinned)
+  void db.setSessionPinned([id], pinned).catch(db.reportStorageError('pin session'))
+}
+
+/** 批量置顶 / 取消置顶（多选后一次操作），返回实际改动的会话数 */
+export const setSessionsPinned = (ids: readonly string[], pinned: boolean): number => {
+  const targets = ids.filter(
+    (id) => !deletingSessions.has(id) && get().sessions.some((session) => session.id === id)
+  )
+  if (!targets.length || get().importingHistory) {
+    return 0
+  }
+  applyPinned(targets, pinned)
+  void db.setSessionPinned(targets, pinned).catch(db.reportStorageError('pin sessions'))
+  return targets.length
+}
+
 export const setSessionRole = (id: string, roleId: string) => {
   updateSession(id, (session) => ({ ...session, roleId }))
   set((state) => ({
@@ -871,6 +911,20 @@ export const removeSession = (id: string): Promise<boolean> => {
   const task = removeSessionData(id).finally(() => deletionTasks.delete(task))
   deletionTasks.add(task)
   return task
+}
+
+/**
+ * 批量删除（多选后的删除）：逐个走单条删除，任意一条失败不影响其余；
+ * 返回成功删除的数量，供界面提示。
+ */
+export const removeSessions = async (ids: readonly string[]): Promise<number> => {
+  let removed = 0
+  for (const id of ids) {
+    if (await removeSession(id)) {
+      removed++
+    }
+  }
+  return removed
 }
 
 const removeSessionData = async (id: string): Promise<boolean> => {

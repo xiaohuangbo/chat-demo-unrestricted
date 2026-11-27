@@ -8,6 +8,8 @@ import {
   setProfileName,
   useProfile,
 } from '../../services/profile.js'
+import { applyAccountNickname, useAccount } from '../../services/account/session.js'
+import { setSettingsSection } from './settingsDialogState.js'
 import { AvatarCropModal } from './AvatarCropModal.js'
 import styles from './ProfileCard.module.css'
 
@@ -15,6 +17,8 @@ import styles from './ProfileCard.module.css'
 export const ProfileCard = () => {
   const t = useTranslate()
   const profile = useProfile()
+  const account = useAccount()
+  const signedIn = account.status === 'signed-in'
   const [name, setName] = useState(profile.name)
   const [avatarError, setAvatarError] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
@@ -41,6 +45,42 @@ export const ProfileCard = () => {
             <div className={styles.title}>{t('profileTitle')}</div>
             <div className={styles.hint}>{t('profileHint')}</div>
           </div>
+        </div>
+        <div className={styles.accountRow} data-profile-account>
+          <span className={styles.accountLabel}>{t('profileAccountLabel')}</span>
+          {signedIn ? (
+            <>
+              <span className={styles.accountName}>
+                {t('accountKeyTail', { tail: account.profile?.tail ?? '' })}
+              </span>
+              <button
+                type="button"
+                className={styles.accountAction}
+                onClick={() => {
+                  if (applyAccountNickname()) {
+                    showToast({ key: 'accountSyncNicknameDone' })
+                  }
+                }}
+              >
+                {t('accountSyncNickname')}
+              </button>
+              <button
+                type="button"
+                className={styles.accountAction}
+                onClick={() => setSettingsSection('data')}
+              >
+                {t('accountManage')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={styles.accountSignIn}
+              onClick={() => setSettingsSection('data')}
+            >
+              {t('accountSignIn')}
+            </button>
+          )}
         </div>
         <div className={styles.body}>
           <button

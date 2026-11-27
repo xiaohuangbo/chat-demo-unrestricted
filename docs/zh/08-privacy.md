@@ -10,6 +10,7 @@
 - 工具会向第三方服务发起请求：Open-Meteo（天气）、BigDataCloud（逆地理）、你让 Agent 抓取的网页；其余工具都在本地完成；
 - Unkernel 页面在 iframe 里运行，资源随应用分发；guest 联网走 Wisp 代理（默认 anura.pro / mercurywork.shop），代理运营方能看到连接的主机名、端口与明文 HTTP 内容，TLS 仍端到端；因为页面固定带 `routes=0`，Debian 里 apt 的索引与 `.deb` 也走这个代理，而不是上游的 CORS 镜像（`mirror.unkernel.dev` 只接受白名单页面源，对本应用一律回 403），所以请求不会发往该镜像。应用的首次运行下载（Steam、浏览器、发行版软件包等）也经由页面发起：同源文件直接 `fetch()`，外站文件走 Wisp 或镜像站；
 - guest 的 GL / Vulkan / VA-API 在本地渲染（WebGL2 / WebGPU / WebCodecs），画面不上传；DSH go 的 24 MiB 二进制来自本仓库，不联网下载；
+- 「从 DeepSeek 账号登录」只向 `https://api.deepseek.com/user/balance` 发一次带 API Key 的请求来确认账号可用与余额，登录态（Key 尾号、余额快照、登录时间）存在本机，不保存 Key 副本，也不发往任何第三方；平台账号 OAuth 需要宿主服务接收回调，静态站点不实现。
 - 提示词注入工具只改写请求的结构（`tools` / `tool_choice`），不增加新的出站目标；记忆节点筛选只在本地列表上过滤，不影响检索与注入；
 - 没有统计、没有埋点、没有第三方脚本、没有中转服务器；
 - 历史导入导出为 ZIP，导出包含会话与本地图片原件，不包含 API Key 与设置；归档格式与保留范围见[历史导入导出说明](../../src/services/chat/history/README.md)。

@@ -157,16 +157,22 @@ export type Session = {
   compression?: SessionCompression
   /** 会话绑定的角色 id；缺省或 deepseek 表示默认风格 */
   roleId?: string
+  /** 置顶：排在列表最前的「置顶」分组里，按最近更新排序 */
+  pinned?: boolean
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */
-export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt' | 'roleId'>
+export type SessionSummary = Pick<
+  Session,
+  'id' | 'title' | 'createdAt' | 'updatedAt' | 'roleId' | 'pinned'
+>
 
 /** 显式提取字段，避免将完整会话的消息带进列表。 */
 export const toSessionSummary = (session: SessionSummary): SessionSummary => ({
   ...(session.roleId ? { roleId: session.roleId } : {}),
+  ...(session.pinned ? { pinned: true } : {}),
   id: session.id,
   title: session.title,
   createdAt: session.createdAt,

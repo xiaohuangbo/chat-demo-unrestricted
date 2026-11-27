@@ -293,3 +293,109 @@
     line-height: 22px;
   }
 }
+
+/* 多选：标题行换成「已选择 N 个对话」+ 全选 / 关闭 */
+.selectTop {
+  margin-bottom: 8px;
+  padding: 15px 0 10px 4px;
+}
+
+.selectTitle {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--dsw-alias-label-primary);
+}
+
+.selectActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.selectAll {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--dsw-alias-brand-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .selectAll:hover {
+    background-color: var(--dsw-specific-sidebar-nav-item-hover);
+  }
+}
+
+/* 多选操作条：置顶 / 删除，固定在侧边栏底部 */
+.bulkBar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 56px;
+  margin: 0 -12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  background-color: var(--dsw-specific-sidebar-fill);
+}
+
+.bulkAction {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+@media (hover: hover) {
+  .bulkAction:not(:disabled):hover {
+    background-color: var(--dsw-specific-sidebar-nav-item-hover);
+  }
+}
+
+.bulkDanger {
+  color: var(--dsw-alias-state-error-primary, #f54a45);
+}
+
+.bulkDivider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--dsw-alias-border-l1);
+}
+
+@media not all and (min-width: 768px) {
+  .selectTitle {
+    font-size: 18px;
+  }
+
+  .bulkBar {
+    height: 64px;
+  }
+
+  .bulkAction {
+    height: 44px;
+    font-size: 16px;
+  }
+}

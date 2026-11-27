@@ -51,14 +51,14 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.52：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.53：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 87 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 88 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -72,13 +72,13 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.19.apk`（118 MB，versionCode 289，
-SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk`（118 MB，versionCode 290，
+SHA-256 `068ee438be8d7d90c7a6083527e4f0d06fef6186fa716d17b49ec5db729d931d`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
 
-最近一次兼容性回归（2026-11，v2.7.19，`compat` / `compat-prod` 两套矩阵）：
+最近一次兼容性回归（2026-11，v2.7.20，`compat` / `compat-prod` 两套矩阵）：
 
 | 范围            | 覆盖                                                       | 结果  |
 | --------------- | ---------------------------------------------------------- | ----- |
@@ -96,12 +96,16 @@ SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`），
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、新版桌面与 80+ 应用启动器、Alpine / Debian、2 CPU SMP、工作区挂载/写回、文件导入/导出、设置页与 `datasize` 映射 | 通过  |
+| 会话置顶 / 多选 | 「…」逐个置顶、置顶分组与图钉、刷新后仍生效、多选头部计数、批量置顶、批量删除确认、390px 抽屉 | 通过  |
+| DeepSeek 账号   | API Key 登录、Key 尾号与余额卡、同步昵称到我的资料、资料卡账号行、退出登录、恢复默认时清登录态 | 通过  |
 | Unkernel 联网   | Debian `apt-get update`（10.2 MB 索引）/ `apt-get install bzip2`、Alpine `apk update` / `apk add curl`、guest HTTP 200、`routes=0` 与内存交回页面 | 通过  |
 | Upstream 0.1.4  | 归档附件随会话导入、按对话计进度、旧浏览器 AbortSignal / toSorted / 100dvh 兼容 | 通过（真机导入 3000 会话、带图归档、旧内核构建验证） |
 
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.20**：三个新功能。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。② 设置 → 数据管理新增「从 DeepSeek 账号登录」：用账号的 API Key 校验一次余额即建立登录态，账号卡显示头像 / 昵称 / Key 尾号 / 余额 / 登录时间，可刷新余额、把账号昵称同步到「我的资料」、退出登录；资料卡新增账号行，与账号卡共用昵称与头像（平台网页授权 OAuth 需要宿主回调且接口无 CORS，静态站点拿不到 token，所以走 API Key，见已知限制第 88 条）。③「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数、账号登录态一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。
 
 - **2.7.19**：两处 Unkernel 修复。① 设置 → Unkernel Linux 去掉「内核内存」滑块：上游页面自己的「设置 → 机器」里就有内存（带按设备算出的自动值），而宿主传的 `?mem=` 会把内存钉死并在每次启动时覆盖页面里的改动，现在内存只由虚拟机自己的设置决定（`kw.settings`），宿主面板保留发行版、数据盘、CPU、设备、Worker、Wisp 与超时。② 修复 Debian 里 `apt-get update` / `apt-get install` 的 403：新版页面默认把 `deb.debian.org` 等纯 HTTP 交给自己的 CORS 镜像 `mirror.unkernel.dev` 代答，而该镜像只接受 `https://unkernel.dev`、`http://localhost:*` 等白名单源，本应用跑在 `127.0.0.1:3080`、局域网地址或 APK 的 `http://127.0.0.1:18765` 上只会拿到 `403 Origin not allowed`（官方站没有这个问题就是因为它的源在白名单里）；现在 iframe 固定带 `routes=0`，guest 的纯 HTTP 也走 Wisp，实测 Debian 的 `apt-get update` 拉完 10.2 MB 索引、`apt-get install bzip2` 正常，Alpine 的 `apk` 与 HTTP 访问也正常。
 
@@ -119,15 +123,6 @@ SHA-256 `9e30eb2d5434748f7d64d51fc12539a32e5c03a12a1e4ab32c5d9dde337d5af6`），
 
 - **2.7.12**：修复网状记忆检索对俄语（西里尔）等非拉丁文字的匹配——分词改用 Unicode 字母 / 数字（`\p{L}` / `\p{N}`），中文仍按单字 + 二元词；设置 → 记忆新增「标签关联与图扩展」开关：共享标签的节点自动连边（每节点最多 3 条），检索命中时按标签扩散，搜索调试显示「标签扩展 N」。
 
-- **2.7.11**：修好附件「token 过大」的真正原因——请求里只要带 `tools` / `safety_check` / `title` 任一 DeepSeek 扩展字段，服务端就把用户输入限制在 32768 token；本轮输入超过 32768 token 时自动去掉这三项、走纯 Anthropic 兼容路径直读附件（上限 1M），估算偏小被拒时也会去掉后自动重试一次；同时首轮大输入改用提问前 24 字作标题、用量照常记账。
-
-- **2.7.10**：设置 → 附件新增「大文本附件自动处理」——超过 32768 token 的纯文本附件选择时自动拆成 `.partN` 分片（每片仍不超过 32768 token）分别上传、一起发送，另有实验性开关把大文本直接拼进本轮提问、占用模型的 1M 上下文；设置 → 数据管理 → 导入历史对话新增进度条，显示已处理条目 / 总条目、已导入对话数与百分比。
-
-- **2.7.9**：修复手机网页端 WebVM 打开输入法时漂移；移植 Unkernel Linux（真正编译成 WebAssembly 的 Linux 7.x 内核，Alpine 3.24 / Debian 13.7，支持 SMP 多 CPU、Debian 默认 2 GiB 内存），支持联网、声音、显示、持久磁盘、导入导出、全屏页面，页面界面已全面汉化；工作区挂到 `/mnt/workspace`，设置页新增文件导入/下载/保存到工作区与重启虚拟机，Agent 工具扩展到十个，数据盘可在设置里扩容或一键重置，启动器内置 **DSH go**（24 MiB 静态 Go 二进制、中文 REPL 与 `bash` 工具，取代原来的 DSH + dsh-TUI 安装入口），NanoVM / WebVM 新增 `fastfetch`；桌面右侧虚拟机面板与左侧侧边栏同样滑入，主页顶部下拉可进入 Unkernel。
-
-- **2.7.8**：修复 DeepSeek V4 Pro 调用报错——请求不再下发服务端联网工具与联网标题，`latest_reminder` 折进 system，智能搜索提示改用 Flash，新会话用首问自动生成标题；README 鸣谢新增 Linux DO 社区。
-- **2.7.7**：设置重组成「破甲」与「附件」两页——越狱相关的解除限制、提示词预设、自动越狱、扰动、自动调参、防撤回、跳过安全审核、拒绝后继续生成集中到「破甲」，附件投毒并入「附件」；移植 DeepChat 的记忆更新提示（气泡显示本次写入内容，可在设置 → 记忆关闭）；头像上传改为圆形取景框裁剪（拖动 / 缩放、圆外变暗、输出 384×384）；APK 输入栏的回形针换成「+」展开拍照 / 相册 / 文件，拍照直接调用系统相机；移动端侧边栏改为 DeepChat 式右滑抽屉，桌面展开带滑入动画；
-- **2.7.6**：NanoVM 支持用户与 Agent 导入单个文件——本机或工作区的任意文件直接写入虚拟机，不再需要 base64 命令行，空间不足自动扩容；新增 `nanovm_import` 工具与 PyBot 工具链（内置离线快照，支持 `pybot -i` 连续对话与 `/reset`、`/exit`）；已知限制补到 80 条。
 - 更早的版本见应用内 **设置 → 更新日志**。
 
 ## Star 历史

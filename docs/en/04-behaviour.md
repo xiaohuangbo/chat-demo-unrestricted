@@ -22,6 +22,8 @@
 | Prompt injection            | Not available               | Off by default; define the tool and argument, force `tool_choice` so the answer becomes the argument and is restored as text | Same as default                                           |
 | Memory nodes                | Not available               | Settings → Memory filters by title / body / tags; every card edits title, body and tags in place                        | Same as default                                           |
 | Unkernel page               | Not available               | Desktop + app launcher (80+ apps), terminals, Wayland windows, GL / Vulkan; Alpine by default                           | Same as default                                           |
+| Session pinning             | Not available               | Pin / unpin one chat from its “…” menu; multi-select pins or deletes several at once; pins only affect the session list | Same as default              |
+| DeepSeek account            | Account sign-in in the official client | Sign in under Data with the account’s API key (the platform OAuth flow needs a host callback) and copy the nickname into My profile | Same as default              |
 
 ---
 
