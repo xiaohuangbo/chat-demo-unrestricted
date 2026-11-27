@@ -1559,7 +1559,7 @@ const en: DocsDoc = {
             '“Restore default settings” resets every store (settings, prompt presets, local-model preferences, NanoVM / WebVM / Unkernel parameters) and keeps the API key, chats, attachments, workspace, memory bank and statistics.',
             'The data disk is a sparse image in IndexedDB, 8 GiB by default and growable to 16 / 32 GiB; Reset data disk wipes the guest. The host passes `datasize` (GiB), `net`, `sound`, `display`, `data`, `worker`, `cpus` and `wisp` as URL parameters, plus a fixed `routes=0` so the guest’s plain HTTP also goes through Wisp instead of the unkernel CORS mirror (otherwise apt inside Debian gets a 403). Kernel memory, GPU and similar machine options belong to the VM page’s own Settings: no `mem` is sent, so page-side changes survive restarts.',
             'The app launcher carries 80+ apps: AI (Claude Code, Ollama, llama.cpp, fx, DSH go), tools, runtimes, servers, Linux, browsers, desktop, games, media and graphics; a first run downloads its files and installs packages with apk / apt, with progress in an installer window of its own.',
-            'The desktop has windows, a dock, a control center, a preview browser and Wayland windows; more than one CPU needs cross-origin isolation (the host registers `coi-sw.js`), a single CPU does not.',
+            'The desktop has windows, a dock, a control centre, a preview browser and Wayland windows; more than one CPU needs cross-origin isolation (the host registers `coi-sw.js`), a single CPU does not.',
           ],
         },
         {
