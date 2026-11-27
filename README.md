@@ -51,7 +51,7 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | ------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | 1. What this is                 | Scope, original features and everything this fork adds               | [01-what-is-this.md](docs/en/01-what-is-this.md)       |
 | 2. Restrictions in the original | What was hard-coded on the request and UI side                       | [02-original-limits.md](docs/en/02-original-limits.md) |
-| 3. What this fork changes       | 3.1–3.55: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
+| 3. What this fork changes       | 3.1–3.56: every settings group, NanoVM Slim, WebVM, Unkernel, chat modes and each fix in detail | [03-changes.md](docs/en/03-changes.md)                 |
 | 4. Behaviour matrix             | Original / default / unrestricted mode, side by side                 | [04-behaviour.md](docs/en/04-behaviour.md)             |
 | 5. Settings reference           | Defaults and localStorage keys for every setting                     | [05-settings.md](docs/en/05-settings.md)               |
 | 6. What the request contains    | The JSON that actually goes out                                      | [06-request.md](docs/en/06-request.md)                 |
@@ -72,8 +72,8 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
-Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk` (118 MB, versionCode 290,
-SHA-256 `3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.21.apk` (118 MB, versionCode 291,
+SHA-256 `57babf16b091338cdd2ad46fed9df22cfdf1f384c253a41fc1c286430a7a00c9`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -101,6 +101,7 @@ Last regression run (2026-11, v2.7.18, both `compat` and `compat-prod` matrices)
 | Mobile layout    | 320 / 360 / 390 / 414 / 599 / 767 plus 768 / 1024 / 1440 | 49/49  |
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
 | Unkernel Linux   | iframe boot, new desktop and 80+ app launcher, Alpine + Debian, 2-CPU SMP, workspace mount / write-back, file import/export, settings and the `datasize` mapping | pass |
+| Vulkan regression | `dist/unkernel` byte-identical to `public/unkernel`, `vk-host` / `vk-shader` chunks evaluate in a browser, the page still parses its config, and the checker exits 1 on a deliberately rewritten chunk | pass |
 | Auto-collapse thinking | Off by default; collapses when a reply finishes, older replies start collapsed, the title expands it, generating replies stay open, toggling applies at once | pass |
 | Boot page | Wordmark and spinner, arc advancing on milestones, dark theme without a flash, locale-aware hint, failure state on an aborted bundle, 320px layout | pass |
 | Pin / multi-select | Pin from the row menu, the Pinned group and pin mark, survives a reload, selection header count, bulk pin, bulk delete with confirmation, 390px drawer | pass |
@@ -109,6 +110,8 @@ Last regression run (2026-11, v2.7.18, both `compat` and `compat-prod` matrices)
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
+
+- **2.7.21**: fixes the Unkernel Linux Vulkan renderer failing to load (`can't access lexical declaration 'r' before initialization`). The cause is in the build chain: `public/unkernel/` is upstream’s Vite output, already minified, and copying it into `dist/` lacked `info.minimized`, so the production SWC pass minified it again and folded a run of calls in the `vk-host` chunk into `for(let[e,t,r]of(a(9,…),a(10,…),…))` — the loop head shadows the outer `r` and hits its TDZ while the head is evaluated, `prepareVk()`’s dynamic import throws, and the guest’s Vulkan instance gets no renderer (unkernel.dev skips that step, hence it works). The copy rule now carries `info: { minimized: true }`, `dist/unkernel` is byte-identical to `public/unkernel` across all 54 files, and the new `scripts/check-unkernel-assets.mjs` — run at the end of `pnpm build` — fails the build if anything is rewritten.
 
 - **2.7.20**: two features plus an icon polish. (1) The session list pins chats and multi-selects them: the row menu pins one chat (pinned chats move into a “Pinned” group with a pin mark), “Select” turns the list into checkboxes with an “N selected” header, select-all, and a bottom “Pin / Delete” bar that asks for confirmation with the count; the pin is stored with the session, so reloads and restarts keep it (the export uses DeepSeek’s history format, which carries no pin). (2) “Restore default settings” now reaches every store: settings, prompt presets, local-model preferences (unloading the model) and the NanoVM / WebVM / Unkernel parameters all reset, while the API key, chats, attachments, workspace, memory bank and statistics stay; the confirmation lists “Reset” and “Kept”. The pin icon is now Material’s `push_pin` — the hand-drawn path was a smudge at 16px. General settings gain “Reply display → Auto-collapse thinking” (off by default): a finished reply folds its reasoning into the “Thought for N seconds” title and older replies start collapsed, a reply still generating stays open, and a manual title click stops the auto behaviour. The first-paint boot animation is ported from deepseek-harness’s boot page: a `DEEPSEEK UNRESTRICTED` wordmark and spinner while the bundle downloads and runs, with the arc advancing on real milestones (72°→288°), the background set from the stored theme first (no white flash in dark mode), the hint following the locale, and a 404 or offline bundle turning into the raw error plus Reload.
 

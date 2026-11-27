@@ -809,6 +809,10 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV2721Title',
+      items: ['changelogV2721Vk', 'changelogV2721Guard', 'changelogV2721Apk'],
+    },
+    {
       title: 'changelogV2720Title',
       items: [
         'changelogV2720Pin',

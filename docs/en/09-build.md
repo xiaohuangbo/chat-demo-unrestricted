@@ -53,6 +53,7 @@ rsync -a --delete web/.output/public/ ../chat-demo-unrestricted/public/unkernel/
 cd ../chat-demo-unrestricted && pnpm patch:unkernel
 ```
 
+- **Never minify the copied page twice**: `public/unkernel/` is upstream’s Vite output, so the copy rule in `rspack.config.ts` carries `info: { minimized: true }`; without it the production SWC pass rewrites the `vk-host` chunk and the Vulkan renderer dies with a TDZ error. `scripts/check-unkernel-assets.mjs` (run at the end of `pnpm build`) compares `public/unkernel` with `dist/unkernel` byte by byte and fails the build on any rewrite.
 `KW_BASE=/unkernel/` makes Vite emit prefixed asset and preload URLs; `pnpm patch:unkernel` then prefixes the distro images, `/vm-sw.js`, the `/vm/` preview paths and the manifest (it matches template literals and is safe to re-run). Delete nothing except the `.br` / `.gz` / `.zst` precompressed copies: `index.html` must come from Nitro (its SSR template), and everything else comes straight from `.output/public`.
 
 The page's `dropLegacyScope` guard must stay (it lives in `web/src/sw.ts`): it only unregisters a root-scope service worker whose script ends in `/vm-sw.js`, never the host's `coi-sw.js`; otherwise the multi-CPU iframe reload loses COEP and Firefox blocks it with `NS_ERROR_DOM_COEP_FAILED`. You can also configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` directly in Nginx / Vercel and skip that reload.
@@ -63,11 +64,11 @@ Host settings arrive as URL parameters (`distro`, `datasize`, `net`, `sound`, `d
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.20.apk` (about 118 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.7.21.apk` (about 118 MB — over GitHub's 100 MB blob limit, so it is gitignored and uploaded as a Release asset):
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, camera capture (system camera plus a content:// hand-off), microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 35.0.1+ (build-tools 34.0.0's d8 can crash on JDK 21 bytecode) and JDK 21/17. A one-click script at the repo root reads the `package.json` version (currently 2.7.20 / 290), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 35.0.1+ (build-tools 34.0.0's d8 can crash on JDK 21 bytecode) and JDK 21/17. A one-click script at the repo root reads the `package.json` version (currently 2.7.21 / 291), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -78,7 +79,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   ./android/build-apk.sh
   # non-interactive: KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 290;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 291;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---

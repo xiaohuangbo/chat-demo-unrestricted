@@ -1240,3 +1240,46 @@ if (toolUse) { ... } else {
 | 生成中（本地慢速 SSE 服务） | `data-open=1`、标题「正在思考」、思考可见 |
 | 流结束 | 自动收起（`data-open=0`、标题「已思考（用时 3 秒）」） |
 | `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |
+
+### 3.56 修复 Unkernel 的 Vulkan 渲染器加载失败（2.7.21）
+
+**症状。** 装好 Debian、Wayland 合成器起来之后，Vulkan 一直拿不到渲染器：
+
+```
+[host] vk: no renderer: can't access lexical declaration 'r' before initialization
+[host] vk: the guest's Vulkan instance gets no renderer: can't access lexical declaration 'r' before initialization
+```
+
+同一个浏览器打开 unkernel.dev 却是正常的。
+
+**根因在构建链，不在页面本身。** unkernel 的页面是上游用 Vite 构建并**已经压缩**过的第三方产物，我们把它整目录复制进 `dist/unkernel/`。`CopyRspackPlugin` 复制时不带 `info.minimized`，生产构建的压缩器（SWC）就把这些文件当成源码**再压一遍**：
+
+| 上游 Vite 产物 | 被 SWC 二次压缩后 |
+| --- | --- |
+| `a(9,\`r8unorm\`,…), a(10,…), …` 一串独立调用 | 被合并成 `for(let[e,t,r]of(a(9,\`r8unorm\`,…),a(10,…),…))` |
+
+循环头里的 `for(let[…,r]of …)` 新声明了一个**遮蔽外层的 `r`**，而迭代器表达式里的 `a(...)` 读的正是外层那个 `r` —— 求值循环头时循环变量 `r` 还在 TDZ，于是 `Cannot access 'r' before initialization`。`prepareVk()` 的动态 `import()` 因此抛错，页面记下「guest 的 Vulkan 实例拿不到渲染器」。上游部署自己的产物时没有被二次压缩，所以 unkernel.dev 正常。
+
+**修法。** 复制规则加上 `info: { minimized: true }`，告诉压缩器这些文件已经压缩过：
+
+```ts
+{
+  from: path.resolve(root, 'public/unkernel'),
+  to: 'unkernel',
+  info: { minimized: true },
+}
+```
+
+`pnpm build` 之后 `dist/unkernel` 与 `public/unkernel` 逐字节一致（54 个文件全部相同），我们自己 `src/` 的产物照常压缩。
+
+**防回归。** 新增 `scripts/check-unkernel-assets.mjs`，接在 `pnpm build` 末尾：文件清单必须一致，脚本 / 样式 / HTML / manifest 逐字节比对，任何一处被构建改写就直接失败并打印这条提示。用它跑一次故意的改动（往分块尾部追加一个字节）确认会 `exit=1`。
+
+| 检查 | 结果 |
+| --- | --- |
+| `diff -rq public/unkernel dist/unkernel` | 无差异（54 个文件） |
+| `vk-host` 分块 | 89825 字节，与 `public/unkernel` 完全相同，不含二次压缩特征 `for(let[…,r]of(a(` |
+| 浏览器里 `import('/unkernel/assets/vk-host-*.js')` | 29 个导出，求值不再抛 TDZ |
+| 浏览器里 `import('/unkernel/assets/vk-shader-*.js')` | `loadVkShader` 正常 |
+| 页面本身 | 仍能启动，`KW.config.routes === null`、`distro === 'alpine'`、无页面错误 |
+| 故意破坏后再跑校验脚本 | `exit=1`，并打印「必须带 info: { minimized: true }」 |
+| `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |

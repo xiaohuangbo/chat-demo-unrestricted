@@ -1,4 +1,4 @@
-# Android APK（DeepSeek Unrestricted 2.7.20）
+# Android APK（DeepSeek Unrestricted 2.7.21）
 
 这是纯原生 WebView 壳，不依赖 Capacitor / Cordova：
 
@@ -12,17 +12,17 @@
 
 ## 产物
 
-`android/deepseek-unrestricted-2.7.20.apk`（本地构建产物，已加入 `.gitignore`，作为 Release 资产上传），versionCode 290，使用
+`android/deepseek-unrestricted-2.7.21.apk`（本地构建产物，已加入 `.gitignore`，作为 Release 资产上传），versionCode 291，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`（118 MB，123,772,930 字节）。
+SHA-256：`57babf16b091338cdd2ad46fed9df22cfdf1f384c253a41fc1c286430a7a00c9`（118 MB，123,764,738）。
 
 ## 上传 Release
 
 APK 超过 GitHub 单文件 100 MB 限制，不能提交进仓库。构建后上传到 Release：
 
 ```sh
-gh release upload 2.7.20 android/deepseek-unrestricted-2.7.20.apk --clobber
+gh release upload 2.7.21 android/deepseek-unrestricted-2.7.21.apk --clobber
 ```
 
 ## 构建

@@ -2087,6 +2087,12 @@ export const zh = {
   nanovmWorkspaceLoading: '正在读取工作区…',
   nanovmWorkspacePick: '选择要导入的文件',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2721Title: 'v2.7.21 · 2026-11',
+  changelogV2721Vk:
+    '修复 Unkernel 的 Vulkan 渲染器加载失败：复制进产物的页面被生产构建二次压缩，SWC 把 `vk-host` 分块改写成 `for(let[…,r]of(a(9,…),…))`，循环头遮蔽了外层的 `r` 并在求值循环头时触发 TDZ（can\'t access lexical declaration \'r\' before initialization）。复制规则补上 `info: { minimized: true }`，`dist/unkernel` 与 `public/unkernel` 逐字节一致',
+  changelogV2721Guard:
+    '新增构建后校验 `scripts/check-unkernel-assets.mjs`（接在 `pnpm build` 末尾）：文件清单与脚本 / 样式 / HTML 逐字节比对，上游产物被二次改写就直接失败',
+  changelogV2721Apk: '同步构建 2.7.21 APK（versionCode 291），使用 xiaohuangbo.jks 签名',
   changelogV2720Title: 'v2.7.20 · 2026-11',
   changelogV2720Pin:
     '会话置顶与多选：行内「…」菜单可置顶 / 取消置顶，置顶的会话进「置顶」分组并带图钉；「多选」后头部显示「已选择 N 个对话」并可全选，底部给出「置顶 / 删除」操作条，删除前确认数量。置顶标记随会话保存，刷新与重开后仍在（导出为 DeepSeek 历史格式不带置顶）',

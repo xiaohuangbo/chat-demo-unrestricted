@@ -92,8 +92,15 @@ export const createConfig = ({
         { from: path.resolve(root, 'public/coi-sw.js'), to: 'coi-sw.js', toType: 'file' },
         // NanoVM 的 PyBot 工具链快照（来自 huggingface/pybot，Apache-2.0），安装时离线解压
         { from: path.resolve(root, 'public/pybot.zip'), to: 'pybot.zip', toType: 'file' },
-        // unkernel 的完整网页与内核/镜像，放在 /unkernel/ 下作为 iframe 载入
-        { from: path.resolve(root, 'public/unkernel'), to: 'unkernel' },
+        // unkernel 的完整网页与内核/镜像，放在 /unkernel/ 下作为 iframe 载入。
+        // info.minimized 让生产构建的压缩器跳过这些文件：它们是上游 Vite 构建好、已经压缩过的
+        // 产物，再压一遍会被 SWC 的变量合并改写语义（vk-host 分块里 for (let [e,t,r] of …)
+        // 的循环头把外层 r 遮住了，求值循环头时 r 处于 TDZ，Vulkan 渲染器因此加载失败）。
+        {
+          from: path.resolve(root, 'public/unkernel'),
+          to: 'unkernel',
+          info: { minimized: true },
+        },
       ],
     }),
   ],

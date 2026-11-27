@@ -1240,3 +1240,46 @@ The logic sits in `ReplyArea` (`src/components/messages/ReplyArea.tsx`): `open` 
 | While generating (local slow SSE server) | `data-open=1`, title “正在思考”, reasoning visible |
 | Stream ends | collapses by itself (`data-open=0`, title “已思考（用时 3 秒）”) |
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |
+
+### 3.56 Fixing the Unkernel Vulkan renderer failing to load (2.7.21)
+
+**Symptom.** With Debian installed and the Wayland compositor up, Vulkan never got a renderer:
+
+```
+[host] vk: no renderer: can't access lexical declaration 'r' before initialization
+[host] vk: the guest's Vulkan instance gets no renderer: can't access lexical declaration 'r' before initialization
+```
+
+while unkernel.dev worked in the very same browser.
+
+**The cause is the build chain, not the page.** The Unkernel page is a third-party artifact that upstream builds with Vite and **already minifies**; we copy the whole directory into `dist/unkernel/`. `CopyRspackPlugin` copies it without `info.minimized`, so the production minimizer (SWC) treated the files as source and **minified them a second time**:
+
+| Upstream Vite output | After SWC’s second pass |
+| --- | --- |
+| a run of independent calls `a(9,\`r8unorm\`,…), a(10,…), …` | folded into `for(let[e,t,r]of(a(9,\`r8unorm\`,…),a(10,…),…))` |
+
+The loop head’s `for(let[…,r]of …)` declares a **shadowing `r`**, while the iterator expression’s `a(...)` reads the outer `r` — evaluating the head therefore hits `r` in its temporal dead zone: `Cannot access 'r' before initialization`. `prepareVk()`’s dynamic `import()` throws, and the page records “the guest’s Vulkan instance gets no renderer”. Upstream never re-minifies its own artifact, which is why unkernel.dev is fine.
+
+**Fix.** Mark the copied page as already minified:
+
+```ts
+{
+  from: path.resolve(root, 'public/unkernel'),
+  to: 'unkernel',
+  info: { minimized: true },
+}
+```
+
+After `pnpm build`, `dist/unkernel` is byte-identical to `public/unkernel` (all 54 files), while our own `src/` output is still minified as before.
+
+**Regression guard.** New `scripts/check-unkernel-assets.mjs`, wired to the end of `pnpm build`: the file list must match, and scripts / styles / HTML / manifest are compared byte by byte; any rewrite fails the build with this hint. A deliberate edit (appending one byte to a chunk) was used to confirm it exits with code 1.
+
+| Check | Result |
+| --- | --- |
+| `diff -rq public/unkernel dist/unkernel` | no differences (54 files) |
+| `vk-host` chunk | 89825 bytes, identical to `public/unkernel`, without the double-minified `for(let[…,r]of(a(` shape |
+| `import('/unkernel/assets/vk-host-*.js')` in a browser | 29 exports, no TDZ |
+| `import('/unkernel/assets/vk-shader-*.js')` in a browser | `loadVkShader` loads |
+| The page itself | still boots: `KW.config.routes === null`, `distro === 'alpine'`, no page errors |
+| Deliberately breaking a chunk, then running the check | exits 1 and prints the `info: { minimized: true }` hint |
+| `pnpm type` / `pnpm lint` / `pnpm build` | pass |

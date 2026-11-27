@@ -53,6 +53,7 @@ rsync -a --delete web/.output/public/ ../chat-demo-unrestricted/public/unkernel/
 cd ../chat-demo-unrestricted && pnpm patch:unkernel
 ```
 
+- **复制进产物时不要二次压缩**：`public/unkernel/` 是上游 Vite 构建好的产物，`rspack.config.ts` 的复制规则带 `info: { minimized: true }`；漏掉它，生产构建的 SWC 会再压一遍，把 `vk-host` 分块改坏（Vulkan 渲染器报 TDZ）。`pnpm build` 末尾的 `scripts/check-unkernel-assets.mjs` 会逐字节比对 `public/unkernel` 与 `dist/unkernel`，被改写就直接失败。
 `KW_BASE=/unkernel/` 让 Vite 生成带前缀的资源与预加载地址；`pnpm patch:unkernel` 再补发行版镜像、`/vm-sw.js`、`/vm/` 预览路径与 manifest（脚本按模板字面量匹配，重复运行安全）。除 `.br/.gz/.zst` 预压缩副本外不要删其它文件：`index.html` 必须来自 Nitro（SSR 模板），其余直接取 `.output/public` 即可。
 
 页面里的 `dropLegacyScope` 检查必须保留：它只会注销脚本名以 `/vm-sw.js` 结尾的根作用域 Service Worker，不能把宿主应用的 `coi-sw.js` 一起注销；否则多 CPU 的 iframe 重载会因缺少 COEP 被 Firefox 拦成 `NS_ERROR_DOM_COEP_FAILED`。这段保护在 `web/src/sw.ts`。
@@ -63,11 +64,11 @@ DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.20.apk`（约 118 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.7.21.apk`（约 118 MB，超过 GitHub 100 MB 单文件限制，已加入 `.gitignore`，请作为 Release 资产上传）：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、拍照（系统相机 + content:// 回传）、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 35.0.1+（34.0.0 的 d8 在 JDK 21 下可能崩溃）与 JDK 21/17。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.20 / 290），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 35.0.1+（34.0.0 的 d8 在 JDK 21 下可能崩溃）与 JDK 21/17。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.7.21 / 291），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -78,7 +79,7 @@ DSH go 是 `go-deepseek` 仓库 `cmd/dsh-go` 的构建产物（aarch64 静态 Go
   ./android/build-apk.sh
   # 非交互：KS_PASS=... ./android/build-apk.sh --yes --no-build-web
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 290；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 291；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---

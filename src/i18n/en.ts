@@ -2245,6 +2245,12 @@ export const en = {
   nanovmWorkspaceLoading: 'Reading the workspace…',
   nanovmWorkspacePick: 'Pick a file to import',
   nanovmWorkspaceFileMeta: '{size}',
+  changelogV2721Title: 'v2.7.21 · 2026-11',
+  changelogV2721Vk:
+    'Fixes the Unkernel Vulkan renderer failing to load: the copied page was minified a second time by the production build, so SWC rewrote the `vk-host` chunk into `for(let[…,r]of(a(9,…),…))`, whose loop head shadows the outer `r` and hits its TDZ while evaluating the head (can\'t access lexical declaration \'r\' before initialization). The copy rule now carries `info: { minimized: true }`, and `dist/unkernel` is byte-identical to `public/unkernel`',
+  changelogV2721Guard:
+    'Adds the post-build guard `scripts/check-unkernel-assets.mjs` (run at the end of `pnpm build`): it compares the file list and scripts / styles / HTML byte by byte and fails whenever the upstream bundle is rewritten',
+  changelogV2721Apk: 'Builds the 2.7.21 APK (versionCode 291), signed with xiaohuangbo.jks',
   changelogV2720Title: 'v2.7.20 · 2026-11',
   changelogV2720Pin:
     'Pinning and multi-select: the row menu pins or unpins a chat, pinned chats move into a “Pinned” group with a pin mark, and “Select” turns the list into checkboxes with an “N selected” header, select-all and a bottom “Pin / Delete” bar that confirms the count; the pin is stored with the chat, so reloads and restarts keep it (the export format carries no pin)',

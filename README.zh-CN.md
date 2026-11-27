@@ -51,7 +51,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
 | 1. 这是什么           | 项目定位、原版功能与本仓库新增的能力清单                | [01-what-is-this.md](docs/zh/01-what-is-this.md)       |
 | 2. 原版做了哪些限制   | 请求侧与界面侧被写死的地方                              | [02-original-limits.md](docs/zh/02-original-limits.md) |
-| 3. 本仓库做了哪些改动 | 3.1–3.55：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
+| 3. 本仓库做了哪些改动 | 3.1–3.56：设置页每一组功能、NanoVM Slim、WebVM、Unkernel、聊天模式与各轮修复的细节 | [03-changes.md](docs/zh/03-changes.md)                 |
 | 4. 行为对照表         | 原版 / 默认 / 越狱模式逐项对比                          | [04-behaviour.md](docs/zh/04-behaviour.md)             |
 | 5. 设置项速查         | 每一项的默认值与 localStorage 键名                      | [05-settings.md](docs/zh/05-settings.md)               |
 | 6. 请求体实际内容     | 实际发出去的 JSON 长什么样                              | [06-request.md](docs/zh/06-request.md)                 |
@@ -72,8 +72,8 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
-预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk`（118 MB，versionCode 290，
-SHA-256 `3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.21.apk`（118 MB，versionCode 291，
+SHA-256 `57babf16b091338cdd2ad46fed9df22cfdf1f384c253a41fc1c286430a7a00c9`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -96,6 +96,7 @@ SHA-256 `3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`），
 | 移动端布局      | 320 / 360 / 390 / 414 / 599 / 767 与桌面 768 / 1024 / 1440 | 49/49 |
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、新版桌面与 80+ 应用启动器、Alpine / Debian、2 CPU SMP、工作区挂载/写回、文件导入/导出、设置页与 `datasize` 映射 | 通过  |
+| Vulkan 回归     | `dist/unkernel` 与 `public/unkernel` 逐字节一致、`vk-host` / `vk-shader` 分块在浏览器里正常求值、页面配置解析正常、故意改写分块时校验脚本 exit=1 | 通过  |
 | 思考自动折叠    | 默认关；开启后回复结束收起、历史消息默认收起、点标题可展开、生成中保持展开、拨开关即时生效 | 通过  |
 | 首屏加载页      | 字标与转圈、弧长随节点推进、深色不闪白、语言跟随、主包 aborted 的失败态、320px 布局 | 通过  |
 | 会话置顶 / 多选 | 「…」逐个置顶、置顶分组与图钉、刷新后仍生效、多选头部计数、批量置顶、批量删除确认、390px 抽屉 | 通过  |
@@ -105,6 +106,8 @@ SHA-256 `3e497ff49a6cb3b83fedb301659ab948d7db7749256c8b182e7f2cd99199e471`），
 浏览器与桌面/移动端的边界、已知取舍见 [10. 已知限制](docs/zh/10-known-limits.md)。
 
 ## 最近版本
+
+- **2.7.21**：修复 Unkernel Linux 的 Vulkan 渲染器加载失败（`can't access lexical declaration 'r' before initialization`）。根因在构建链：`public/unkernel/` 是上游 Vite 构建并已压缩的产物，复制进 `dist/` 时没标 `info.minimized`，生产构建的 SWC 又压了一遍，把 `vk-host` 分块里的调用串折叠成 `for(let[e,t,r]of(a(9,…),a(10,…),…))` —— 循环头遮蔽外层 `r` 并在求值循环头时撞上 TDZ，`prepareVk()` 的动态 import 抛错，guest 的 Vulkan 实例因此拿不到渲染器（unkernel.dev 没有这一步，所以正常）。复制规则补上 `info: { minimized: true }`，`dist/unkernel` 与 `public/unkernel` 54 个文件逐字节一致；新增 `scripts/check-unkernel-assets.mjs` 接在 `pnpm build` 末尾做逐字节校验，被改写直接失败。
 
 - **2.7.20**：两个新功能（另附一次图标修缮）。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。②「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。置顶图标换成 Material 的 `push_pin` 标准图钉（原来手绘路径在 16px 下糊成一团色块）。通用设置新增「回复展示 → 思考内容自动折叠」（默认关）：开启后回复结束把推理收进「已思考（用时 N 秒）」标题、历史消息默认收起，生成中仍展开，点过标题后不再自动抢状态。首屏加载动画移植自 deepseek-harness 的 boot page：主包下载与执行期间显示 `DEEPSEEK UNRESTRICTED` 字标与转圈，弧长随真实节点 72°→288° 推进，背景先按本机主题设好（深色不闪白），提示语跟随语言，主包 404 / 断网时换成原样报错与「重新加载」。
 
