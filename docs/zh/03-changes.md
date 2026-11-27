@@ -1186,4 +1186,5 @@ if (toolUse) { ... } else {
 | 账号登录 | 用 Key 登录后显示「已登录 · Key 尾号 abcd · 余额 12.34」；「同步账号昵称」写入 `DeepSeek · abcd`；资料卡账号行显示同一尾号 |
 | 恢复默认 | 账号回到未登录、NanoVM / Unkernel 参数回默认、API Key 与我的资料保留 |
 | 手机端 390px | 抽屉里多选头部与底部操作条都可见、无横向溢出 |
+| 置顶图标 | 换成 Material 的 `push_pin` 标准图钉：原来手绘的路径在 16px 下糊成一团色块 |
 | `pnpm type` / `pnpm lint` / `pnpm build` | 通过 |

@@ -73,7 +73,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk`（118 MB，versionCode 290，
-SHA-256 `068ee438be8d7d90c7a6083527e4f0d06fef6186fa716d17b49ec5db729d931d`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+SHA-256 `d535b5a12dd6b7779922131520e971a6c1cf4ca0a655148855b3c158648f7eea`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性

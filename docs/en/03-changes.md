@@ -1186,4 +1186,5 @@ Alpine shows no regression: `apk update` and `apk add curl` work, and `curl http
 | Account sign-in | signed in shows “Key ending abcd · balance 12.34”; “Sync account nickname” writes `DeepSeek · abcd`; the profile account row shows the same tail |
 | Restore defaults | account back to signed out, NanoVM / Unkernel parameters back to defaults, API key and My profile kept |
 | Mobile at 390px | selection header and action bar both visible in the drawer, no horizontal overflow |
+| Pin icon | Swapped for Material’s `push_pin`, a proper thumbtack; the hand-drawn path turned into a smudge at 16px |
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |
