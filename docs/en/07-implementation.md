@@ -116,9 +116,7 @@
 | [`src/components/settings/ProfileCard.tsx`](../../src/components/settings/ProfileCard.tsx) | General settings → My profile |
 | [`src/components/settings/AvatarCropModal.tsx`](../../src/components/settings/AvatarCropModal.tsx) | Avatar crop dialog: circular viewport, drag-to-pan, zoom and 384×384 output |
 | [`src/components/settings/AccountSettings.tsx`](../../src/components/settings/AccountSettings.tsx) | Settings → Account & usage: balance, today and 30-day overview |
-| [`src/services/account/session.ts`](../../src/services/account/session.ts) | DeepSeek account sign-in state: verifies the balance with the account’s API key, keeps the key tail and a balance snapshot, signs out, and copies the account nickname into My profile |
-| [`src/components/settings/AccountCard.tsx`](../../src/components/settings/AccountCard.tsx) | Settings → Data: the account card and its sign-in dialog |
-| [`src/services/resetAll.ts`](../../src/services/resetAll.ts) | The restore-defaults entry point: settings, prompt presets, local-model preferences, NanoVM / WebVM / Unkernel parameters and the account sign-in state all go back to defaults together |
+| [`src/services/resetAll.ts`](../../src/services/resetAll.ts) | The restore-defaults entry point: settings, prompt presets, local-model preferences and the NanoVM / WebVM / Unkernel parameters all go back to defaults together |
 | [`src/components/sider/sessionSelection.ts`](../../src/components/sider/sessionSelection.ts) | Multi-select state shared by the docked sidebar and the mobile drawer: enter, toggle, select all, exit, and prune stale ids |
 | [`src/components/sider/SessionItem.tsx`](../../src/components/sider/SessionItem.tsx) | A session row: rename / pin / select / branch / delete menu, the selection checkbox and the pin mark |
 | [`src/components/sider/Sider.tsx`](../../src/components/sider/Sider.tsx) | Session list: the “N selected” header, select-all, and the pin / bulk-delete action bar with its confirmation |

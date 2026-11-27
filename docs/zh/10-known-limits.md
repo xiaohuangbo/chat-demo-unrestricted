@@ -102,7 +102,6 @@
 85. **新版 Unkernel 页面的应用首次运行需要联网**：80+ 个应用的首次启动要下载文件并从发行版镜像安装软件包（Steam、Zed 等从几十到上百 MB），网络不可用时会停在安装器；DSH go 随页面分发，不需要联网下载二进制。
 86. **记忆节点筛选只影响列表**：搜索框与标签按钮只过滤设置页里的节点列表，不改变检索参数、注入条数与关系图数据；筛选状态不持久化，切换设置分组后清空。
 87. **apt 与纯 HTTP 走 Wisp，不经 unkernel 的镜像**：上游页面默认把 `deb.debian.org`、`apt.ladybird.org`、`mirror.unkernel.dev` 的纯 HTTP 交给 `https://mirror.unkernel.dev` 的 CORS 镜像用页面 fetch 代答，而该镜像只接受 `https://unkernel.dev`、`http://localhost:*` 等白名单源。本应用跑在 `127.0.0.1:3080`、局域网地址或 APK 的 `http://127.0.0.1:18765` 上，拿到的只有 `403 Origin not allowed`（Debian 里 apt 因此报 403），所以 iframe 固定带 `routes=0`：guest 的纯 HTTP 也走公共 Wisp 代理。代价是 apt 的索引与 `.deb` 经过第三方代理（代理运营方能看到明文 HTTP 内容，TLS 仍是端到端），速度受代理带宽限制；依赖该镜像的应用（如 Ubuntu 的 tarball）会退到上游地址，镜像上独有的文件可能停在安装器。想要更快或更私密，可在 设置 → Unkernel Linux 填自己的 Wisp 代理，或把 guest 的 apt 源改成 `https://deb.debian.org`（443 端口本来就走 Wisp，与镜像无关）。
-88. **账号登录用的是 API Key，不是平台网页授权**：DeepSeek 平台的账号 OAuth（`/auth-api/v0/dsh/auth_init` → 浏览器授权页 → `auth_exchange`）需要宿主服务接收回调，而且这些接口不带 CORS 头：纯静态页面既读不到被拒的响应，也换不到 token——deepseek-harness 正是把它放在 Node 宿主里做。所以「从 DeepSeek 账号登录」用同一个账号的 API Key 登录：只向 `api.deepseek.com/user/balance` 校验一次，能拿到账号可用状态与余额，但拿不到平台头像和平台昵称（昵称由「同步账号昵称」生成为 `DeepSeek · 尾号`，之后可改成任意称呼）。想接真正的平台登录，需要自建一个能接收回调的网关，再把它的地址接进来。
 
 ---
 

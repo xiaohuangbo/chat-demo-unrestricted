@@ -58,7 +58,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | 7. 实现位置索引       | 每个能力对应的源码文件                                  | [07-implementation.md](docs/zh/07-implementation.md)   |
 | 8. 数据、隐私与网络   | 数据都存在哪、请求发往哪里                              | [08-privacy.md](docs/zh/08-privacy.md)                 |
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
-| 10. 已知限制          | 88 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
+| 10. 已知限制          | 87 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
 
 ## 快速开始
@@ -73,7 +73,7 @@ KS_PASS=<keystore密码> ./构建APK.sh   # 构建并签名 Android APK
 完整说明（环境变量、签名、字体与离线细节）见 [9. 运行与构建](docs/zh/09-build.md)。
 
 预构建产物：[GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk`（118 MB，versionCode 290，
-SHA-256 `d535b5a12dd6b7779922131520e971a6c1cf4ca0a655148855b3c158648f7eea`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
+SHA-256 `b6e4678f85fcb3e40bea95b894e7f05dee1c82f399bfae1a0dc4d111ba6d1b4c`），详情见 [android/README.md](android/README.md)。APK 作为 Release 资产分发，不进 Git（GitHub 拒绝超过 100 MB 的文件）。
 注意：Android WebView 没有 WebGPU，浏览器内 WebLLM 模型只能在桌面浏览器使用；APK 内请改用 MLC-LLM API。
 
 ## 兼容性
@@ -97,7 +97,6 @@ SHA-256 `d535b5a12dd6b7779922131520e971a6c1cf4ca0a655148855b3c158648f7eea`），
 | 安卓 APK        | Android 14 WebView（320dp）：启动、终端、虚拟网络、控制台；WebVM 受 WebView 跨源隔离限制 | 通过  |
 | Unkernel Linux  | iframe 启动、新版桌面与 80+ 应用启动器、Alpine / Debian、2 CPU SMP、工作区挂载/写回、文件导入/导出、设置页与 `datasize` 映射 | 通过  |
 | 会话置顶 / 多选 | 「…」逐个置顶、置顶分组与图钉、刷新后仍生效、多选头部计数、批量置顶、批量删除确认、390px 抽屉 | 通过  |
-| DeepSeek 账号   | API Key 登录、Key 尾号与余额卡、同步昵称到我的资料、资料卡账号行、退出登录、恢复默认时清登录态 | 通过  |
 | Unkernel 联网   | Debian `apt-get update`（10.2 MB 索引）/ `apt-get install bzip2`、Alpine `apk update` / `apk add curl`、guest HTTP 200、`routes=0` 与内存交回页面 | 通过  |
 | Upstream 0.1.4  | 归档附件随会话导入、按对话计进度、旧浏览器 AbortSignal / toSorted / 100dvh 兼容 | 通过（真机导入 3000 会话、带图归档、旧内核构建验证） |
 
@@ -105,7 +104,7 @@ SHA-256 `d535b5a12dd6b7779922131520e971a6c1cf4ca0a655148855b3c158648f7eea`），
 
 ## 最近版本
 
-- **2.7.20**：三个新功能。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。② 设置 → 数据管理新增「从 DeepSeek 账号登录」：用账号的 API Key 校验一次余额即建立登录态，账号卡显示头像 / 昵称 / Key 尾号 / 余额 / 登录时间，可刷新余额、把账号昵称同步到「我的资料」、退出登录；资料卡新增账号行，与账号卡共用昵称与头像（平台网页授权 OAuth 需要宿主回调且接口无 CORS，静态站点拿不到 token，所以走 API Key，见已知限制第 88 条）。③「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数、账号登录态一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。
+- **2.7.20**：两个新功能（另附一次图标修缮）。① 会话列表支持置顶与多选：「…」菜单可逐个置顶（置顶的会话进「置顶」分组并带图钉），「多选」进入勾选模式后头部显示「已选择 N 个对话」、可全选，底部给出「置顶 / 删除」操作条，删除前确认数量；置顶标记随会话保存（刷新与重开浏览器后仍在；导出为 DeepSeek 历史格式不带置顶，导入后需重新置顶）。②「恢复默认设置」改为联动所有 store：设置项、提示词预设、本地模型偏好（并卸载模型）、NanoVM / WebVM / Unkernel 参数一起回默认，API Key、对话、附件、工作区、记忆库与统计保留；确认弹窗明确列出「会重置 / 会保留」。置顶图标换成 Material 的 `push_pin` 标准图钉（原来手绘路径在 16px 下糊成一团色块）。
 
 - **2.7.19**：两处 Unkernel 修复。① 设置 → Unkernel Linux 去掉「内核内存」滑块：上游页面自己的「设置 → 机器」里就有内存（带按设备算出的自动值），而宿主传的 `?mem=` 会把内存钉死并在每次启动时覆盖页面里的改动，现在内存只由虚拟机自己的设置决定（`kw.settings`），宿主面板保留发行版、数据盘、CPU、设备、Worker、Wisp 与超时。② 修复 Debian 里 `apt-get update` / `apt-get install` 的 403：新版页面默认把 `deb.debian.org` 等纯 HTTP 交给自己的 CORS 镜像 `mirror.unkernel.dev` 代答，而该镜像只接受 `https://unkernel.dev`、`http://localhost:*` 等白名单源，本应用跑在 `127.0.0.1:3080`、局域网地址或 APK 的 `http://127.0.0.1:18765` 上只会拿到 `403 Origin not allowed`（官方站没有这个问题就是因为它的源在白名单里）；现在 iframe 固定带 `routes=0`，guest 的纯 HTTP 也走 Wisp，实测 Debian 的 `apt-get update` 拉完 10.2 MB 索引、`apt-get install bzip2` 正常，Alpine 的 `apk` 与 HTTP 访问也正常。
 

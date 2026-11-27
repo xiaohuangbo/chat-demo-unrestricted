@@ -119,7 +119,6 @@
 | Unkernel          | Command timeout                      | 30000 ms                     | `chat-demo:unkernel-config`                | Unaffected                      |
 | Unkernel          | Kernel memory (the page owns it)     | Auto (512 MiB on phones, 2048 MiB elsewhere) | `kw.settings` (the page’s own settings, same origin) | Unaffected        |
 | Unkernel          | Data disk contents / snapshots       | Empty                        | IndexedDB `kwdisk:kwdata` (the page)       | Unaffected                      |
-| DeepSeek account  | Sign-in state (key tail, balance snapshot, sign-in time) | Signed out     | `chat-demo:account-session`                | Unaffected                      |
 | Session list      | Pinned                               | Not pinned                   | IndexedDB `sessionSummaries.pinned` (travels with the session) | Unaffected        |
 | Composer          | Chat mode                            | Web agent                    | `chat-demo:chat-mode`                      | Unaffected                      |
 

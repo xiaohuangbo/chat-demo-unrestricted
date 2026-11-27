@@ -21,7 +21,6 @@ The settings dialog grows from two groups to eighteen:
 | **Unkernel Linux**    | A third VM: real Linux 7.x compiled to WebAssembly, Alpine 3.24 / Debian 13, SMP multi-CPU, Wisp networking, sound, framebuffer, persistent disk (8 / 16 / 32 GiB), import/export, `/mnt/workspace` mount, a Chinese page UI with a desktop and 80+ apps, ten Agent tools, a DSH go app in the AI folder, data-disk reset and restart; kernel memory is owned by the VM page’s own settings |
 | **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
 | **Account and usage** | Balance lookup, tokens and cost for today and the last 30 days, voice and search add-ons |
-| **DeepSeek account**  | Account sign-in in Data (with the account’s API key; syncs the nickname into My profile and shares the key with Account & usage) and sign-out
 | Data                  | API key, import, export, restore default settings (which now resets every store), delete all                                                                                                                                  |
 | About                 | Repository, demo and upstream links                                                                                                                                                            |
 | Changelog             | Version history and upstream credits                                                                                                                                                           |
@@ -1167,15 +1166,11 @@ Alpine shows no regression: `apk update` and `apk add curl` work, and `curl http
 | Guest runs | Debian `apt-get update` and install pass; Alpine `apk` and an HTTP 200 pass |
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |
 
-### 3.53 Session pinning and multi-select, DeepSeek account sign-in, linked restore-defaults (2.7.20)
+### 3.53 Session pinning and multi-select, linked restore-defaults (2.7.20)
 
 **1. Pin a chat and act on several chats at once.** The row menu gains “Pin / Unpin” and “Select”. Pinned chats move into a leading “Pinned” group (still sorted by last update, with a small pin at the end of the row) while the rest stay grouped by today / yesterday / 7 days / 30 days / month, matching the official client. Entering selection mode turns the list header into “N selected” with “Select all / Select none” and a close button, and the new-chat button plus the bottom navigation give way to a “Pin / Delete” action bar; deleting asks for confirmation with the count. The pin lives in the stored summary (`sessionSummaries.pinned`), so it survives reloads and browser restarts; the export keeps DeepSeek’s history format and carries no pin, so imported chats start unpinned; the selection state lives in `components/sider/sessionSelection.ts` and is shared by the docked sidebar and the mobile drawer, pruning ids that disappear after a delete or an import.
 
-**2. Settings → Data gains “Sign in with DeepSeek account”.** It signs in with the account’s API Key: one call to `api.deepseek.com/user/balance`, and on success the app stores a sign-in state (key tail, balance snapshot, sign-in time in `chat-demo:account-session`, never a copy of the key). The account card shows the avatar, nickname, key tail, balance and sign-in time, with “Refresh balance / Sync account nickname / Edit my profile / Sign out”. It links with General → My profile: the profile card carries an account row (a sign-in shortcut when signed out; the key tail plus a one-click `DeepSeek · tail` nickname when signed in), and both surfaces share one nickname and avatar. Account & usage reads the same key.
-
-> The platform’s web authorization (OAuth) runs `/auth-api/v0/dsh/auth_init` → the browser authorization page → `auth_exchange`; it needs a host to receive the callback, and those endpoints send no CORS headers, so a static page cannot obtain a token (deepseek-harness runs it inside its Node host for that reason). Signing in with the API key therefore yields the account’s availability and balance but not the platform avatar or nickname — written up as known limit 88.
-
-**3. Restore defaults now reaches every store.** It used to reset the settings, prompt presets and local-model preferences only, leaving the NanoVM / WebVM / Unkernel parameters and the account state behind. Everything now goes through `resetAllSettings()` in `services/resetAll.ts`: settings, prompt presets, local-model preferences (and the model unloads from GPU memory), all three VMs’ parameters and the account sign-in state; the API key, every chat and attachment, workspace files, the memory bank and statistics are kept (the Unkernel data disk keeps its size and contents too). The confirmation dialog now spells out “Reset” and “Kept” so nothing is a surprise.
+**2. Restore defaults now reaches every store.** It used to reset the settings, prompt presets and local-model preferences only, leaving the NanoVM / WebVM / Unkernel parameters behind. Everything now goes through `resetAllSettings()` in `services/resetAll.ts`: settings, prompt presets, local-model preferences (and the model unloads from GPU memory) and all three VMs’ parameters; the API key, every chat and attachment, workspace files, the memory bank and statistics are kept (the Unkernel data disk keeps its size and contents too). The confirmation dialog now spells out “Reset” and “Kept” so nothing is a surprise.
 
 | Check | Result |
 | --- | --- |
@@ -1183,8 +1178,7 @@ Alpine shows no regression: `apk update` and `apk add curl` work, and `curl http
 | Multi-select | header reads `1 / 2 已选择`, select-all / none, bottom “Pin / Delete” bar |
 | Bulk pin | three chats pinned at once, then selection exits by itself |
 | Bulk delete | confirmation titled “Delete 2 chats?” and one chat left afterwards |
-| Account sign-in | signed in shows “Key ending abcd · balance 12.34”; “Sync account nickname” writes `DeepSeek · abcd`; the profile account row shows the same tail |
-| Restore defaults | account back to signed out, NanoVM / Unkernel parameters back to defaults, API key and My profile kept |
+| Restore defaults | NanoVM / Unkernel parameters back to defaults, API key and My profile kept |
 | Mobile at 390px | selection header and action bar both visible in the drawer, no horizontal overflow |
 | Pin icon | Swapped for Material’s `push_pin`, a proper thumbtack; the hand-drawn path turned into a smudge at 16px |
 | `pnpm type` / `pnpm lint` / `pnpm build` | pass |

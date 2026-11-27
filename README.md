@@ -58,7 +58,7 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | 7. Implementation index         | Which source file implements what                                    | [07-implementation.md](docs/en/07-implementation.md)   |
 | 8. Data, privacy and network    | Where data lives and where requests go                               | [08-privacy.md](docs/en/08-privacy.md)                 |
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
-| 10. Known limitations           | The 88 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
+| 10. Known limitations           | The 87 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
 
 ## Quick start
@@ -73,7 +73,7 @@ KS_PASS=<keystore-password> ./构建APK.sh   # build and sign the Android APK
 Full details (env vars, signing, fonts, offline behaviour) are in [9. Run and build](docs/en/09-build.md).
 
 Prebuilt artifact: [GitHub Releases](https://github.com/xiaohuangbo/chat-demo-unrestricted/releases) — `deepseek-unrestricted-2.7.20.apk` (118 MB, versionCode 290,
-SHA-256 `d535b5a12dd6b7779922131520e971a6c1cf4ca0a655148855b3c158648f7eea`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
+SHA-256 `b6e4678f85fcb3e40bea95b894e7f05dee1c82f399bfae1a0dc4d111ba6d1b4c`); see [android/README.md](android/README.md). The APK is a Release asset, not a Git blob (GitHub rejects files over 100 MB).
 Note: Android WebView has no WebGPU, so in-browser WebLLM models only work in a desktop browser; inside the APK use the MLC-LLM API.
 
 ## Compatibility
@@ -102,14 +102,13 @@ Last regression run (2026-11, v2.7.18, both `compat` and `compat-prod` matrices)
 | Android APK      | Android 14 WebView (320dp): boot, terminal, virtual net; WebVM is limited by WebView COI | pass |
 | Unkernel Linux   | iframe boot, new desktop and 80+ app launcher, Alpine + Debian, 2-CPU SMP, workspace mount / write-back, file import/export, settings and the `datasize` mapping | pass |
 | Pin / multi-select | Pin from the row menu, the Pinned group and pin mark, survives a reload, selection header count, bulk pin, bulk delete with confirmation, 390px drawer | pass |
-| DeepSeek account | API-key sign-in, key tail and balance card, nickname synced into My profile, profile account row, sign-out, restore-defaults clears it | pass |
 | Unkernel network | Debian `apt-get update` (10.2 MB index) and `apt-get install bzip2`, Alpine `apk update` / `apk add curl`, guest HTTP 200, `routes=0` and memory handed back to the page | pass |
 
 Boundaries and trade-offs are listed in [10. Known limitations](docs/en/10-known-limits.md).
 
 ## Recent versions
 
-- **2.7.20**: three features. (1) The session list pins chats and multi-selects them: the row menu pins one chat (pinned chats move into a “Pinned” group with a pin mark), “Select” turns the list into checkboxes with an “N selected” header, select-all, and a bottom “Pin / Delete” bar that asks for confirmation with the count; the pin is stored with the session, so reloads and restarts keep it (the export uses DeepSeek’s history format, which carries no pin). (2) Settings → Data gains “Sign in with DeepSeek account”: one balance check with the account’s API key establishes the sign-in state, the account card shows avatar / nickname / key tail / balance / sign-in time with refresh, nickname sync into My profile and sign-out, and the profile card’s new account row shares one nickname and avatar (the platform OAuth flow needs a host callback and sends no CORS headers, so a static site cannot get a token — hence the API key, written up as known limit 88). (3) “Restore default settings” now reaches every store: settings, prompt presets, local-model preferences (unloading the model), the NanoVM / WebVM / Unkernel parameters and the account sign-in state all reset, while the API key, chats, attachments, workspace, memory bank and statistics stay; the confirmation lists “Reset” and “Kept”.
+- **2.7.20**: two features plus an icon polish. (1) The session list pins chats and multi-selects them: the row menu pins one chat (pinned chats move into a “Pinned” group with a pin mark), “Select” turns the list into checkboxes with an “N selected” header, select-all, and a bottom “Pin / Delete” bar that asks for confirmation with the count; the pin is stored with the session, so reloads and restarts keep it (the export uses DeepSeek’s history format, which carries no pin). (2) “Restore default settings” now reaches every store: settings, prompt presets, local-model preferences (unloading the model) and the NanoVM / WebVM / Unkernel parameters all reset, while the API key, chats, attachments, workspace, memory bank and statistics stay; the confirmation lists “Reset” and “Kept”. The pin icon is now Material’s `push_pin` — the hand-drawn path was a smudge at 16px.
 
 - **2.7.19**: two Unkernel fixes. (1) Settings → Unkernel Linux drops the kernel-memory slider: the upstream page already has memory under its own Settings → Machine (with an automatic per-device value), while the host’s `?mem=` pinned it and overwrote page-side changes on every boot; memory now follows the VM’s own settings (`kw.settings`) and the host panel keeps distro, data disk, CPUs, devices, Worker, Wisp and timeout. (2) Debian’s `apt-get update` / `apt-get install` no longer returns 403: the new page hands plain HTTP to `deb.debian.org` and friends to its own CORS mirror at `mirror.unkernel.dev`, which only accepts allowlisted origins (`https://unkernel.dev`, `http://localhost:*`, …), so this app — on `127.0.0.1:3080`, a LAN address or the APK’s `http://127.0.0.1:18765` — got `403 Origin not allowed` (the official site is on the list, which is why it works there). The iframe now always carries `routes=0`, sending the guest’s plain HTTP through Wisp instead; Debian’s `apt-get update` fetched the 10.2 MB index and `apt-get install bzip2` succeeded, and Alpine’s `apk` plus HTTP access still work.
 

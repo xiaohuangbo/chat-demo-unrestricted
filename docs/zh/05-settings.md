@@ -119,7 +119,6 @@
 | Unkernel   | 命令超时           | 30000 毫秒                | `chat-demo:unkernel-config`                | 不受影响             |
 | Unkernel   | 内核内存（页面自己管） | 自动（手机 512 MiB、桌面 2048 MiB） | `kw.settings`（页面内设置，同一源） | 不受影响 |
 | Unkernel   | 数据盘内容 / 快照  | 空                        | IndexedDB `kwdisk:kwdata`（页面）          | 不受影响             |
-| DeepSeek 账号 | 登录态（Key 尾号 + 余额快照 + 登录时间） | 未登录                    | `chat-demo:account-session`                | 不受影响             |
 | 会话列表   | 置顶               | 不置顶                    | IndexedDB `sessionSummaries.pinned`（随会话） | 不受影响             |
 | 输入栏     | 聊天模式           | 网页 Agent                | `chat-demo:chat-mode`                      | 不受影响             |
 

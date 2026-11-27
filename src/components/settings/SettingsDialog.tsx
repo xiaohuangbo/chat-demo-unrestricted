@@ -122,7 +122,6 @@ import { LocalModelSettings } from '../local/LocalModelSettings.js'
 import { RolesSettings } from './RolesSettings.js'
 import { AccountSettings } from './AccountSettings.js'
 import { ProfileCard } from './ProfileCard.js'
-import { AccountCard } from './AccountCard.js'
 import { PromptPresetBar } from './PromptPresetBar.js'
 import {
   ensurePromptPresetsMigrated,
@@ -312,7 +311,6 @@ const SettingsContent = () => {
             <ChangelogSetting />
           ) : (
             <>
-              <AccountCard />
               <ApiKeyField editor={apiKeyEditor} />
               <ImportHistory historyImport={historyImport} disabled={historyBusy} />
               <ExportHistory disabled={historyBusy} />
@@ -783,7 +781,7 @@ const ChangelogSetting = () => {
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
       title: 'changelogV2720Title',
-      items: ['changelogV2720Pin', 'changelogV2720Account', 'changelogV2720Reset', 'changelogV2720Apk'],
+      items: ['changelogV2720Pin', 'changelogV2720Reset', 'changelogV2720Apk'],
     },
     {
       title: 'changelogV2719Title',
